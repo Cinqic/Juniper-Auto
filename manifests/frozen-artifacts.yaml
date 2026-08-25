@@ -22,6 +22,28 @@ architecture:
       Mandatory dense control, frozen alongside the sparse architecture.
       See docs/adr/0002-dense-control-requirement.md.
 
+reference_model_implementation:
+  id: ja150m-v0.1-reference-implementation
+  status: frozen
+  location: juniper_auto/model/, juniper_auto/training/
+  notes: >
+    Phase 1 executable PyTorch reference implementation of the frozen
+    ja150m-v0.1 / ja150m-v0.1-dense architectures (forward/backward,
+    losses, checkpointing, tiny-overfit harness, profiling). Hash-tracked
+    via manifests/phase-1-artifact-hashes.yaml. This is architecture and
+    training plumbing, not a trained checkpoint -- base_checkpoint and
+    instruction_checkpoint below remain not-yet-created, and no language
+    capability is claimed.
+
+checkpoint_format:
+  id: juniper-auto-checkpoint-v1
+  status: frozen
+  location: juniper_auto/training/checkpoint.py
+  notes: >
+    Versioned training checkpoint format (CHECKPOINT_FORMAT_VERSION=1),
+    validated in juniper_auto/training/checkpoint.py. Governs the shape of
+    any checkpoint this project writes; not itself a trained checkpoint.
+
 tokenizer:
   status: not-yet-created
   target_vocab_size: 36864

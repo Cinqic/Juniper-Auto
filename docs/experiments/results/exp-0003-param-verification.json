@@ -1,0 +1,85 @@
+{
+  "git_commit": "241295a2fc99a0289bace5ca734d600090a84f53",
+  "environment": {
+    "python_version": "3.12.3",
+    "platform": "Linux-7.0.0-30-generic",
+    "torch_version": "2.13.0+cu130",
+    "cuda_available": true,
+    "cuda_device_name": "NVIDIA GeForce RTX 2060",
+    "cuda_driver_version": "13.0"
+  },
+  "experiment": "param-verification",
+  "sparse": {
+    "method_a_total_breakdown": {
+      "embeddings": 18874368,
+      "attention": 13107200,
+      "dense_ffns": 11796480,
+      "routed_experts": 94371840,
+      "shared_experts": 11796480,
+      "routers": 61440,
+      "qk_norms": 2560,
+      "block_norms": 20480,
+      "final_norm": 512,
+      "total": 150031360
+    },
+    "method_a_standard_active_breakdown": {
+      "embeddings": 18874368,
+      "attention": 13107200,
+      "dense_ffns": 11796480,
+      "routed_experts": 23592960,
+      "shared_experts": 11796480,
+      "routers": 61440,
+      "qk_norms": 2560,
+      "block_norms": 20480,
+      "final_norm": 512,
+      "total": 79252480
+    },
+    "method_b_total_breakdown": {
+      "embeddings": 18874368,
+      "attention": 13107200,
+      "dense_ffns": 11796480,
+      "routed_experts": 94371840,
+      "shared_experts": 11796480,
+      "routers": 61440,
+      "qk_norms": 2560,
+      "block_norms": 20480,
+      "final_norm": 512,
+      "total": 150031360
+    },
+    "method_b_total_via_model_parameters": 150031360,
+    "totals_match": true,
+    "expected_total": 150031360,
+    "expected_standard_active": 79252480,
+    "weight_tying_verified": true
+  },
+  "dense": {
+    "method_a_total_breakdown": {
+      "embeddings": 18874368,
+      "attention": 13107200,
+      "dense_ffns": 47185920,
+      "routed_experts": 0,
+      "shared_experts": 0,
+      "routers": 0,
+      "qk_norms": 2560,
+      "block_norms": 20480,
+      "final_norm": 512,
+      "total": 79191040
+    },
+    "method_b_total_breakdown": {
+      "embeddings": 18874368,
+      "attention": 13107200,
+      "dense_ffns": 47185920,
+      "routed_experts": 0,
+      "shared_experts": 0,
+      "routers": 0,
+      "qk_norms": 2560,
+      "block_norms": 20480,
+      "final_norm": 512,
+      "total": 79191040
+    },
+    "method_b_total_via_model_parameters": 79191040,
+    "totals_match": true,
+    "expected_total": 79191040,
+    "weight_tying_verified": true
+  }
+}

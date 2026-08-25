@@ -1,0 +1,66 @@
+{
+  "git_commit": "241295a2fc99a0289bace5ca734d600090a84f53",
+  "environment": {
+    "python_version": "3.12.3",
+    "platform": "Linux-7.0.0-30-generic",
+    "torch_version": "2.13.0+cu130",
+    "cuda_available": true,
+    "cuda_device_name": "NVIDIA GeForce RTX 2060",
+    "cuda_driver_version": "13.0"
+  },
+  "experiment": "flowbox-profile",
+  "architecture_id": "ja150m-v0.1-dense",
+  "device": "cuda",
+  "inference": [
+    {
+      "precision_label": "fp32",
+      "batch_size": 1,
+      "seq_len": 512,
+      "warmup_iters": 3,
+      "measured_iters": 10,
+      "latency_seconds": 0.029783773100007238,
+      "tokens_per_second": 17190.568779879522,
+      "peak_vram_bytes": 401860608,
+      "host_rss_bytes": 942309376
+    },
+    {
+      "precision_label": "fp16",
+      "batch_size": 1,
+      "seq_len": 512,
+      "warmup_iters": 3,
+      "measured_iters": 10,
+      "latency_seconds": 0.018568491699988955,
+      "tokens_per_second": 27573.591235754735,
+      "peak_vram_bytes": 285948928,
+      "host_rss_bytes": 1253605376
+    }
+  ],
+  "training_step": {
+    "microbatch_size": 2,
+    "seq_len": 512,
+    "grad_accumulation_steps": 4,
+    "activation_checkpointing": false,
+    "use_amp": true,
+    "warmup_iters": 2,
+    "measured_iters": 5,
+    "forward_seconds": 0.12320841659993675,
+    "backward_seconds": 0.2467988784001136,
+    "optimizer_step_seconds": 0.027978413999971963,
+    "total_step_seconds": 0.39798570900002234,
+    "training_tokens_per_second": 10291.826835419786,
+    "peak_vram_bytes": 2785551872,
+    "host_rss_bytes": 1354584064
+  },
+  "checkpoint_io": {
+    "checkpoint_path": "docs/experiments/results/exp-0007-flowbox-dense-profile.checkpoint_probe.pt",
+    "file_size_bytes": 950626909,
+    "write_seconds": 2.6923919429996204,
+    "load_seconds": 0.3382218520000606
+  },
+  "full_context_4096_batch1_probe": {
+    "batch_size": 1,
+    "seq_len": 4096,
+    "status": "success",
+    "peak_vram_bytes": 1090395136
+  }
+}

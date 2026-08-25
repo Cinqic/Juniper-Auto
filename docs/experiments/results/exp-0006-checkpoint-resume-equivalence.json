@@ -1,0 +1,44 @@
+{
+  "git_commit": "241295a2fc99a0289bace5ca734d600090a84f53",
+  "environment": {
+    "python_version": "3.12.3",
+    "platform": "Linux-7.0.0-30-generic",
+    "torch_version": "2.13.0+cu130",
+    "cuda_available": true,
+    "cuda_device_name": "NVIDIA GeForce RTX 2060",
+    "cuda_driver_version": "13.0"
+  },
+  "experiment": "resume-equivalence",
+  "architecture_id": "ja150m-v0.1",
+  "device": "cpu",
+  "total_steps": 20,
+  "split_at_step": 10,
+  "exact_loss_match": true,
+  "losses_uninterrupted_tail": [
+    6.628414154052734,
+    6.294356822967529,
+    5.3143110275268555,
+    5.196935653686523,
+    5.903799057006836,
+    4.407691478729248,
+    5.199448108673096,
+    5.180752277374268,
+    5.217070579528809,
+    4.25056791305542
+  ],
+  "losses_resumed": [
+    6.628414154052734,
+    6.294356822967529,
+    5.3143110275268555,
+    5.196935653686523,
+    5.903799057006836,
+    4.407691478729248,
+    5.199448108673096,
+    5.180752277374268,
+    5.217070579528809,
+    4.25056791305542
+  ],
+  "max_parameter_abs_diff": 0.0,
+  "global_step_match": true,
+  "global_valid_token_count_match": true
+}

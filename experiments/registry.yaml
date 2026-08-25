@@ -63,3 +63,231 @@
     field and docs/phases/phase-0-sonnet-self-review.md for the accepted
     limitation.
   artifact_locations: tests/test_determinism.py, juniper_auto/foundation/probe.py
+
+- experiment_id: exp-0003
+  date: "2026-08-25"
+  phase: phase-1
+  hypothesis: >
+    The actual instantiated PyTorch ja150m-v0.1 and ja150m-v0.1-dense
+    models (juniper_auto.model.build_model), counted directly from
+    real Parameter objects, produce the exact same parameter totals as
+    the Phase 0 config-derived accounting (juniper_auto.accounting) --
+    proving the executable model, not just the config, matches the
+    frozen parameter targets, with no double-counting of the tied
+    embedding/LM-head weight.
+  git_commit: 241295a2fc99a0289bace5ca734d600090a84f53
+  architecture_id: ja150m-v0.1, ja150m-v0.1-dense
+  tokenizer_id: not-yet-created
+  dataset_id: not-applicable
+  sampler_id: not-applicable
+  starting_checkpoint: not-applicable
+  configuration: configs/architecture/ja150m-v0.1.yaml, configs/architecture/ja150m-v0.1-dense.yaml
+  seed: 0
+  environment: see docs/architecture/environment-specification.md (FLOWBOX, RTX 2060, torch 2.13.0+cu130)
+  token_budget: not-applicable
+  status: completed
+  result: >
+    Method A (config-derived) and Method B (instantiated-module-derived,
+    juniper_auto.model.inspection.pytorch_parameter_breakdown /
+    total_parameters) totals match exactly and match the frozen targets:
+    sparse total 150,031,360, sparse standard active 79,252,480, dense
+    total 79,191,040, field-by-field breakdown identical between methods,
+    weight tying verified as true object-identity sharing for both
+    models. Full result: docs/experiments/results/exp-0003-param-verification.json.
+  conclusion: >
+    The executable model construction path (build_model) is faithful to
+    the frozen architecture's parameter accounting -- no drift between
+    configuration-derived and module-derived counts.
+  artifact_locations: docs/experiments/results/exp-0003-param-verification.json, tests/test_model_official_architecture.py, scripts/run_phase1_experiment.py
+
+- experiment_id: exp-0004
+  date: "2026-08-25"
+  phase: phase-1
+  hypothesis: >
+    The full official ja150m-v0.1-dense architecture, trained end to end
+    (forward, backward, AdamW, gradient clipping, FP16 AMP + dynamic
+    GradScaler) on a tiny deterministic synthetic token dataset, can
+    memorize it -- unambiguous evidence the training plumbing is wired
+    correctly, not merely that the architecture is mathematically
+    plausible on paper.
+  git_commit: 241295a2fc99a0289bace5ca734d600090a84f53
+  architecture_id: ja150m-v0.1-dense
+  tokenizer_id: not-yet-created
+  dataset_id: synthetic Phase 1 engineering data (juniper_auto.training.state.SyntheticSequenceStream, seed 1234, 8 sequences x 32 tokens, vocab 36,864)
+  sampler_id: SyntheticSequenceStream (seed 1234, batch_size 4)
+  starting_checkpoint: not-applicable
+  configuration: configs/architecture/ja150m-v0.1.yaml (dense control)
+  seed: 1234
+  environment: FLOWBOX (Ryzen 7 5700G, RTX 2060 6GB, torch 2.13.0+cu130, CUDA), AdamW lr=3e-3, grad_clip_norm=1.0, 300 steps, FP16 AMP
+  token_budget: not-applicable (tiny-batch memorization gate, not pretraining)
+  status: completed
+  result: >
+    LM loss 10.60 -> 0.0012 (best 0.0012), token accuracy 100% by the end
+    of the run, zero non-finite (NaN/Inf) events across all 300 steps,
+    elapsed 28.5s, peak VRAM 1.67 GB. Full result:
+    docs/experiments/results/exp-0004-dense-tiny-overfit.json.
+  conclusion: >
+    The dense control's full training path (forward/backward/optimizer/
+    AMP/grad-clipping) is functionally correct and can memorize a tiny
+    deterministic target on real FLOWBOX hardware.
+  artifact_locations: docs/experiments/results/exp-0004-dense-tiny-overfit.json, juniper_auto/training/tiny_overfit.py, scripts/run_phase1_experiment.py
+
+- experiment_id: exp-0005
+  date: "2026-08-25"
+  phase: phase-1
+  hypothesis: >
+    The full official ja150m-v0.1 sparse MoE architecture (15 real MoE
+    layers, top-2 dropless routing, always-active ungated shared expert,
+    load-balance + router Z-loss), trained end to end under the same
+    conditions as exp-0004, can also memorize a tiny deterministic
+    synthetic dataset without unexplained numerical or routing failure.
+  git_commit: 241295a2fc99a0289bace5ca734d600090a84f53
+  architecture_id: ja150m-v0.1
+  tokenizer_id: not-yet-created
+  dataset_id: synthetic Phase 1 engineering data (SyntheticSequenceStream, seed 1234, 8 sequences x 32 tokens, vocab 36,864)
+  sampler_id: SyntheticSequenceStream (seed 1234, batch_size 4)
+  starting_checkpoint: not-applicable
+  configuration: configs/architecture/ja150m-v0.1.yaml
+  seed: 1234
+  environment: FLOWBOX (Ryzen 7 5700G, RTX 2060 6GB, torch 2.13.0+cu130, CUDA), AdamW lr=3e-3, grad_clip_norm=1.0, 300 steps, FP16 AMP
+  token_budget: not-applicable (tiny-batch memorization gate, not pretraining)
+  status: completed
+  result: >
+    LM loss 10.61 -> 0.0003 (best 0.0003), token accuracy 100% by the end
+    of the run, zero non-finite events across all 300 steps, load-balance
+    loss stabilized near 0.0103 and router Z-loss near 0.0005 (both
+    bounded, not diverging), elapsed 120.0s (slower than the dense run --
+    the reference MoE dispatch loops over 8 experts per layer rather than
+    using a batched/optimized kernel, by design; see Phase 2 scope), peak
+    VRAM 3.09 GB. Full result:
+    docs/experiments/results/exp-0005-sparse-tiny-overfit.json.
+  conclusion: >
+    The sparse MoE training path -- routing, dropless dispatch, shared
+    expert, both auxiliary losses, FP16 AMP -- is functionally correct
+    end to end on real FLOWBOX hardware. Auxiliary losses remained
+    bounded rather than collapsing or diverging during memorization.
+  artifact_locations: docs/experiments/results/exp-0005-sparse-tiny-overfit.json, juniper_auto/training/tiny_overfit.py, scripts/run_phase1_experiment.py
+
+- experiment_id: exp-0006
+  date: "2026-08-25"
+  phase: phase-1
+  hypothesis: >
+    Resuming the full official ja150m-v0.1 model's training from a
+    mid-run checkpoint (model, optimizer, RNG streams, sampler/data-stream
+    position, step counters) reproduces, on a deterministic CPU
+    configuration, exactly the same subsequent batches, losses, and final
+    parameters as an uninterrupted run -- proving checkpoint/resume is not
+    merely "loads without crashing" but numerically equivalent.
+  git_commit: 241295a2fc99a0289bace5ca734d600090a84f53
+  architecture_id: ja150m-v0.1
+  tokenizer_id: not-yet-created
+  dataset_id: synthetic Phase 1 engineering data (SyntheticSequenceStream, seed 42, 6 sequences x 16 tokens, vocab 36,864)
+  sampler_id: SyntheticSequenceStream (seed 42, batch_size 2)
+  starting_checkpoint: mid-run checkpoint saved by this experiment itself at step 10 (not a prior release checkpoint -- none exists yet)
+  configuration: configs/architecture/ja150m-v0.1.yaml
+  seed: 42
+  environment: FLOWBOX, CPU (deterministic-comparison run; CUDA bitwise determinism is not claimed per juniper_auto.util.seed), AdamW lr=1e-3, 20 steps total, split at step 10
+  token_budget: not-applicable
+  status: completed
+  result: >
+    Run A (uninterrupted, 20 steps) vs Run B (10 steps, checkpoint,
+    harness discarded, reconstructed from the checkpoint's recorded
+    training config, resumed for 10 more steps): steps 11-20 losses
+    matched exactly (bit-for-bit, atol=0/rtol=0), final parameters
+    matched exactly (max abs diff 0.0), AdamW exp_avg/exp_avg_sq matched
+    exactly, global_step and global_valid_token_count matched. Full
+    result: docs/experiments/results/exp-0006-checkpoint-resume-equivalence.json.
+  conclusion: >
+    Checkpoint/resume is exactly equivalent to uninterrupted training on
+    this deterministic CPU configuration for the full 150M-parameter
+    sparse model. tests/test_training_resume_equivalence.py additionally
+    proves this result is load-bearing (not a vacuous same-seed
+    coincidence) via two negative controls that correctly diverge.
+  artifact_locations: docs/experiments/results/exp-0006-checkpoint-resume-equivalence.json, tests/test_training_resume_equivalence.py, juniper_auto/training/checkpoint.py
+
+- experiment_id: exp-0007
+  date: "2026-08-25"
+  phase: phase-1
+  hypothesis: >
+    The full official ja150m-v0.1-dense architecture has a practical,
+    measured FLOWBOX (RTX 2060 6GB) execution profile for inference
+    (FP32/FP16), a training step (forward/backward/optimizer separately
+    timed), checkpoint I/O, and a full-context (4,096 token, batch-1)
+    reference inference pass -- not a theoretical estimate.
+  git_commit: 241295a2fc99a0289bace5ca734d600090a84f53
+  architecture_id: ja150m-v0.1-dense
+  tokenizer_id: not-yet-created
+  dataset_id: synthetic Phase 1 engineering data (random token ids, not a real corpus)
+  sampler_id: not-applicable
+  starting_checkpoint: not-applicable
+  configuration: configs/architecture/ja150m-v0.1-dense.yaml
+  seed: 0
+  environment: FLOWBOX (Ryzen 7 5700G, RTX 2060 6GB, torch 2.13.0+cu130, CUDA driver 13.0)
+  token_budget: not-applicable
+  status: completed
+  result: >
+    Inference (batch=1, seq=512, warmup=3, measured=10): FP32 17,191
+    tok/s (401.9 MB peak VRAM), FP16 27,574 tok/s (285.9 MB peak VRAM).
+    Training step (microbatch=2, seq=512, grad_accum=4, FP16 AMP):
+    forward 0.123s, backward 0.247s, optimizer 0.028s, total 0.398s,
+    10,292 training tok/s, 2.79 GB peak VRAM. Checkpoint I/O: 950.6 MB
+    file, write 2.69s, load 0.34s. Full-context probe (batch=1, seq=4096,
+    FP16): succeeded, 1.09 GB peak VRAM. Full result:
+    docs/experiments/results/exp-0007-flowbox-dense-profile.json.
+  conclusion: >
+    The dense control comfortably fits FLOWBOX's 6 GB VRAM budget at
+    these settings, including full 4,096-token batch-1 inference. FP16
+    gives a clear ~1.6x inference throughput improvement over FP32 for
+    this dense architecture.
+  artifact_locations: docs/experiments/results/exp-0007-flowbox-dense-profile.json, juniper_auto/training/profiling.py, scripts/run_phase1_experiment.py
+
+- experiment_id: exp-0008
+  date: "2026-08-25"
+  phase: phase-1
+  hypothesis: >
+    The full official ja150m-v0.1 sparse MoE architecture has a practical,
+    measured FLOWBOX execution profile under the same methodology as
+    exp-0007, and a full-context (4,096 token, batch-1) reference
+    inference pass succeeds or fails honestly on this hardware.
+  git_commit: 241295a2fc99a0289bace5ca734d600090a84f53
+  architecture_id: ja150m-v0.1
+  tokenizer_id: not-yet-created
+  dataset_id: synthetic Phase 1 engineering data (random token ids, not a real corpus)
+  sampler_id: not-applicable
+  starting_checkpoint: not-applicable
+  configuration: configs/architecture/ja150m-v0.1.yaml
+  seed: 0
+  environment: FLOWBOX (Ryzen 7 5700G, RTX 2060 6GB, torch 2.13.0+cu130, CUDA driver 13.0)
+  token_budget: not-applicable
+  status: completed
+  result: >
+    Inference (batch=1, seq=512, warmup=3, measured=10): FP32 5,011
+    tok/s (685.2 MB peak VRAM), FP16 5,113 tok/s (423.5 MB peak VRAM) --
+    FP16 gives almost no inference speedup here, unlike the dense model,
+    because the reference dropless MoE dispatch loops over 8 experts per
+    layer in Python and is kernel-launch/overhead-bound rather than
+    compute-bound at batch=1 (an expected property of the Phase 1
+    reference implementation; batched/fused MoE dispatch is Phase 2
+    scope). Training step (microbatch=2, seq=512, grad_accum=4, FP16
+    AMP): forward 0.520s, backward 0.749s, optimizer 0.054s, total
+    1.323s, 3,096 training tok/s, 4.19 GB peak VRAM. Checkpoint I/O:
+    1.62 GB file, write 5.86s, load 0.69s. Full-context probe (batch=1,
+    seq=4096, FP16): succeeded, 1.23 GB peak VRAM. Full result:
+    docs/experiments/results/exp-0008-flowbox-sparse-profile.json.
+
+    An earlier run of this experiment (same commit) hit a CUDA OOM during
+    the checkpoint-I/O stage; investigation traced it to the profiling
+    script not releasing the prior training-step model/optimizer's GPU
+    memory before building a second full model for the checkpoint probe
+    -- a profiling-script memory-hygiene bug, not an architecture or
+    hardware limitation. Fixed in scripts/run_phase1_experiment.py
+    (explicit del + torch.cuda.empty_cache() between stages) and rerun
+    to the clean result above; the failed run's cause is recorded here
+    rather than silently discarded.
+  conclusion: >
+    The sparse model also fits FLOWBOX's 6 GB VRAM budget at these
+    settings, including full 4,096-token batch-1 inference, with headroom
+    to spare. The reference (unoptimized) MoE dispatch is a real,
+    honestly-measured throughput ceiling for Phase 1 -- optimizing it is
+    explicitly Phase 2 scope, not something to paper over here.
+  artifact_locations: docs/experiments/results/exp-0008-flowbox-sparse-profile.json, juniper_auto/training/profiling.py, scripts/run_phase1_experiment.py

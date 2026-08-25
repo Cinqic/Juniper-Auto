@@ -1,0 +1,41 @@
+name: Phase 1 Validation
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch: {}
+
+jobs:
+  validate-phase1:
+    name: Validate Phase 1 (CPU-only, clean Linux runner)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      - name: Create virtual environment
+        run: python -m venv .venv
+
+      - name: Install dependencies from locked requirements
+        run: |
+          source .venv/bin/activate
+          python -m pip install --upgrade pip
+          pip install -r requirements-lock.txt
+
+      - name: Install project package (editable, no re-resolve)
+        run: |
+          source .venv/bin/activate
+          pip install -e . --no-deps
+
+      - name: Run canonical Phase 1 validation (includes the Phase 0 baseline, official-model construction/parameter counts, forward/backward smoke, checkpoint round trip, full pytest suite, documentation/hash/experiment/time-accounting checks)
+        run: |
+          source .venv/bin/activate
+          python scripts/validate_phase1.py --all
