@@ -1,0 +1,92 @@
+# Juniper Auto DENSE CONTROL architecture -- FROZEN for v0.1.
+#
+# This is the mandatory dense-control research requirement for ja150m-v0.1
+# (see docs/research/project-charter.md, "Sparse-vs-dense requirement").
+# It shares vocabulary, embeddings, layer count, attention, GQA, QK-Norm,
+# RoPE, context, normalization, and initialization family with the sparse
+# model, but uses the 1536-dimensional dense SwiGLU FFN in all 20 layers
+# instead of MoE. Do not modify this model to make a future sparse-vs-dense
+# comparison easier to win.
+#
+# Schema: juniper_auto.config.schema.ArchitectureConfig
+
+architecture_id: ja150m-v0.1-dense
+kind: dense
+
+core:
+  d_model: 512
+  n_layers: 20
+  # Every layer uses the dense-anchor FFN; there are no MoE layers.
+  dense_layers: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
+  moe_layers: []
+
+attention:
+  kind: causal_gqa
+  n_query_heads: 8
+  n_kv_heads: 2
+  head_dim: 64
+  qk_norm: true
+  qk_norm_placement: before_rope
+  qk_norm_kind: per_head_rmsnorm
+  attention_scale: 0.125
+  context_length: 4096
+  future_context_target: 16384
+  future_context_advertised: false
+  sliding_window: null
+  attention_bias: false
+  causal: true
+
+dense_ffn:
+  kind: swiglu
+  dim: 1536
+  expansion: 3.0
+  bias: false
+
+moe: null
+
+normalization:
+  kind: rmsnorm
+  placement: pre_norm
+  epsilon: 1.0e-5
+  reduction_dtype: fp32
+
+position_encoding:
+  kind: rope
+  theta: 100000
+  initial_scaling: 1.0
+  rotary_dim: 64
+
+residual:
+  kind: additive
+  scale: 1.0
+  rezero: false
+  deepnorm: false
+  learned_gates: false
+
+embeddings:
+  kind: learned
+  vocab_size: 36864
+  dim: 512
+  tie_lm_head: true
+  output_bias: false
+  embedding_scale: 1.0
+  logit_softcap: null
+
+dropout:
+  embedding: 0.0
+  attention: 0.0
+  ffn: 0.0
+  residual: 0.0
+
+initialization:
+  distribution: normal
+  mean: 0.0
+  base_std: 0.02
+  router_std: 0.02
+  embedding_std: 0.02
+  residual_output_projection_std: 0.0031622776601683794
+
+precision:
+  training_mixed_precision: fp16
+  training_param_master_dtype: fp32
+  inference_default_dtype: fp16

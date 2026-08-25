@@ -1,0 +1,79 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# --- Virtual environments ---
+.venv/
+venv/
+env/
+ENV/
+
+# --- Test / coverage / tooling caches ---
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.cache/
+htmlcov/
+.coverage
+.coverage.*
+coverage.xml
+*.cover
+
+# --- Editor / IDE metadata ---
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+
+# --- Secrets / local env ---
+.env
+.env.*
+*.pem
+*.key
+id_rsa
+id_ed25519
+*.credentials.json
+
+# --- Package manager caches ---
+pip-wheel-metadata/
+*.whl
+
+# --- Downloaded archives / raw corpora / generated datasets ---
+data/raw/
+data/downloads/
+data/**/*.tar
+data/**/*.tar.gz
+data/**/*.zip
+data/**/*.jsonl
+data/**/*.parquet
+!data/schemas/**
+
+# --- Transient logs / workspaces / profiling ---
+logs/
+*.log
+tmp/
+.tmp/
+*.prof
+
+# --- Checkpoints / model weights / releases (local, disposable) ---
+checkpoints/
+releases/
+*.pt
+*.pth
+*.safetensors
+*.ckpt
+
+# --- Build output ---
+*.egg-info
+site/
+
+# --- System junk ---
+Thumbs.db
