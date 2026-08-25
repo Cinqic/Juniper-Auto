@@ -1,0 +1,65 @@
+# Juniper Auto experiment registry. Schema documented in docs/experiments/README.md.
+# Do not delete failed/negative-result entries -- see project-governance.md rule 21.
+
+- experiment_id: exp-0001
+  date: "2026-08-25"
+  phase: phase-0
+  hypothesis: >
+    The ja150m-v0.1 and ja150m-v0.1-dense architecture configurations, as
+    encoded in configs/architecture/, produce the exact frozen parameter
+    counts specified in the research charter (150,031,360 total /
+    79,252,480 standard active for the sparse model; 79,191,040 for the
+    dense control) when counted programmatically rather than transcribed.
+  git_commit: PENDING_CANDIDATE_COMMIT
+  architecture_id: ja150m-v0.1, ja150m-v0.1-dense
+  tokenizer_id: not-yet-created
+  dataset_id: not-yet-created
+  sampler_id: not-applicable
+  starting_checkpoint: not-applicable
+  configuration: configs/architecture/ja150m-v0.1.yaml, configs/architecture/ja150m-v0.1-dense.yaml
+  seed: not-applicable
+  environment: see docs/architecture/environment-specification.md
+  token_budget: not-applicable
+  status: completed
+  result: >
+    juniper_auto.accounting.total_parameter_breakdown and
+    standard_active_parameter_breakdown, run against both configs, produce
+    150,031,360 / 79,252,480 (sparse) and 79,191,040 (dense), matching the
+    frozen specification exactly. Asserted by tests/test_parameter_accounting.py
+    and tests/test_architecture_constants.py.
+  conclusion: >
+    The committed configuration files and the accounting code agree with
+    the frozen research target. No inconsistency found.
+  artifact_locations: tests/test_parameter_accounting.py, juniper_auto/accounting/
+
+- experiment_id: exp-0002
+  date: "2026-08-25"
+  phase: phase-0
+  hypothesis: >
+    FoundationProbe (a minimal tensor pipeline, not the Juniper Auto model)
+    produces bitwise-identical output under a fixed seed on CPU, and
+    different output under a different seed, proving the seed framework in
+    juniper_auto.util.seed actually has an effect and that determinism can
+    be checked mechanically before any real model exists.
+  git_commit: PENDING_CANDIDATE_COMMIT
+  architecture_id: ja150m-v0.1
+  tokenizer_id: not-yet-created
+  dataset_id: not-yet-created
+  sampler_id: not-applicable
+  starting_checkpoint: not-applicable
+  configuration: configs/architecture/ja150m-v0.1.yaml
+  seed: 42 (and 1, 2 for the cross-seed comparison)
+  environment: see docs/architecture/environment-specification.md
+  token_budget: not-applicable
+  status: completed
+  result: >
+    Same-seed runs (seed=42) on CPU produced identical output checksums
+    across repeated invocations. Different-seed runs (seed=1 vs seed=2)
+    produced different checksums. See tests/test_determinism.py.
+  conclusion: >
+    Best-effort CPU determinism holds for the foundation probe under this
+    seed framework. CUDA-side bitwise determinism was not claimed or
+    tested here -- see juniper_auto/util/seed.py's strict_determinism_claim
+    field and docs/phases/phase-0-sonnet-self-review.md for the accepted
+    limitation.
+  artifact_locations: tests/test_determinism.py, juniper_auto/foundation/probe.py

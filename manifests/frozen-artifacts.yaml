@@ -1,0 +1,86 @@
+# Juniper Auto frozen artifact registry.
+#
+# status is one of: frozen, planned, not-yet-created, superseded.
+# A `status: frozen` artifact should have a corresponding entry in
+# manifests/phase-0-artifact-hashes.yaml (or its later-phase successor).
+# Do not invent hashes for artifacts that are not yet frozen -- see
+# docs/research/project-governance.md, rule 37.
+
+architecture:
+  sparse:
+    id: ja150m-v0.1
+    status: frozen
+    location: configs/architecture/ja150m-v0.1.yaml
+    notes: >
+      Frozen for v0.1. See docs/research/project-charter.md and
+      docs/adr/0001-one-model-moe-architecture.md.
+  dense_baseline:
+    id: ja150m-v0.1-dense
+    status: frozen
+    location: configs/architecture/ja150m-v0.1-dense.yaml
+    notes: >
+      Mandatory dense control, frozen alongside the sparse architecture.
+      See docs/adr/0002-dense-control-requirement.md.
+
+tokenizer:
+  status: not-yet-created
+  target_vocab_size: 36864
+  notes: Tokenizer training is Phase 3 scope, not Phase 0.
+
+special_token_map:
+  status: not-yet-created
+  notes: Depends on the tokenizer (Phase 3).
+
+runtime_protocol:
+  status: not-yet-created
+  notes: Runtime protocol design is Phase 5+ scope.
+
+tool_schemas:
+  status: not-yet-created
+  notes: Depends on the runtime protocol (Phase 5+).
+
+memory_schema:
+  status: not-yet-created
+  notes: >
+    configs/memory/ directory exists as a placeholder for future schema
+    work; no schema has been designed yet.
+
+state_schema:
+  status: not-yet-created
+  notes: Runtime state schema is Phase 5+ scope.
+
+permission_policy:
+  status: not-yet-created
+  notes: >
+    docs/research/project-governance.md rules 17-19 state the operational
+    requirements a future permission policy must satisfy; the policy
+    itself does not exist yet.
+
+pretraining_dataset:
+  status: not-yet-created
+  target: "~4-5B unique approved tokens, ~6B effective exposures"
+  notes: Data acquisition/curation is Phase 3 scope. See project-charter.md.
+
+post_training_dataset:
+  status: not-yet-created
+  target: "~100-300M curated tokens"
+  notes: Data acquisition/curation is Phase 3 scope.
+
+evaluation_suite:
+  status: not-yet-created
+  notes: >
+    evals/ directory exists as a placeholder; the evaluation harness that
+    would run both ja150m-v0.1 and ja150m-v0.1-dense through the same
+    tests is Phase 4+ scope.
+
+base_checkpoint:
+  status: not-yet-created
+  notes: No pretraining has occurred.
+
+instruction_checkpoint:
+  status: not-yet-created
+  notes: No post-training has occurred.
+
+autonomous_system_release:
+  status: not-yet-created
+  notes: Runtime/autonomy work has not started. See v0.1 non-goals in project-charter.md.
