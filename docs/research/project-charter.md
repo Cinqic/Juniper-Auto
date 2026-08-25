@@ -12,36 +12,39 @@ consumer hardware and genuinely customizable?
 
 ## Secondary research questions
 
-1. Does learned MoE routing at this scale produce measurable internal
-   specialization (by domain, task type, or modality of reasoning), and can
-   that specialization be observed, measured, and reported rather than
-   assumed?
-2. At matched (or near-matched) active-parameter budgets, does the sparse
-   `ja150m-v0.1` architecture outperform the dense control model
-   (`ja150m-v0.1-dense`, 79,191,040 parameters) on held-out evaluation, and by
-   how much, and on which capability axes?
-3. What is the actual measured relationship between reported active-parameter
-   count and realized FLOPs/latency/throughput on consumer hardware (FLOWBOX
-   and comparable machines) — i.e., where does the parameter-accounting
-   convention diverge from delivered compute?
-4. How much of a small model's practical capability, autonomy, and perceived
-   reliability can be delivered through runtime scaffolding (memory, tools,
-   bounded autonomy, evaluation-gated self-modification) rather than raw
-   parameter count?
-5. Can a single ~150M-parameter checkpoint, run as multiple temporary
-   instances with different runtime configuration, cover the practical range
-   of tasks that would otherwise motivate separate specialist models --
-   without those instances becoming permanent separate models?
-6. What pretraining and post-training data composition, at the stated token
-   budgets (approximately 4-5B unique approved pretraining tokens, ~6B
-   effective exposures, ~100-300M curated post-training tokens), produces the
-   best measured capability-per-token on this architecture?
-7. What does genuine reproducibility cost and require for a project of this
-   size — i.e., can the project survive the loss of the current local
-   machine, and what does Phase 0 have to build to make that true?
-8. Where do consumer-hardware constraints (6 GB VRAM, 16 GB system RAM)
-   force real architectural or training-methodology tradeoffs, and how are
-   those tradeoffs documented rather than silently absorbed?
+1. Whether approximately 150M total / approximately 79M active parameters can
+   support useful competence across general language, coding, mathematics,
+   research, productivity, creativity, planning, tools, and verification.
+2. Whether the 150M MoE measurably improves over the approximately 79.19M
+   dense control under equivalent data and optimization.
+3. Whether routed experts learn useful specialization rather than
+   token-frequency artifacts or redundant representations.
+4. Whether the shared expert improves robustness while routed experts
+   specialize.
+5. Whether a 4,096-token working context plus external memory can outperform
+   indiscriminately increasing context for persistent work.
+6. Whether the same language model can function as assistant, planner, tool
+   user, verifier, critic, researcher, programmer, and autonomous controller
+   without permanent specialist language models.
+7. Whether tool-use training can teach when a tool is required, which tool to
+   use, how to invoke it, how to interpret its result, how to recover, and
+   when not to use one.
+8. Whether persistent state and memory can preserve long objectives without
+   introducing stale, irrelevant, poisoned, or contradictory context.
+9. Whether runtime recurrence -- reason, act, observe, verify, revise, and
+   continue -- provides useful reasoning depth without architectural
+   recurrence.
+10. Whether increasingly long objectives can be completed with less human
+    intervention, false completion, looping, and unrecovered failure.
+11. Whether self-play and internally generated curricula produce measurable
+    improvement rather than additional synthetic text alone.
+12. Whether Juniper Auto can inspect routing, evaluations, tools, datasets,
+    and runtime sufficiently to propose useful improvements.
+13. Whether those proposals can be evaluated through isolated candidate
+    experiments without granting the running model authority to silently
+    modify or promote itself.
+14. Whether the full system can remain realistically local, inspectable,
+    forkable, retrainable, and customizable.
 
 ## One-model philosophy
 
@@ -132,13 +135,28 @@ FLOPs/latency/throughput comparison, and must not conflate the two. See
 - **Post-training:** approximately 100-300M curated tokens.
 
 As of Phase 0, no pretraining or post-training corpus has been acquired,
-curated, or approved. These figures are planning targets for Phase 3+ data
-work, recorded here so later phases are held to them rather than drifting.
+curated, or approved. These figures are planning targets for Phase 6 unified
+pretraining-dataset work and Phases 10-11 post-training work, recorded here
+so later phases are held to them rather than drifting.
 The [[frozen-artifact-registry]] records dataset status as `not-yet-created`.
 
 ## v0.1 model scope
 
-`ja150m-v0.1` targets:
+The following are future capability targets for `ja150m-v0.1`, not Phase 0
+implementation claims. The model should eventually learn useful competence
+in:
+
+- natural language and instruction following;
+- coding and mathematics;
+- research-oriented reasoning and structured information synthesis;
+- productivity and creativity;
+- planning;
+- tool selection, tool calls, and tool-result interpretation;
+- verification and failure recovery;
+- state interpretation and memory-use decisions; and
+- autonomous-control decisions.
+
+The corresponding frozen architecture targets are:
 
 - A single decoder-only causal sparse MoE transformer, 150,031,360 total
   parameters, 79,252,480 standard active parameters (see
@@ -153,12 +171,24 @@ The [[frozen-artifact-registry]] records dataset status as `not-yet-created`.
 
 ## v0.1 runtime scope
 
-The eventual v0.1 runtime is expected to support: local inference on
-consumer hardware, structured tool use under an explicit permission model,
-curated/bounded memory, and bounded autonomous execution under owner
-priority and cancellation. None of this runtime exists yet; Phase 0 builds
-only the configuration, logging, and experiment-tracking foundations that
-later runtime work will build on.
+The eventual v0.1 runtime scope explicitly includes:
+
+- objective management;
+- persistent state and memory;
+- permissions and a tool registry;
+- sandboxed execution;
+- scheduling and event handling;
+- resource limits and process supervision;
+- checkpoint/resume;
+- action logging;
+- interruption; and
+- rollback.
+
+These are defined system targets, not implemented functionality. The runtime
+should ultimately provide local inference on consumer hardware and bounded
+autonomous execution under owner priority. None of this runtime exists yet;
+Phase 0 builds only configuration, logging, and experiment-tracking
+foundations. Runtime implementation belongs to Phase 4.
 
 ## Explicit v0.1 non-goals
 
@@ -175,8 +205,7 @@ a superseding ADR:
 - Hierarchical MoE
 - Dynamic expert creation during ordinary inference
 - Unrestricted self-modification
-- Automatic self-promotion (a candidate change promoting itself without
-  evaluator/owner approval)
+- Automatic promotion of self-generated checkpoints
 - Permanent specialist-model collections (see One-model philosophy, above)
 
 Where external multimodal capability is wanted, the project's stated

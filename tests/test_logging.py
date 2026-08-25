@@ -20,6 +20,7 @@ def test_log_event_emits_valid_json_with_required_fields():
     ctx = LogContext(
         phase="phase-0",
         run_id="run-1",
+        experiment_id="exp-0002",
         git_commit="abc123",
         config_id="ja150m-v0.1",
         architecture_id="ja150m-v0.1",
@@ -36,6 +37,7 @@ def test_log_event_emits_valid_json_with_required_fields():
     assert "timestamp" in payload
     assert payload["phase"] == "phase-0"
     assert payload["run_id"] == "run-1"
+    assert payload["experiment_id"] == "exp-0002"
     assert payload["git_commit"] == "abc123"
     assert payload["config_id"] == "ja150m-v0.1"
     assert payload["architecture_id"] == "ja150m-v0.1"
@@ -48,6 +50,7 @@ def test_log_context_omits_none_fields():
     d = ctx.as_dict()
     assert d == {"phase": "phase-0"}
     assert "run_id" not in d
+    assert "experiment_id" not in d
     assert "seed" not in d
 
 
@@ -84,5 +87,8 @@ def test_foundation_probe_emits_start_and_complete_log_events(sparse_config_path
 
     lines = [line for line in stream.getvalue().strip().splitlines() if line]
     assert len(lines) == 2
-    events = [json.loads(line)["event"] for line in lines]
+    payloads = [json.loads(line) for line in lines]
+    events = [payload["event"] for payload in payloads]
     assert events == ["foundation_probe.start", "foundation_probe.complete"]
+    assert all(payload["run_id"] == "foundation-probe-seed-3" for payload in payloads)
+    assert all(payload["config_id"] == "ja150m-v0.1" for payload in payloads)

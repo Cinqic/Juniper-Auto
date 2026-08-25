@@ -5,12 +5,14 @@
 algorithm: sha256
 generated_by: scripts/hash_manifest.py
 sha256:
-  configs/architecture/ja150m-v0.1-dense.yaml: 065303a873ae95b141abc20eedbb9c9555c419daba2dd8ffe0be3b9bff071067
-  configs/architecture/ja150m-v0.1.yaml: 8485bb76d20eafeb5e4326895232487707211e47d7ff44176b25b0bdecb5f791
-  docs/research/project-charter.md: db2d84f05c4906dbae5f68ee7032acb6ddb5cdd9eeee653815f0d7b57d8b7896
-  docs/research/project-governance.md: 2d6cdef6a400e0de6d0eaa0ddd01f3487e45799ed9f654d607ce98ea8caaa518
-  juniper_auto/accounting/parameter_count.py: 91b99a73e652b198ed596a776860ac7dbf4ee4b9043f9b6ba63785afbeadedb4
-  juniper_auto/config/frozen.py: c39e131f4d47cddbb6adf659e7da88e7fc7e94833e54d226cdbf5a069d7ee742
-  juniper_auto/config/schema.py: 3a63da9866c4f80d91eacac5dd864f2a98366d672e412818e034c7555fe40a74
+  configs/architecture/ja150m-v0.1-dense.yaml: 4b356cf9c7022fbfea60879a9b8b5fd28c14325565d2e6e908c5b5a79cb95370
+  configs/architecture/ja150m-v0.1.yaml: 2fd81b5a602e08d28bf3510911d02e9fa43f09af81ba2b9dbe6f9ff9285558e3
+  docs/architecture/precision-policy.md: dd5f84b75e8b308f761a6767a2d90104f8ebfe43f13e75b16e8faa45fb921002
+  docs/research/project-charter.md: 20fff00d25cbbb8587fa129f92617b76435ab653917a4a8186ea4ce56f66d3ef
+  docs/research/project-governance.md: ac291527c2f85208222f8f2d1d39206f1259e67354790a16eed348f97419f7c3
+  docs/research/project-roadmap.md: 972564b21952154b4860d26fa57f3ed2ae3ad6fbe7d604948970f9e58310579f
+  juniper_auto/accounting/parameter_count.py: e0af4a3a816958cfb06fceeb841de707c10a81351f85b5454b7567bb90abafd5
+  juniper_auto/config/frozen.py: 7b11dbc6c8212967d0ef9e855ce8e2d32c352dbbbf4c1b15610e4401e6d10167
+  juniper_auto/config/schema.py: 3e13566525593c8f292b3cd789b9a13827385a71834d21f9bb3b6c1f57c6b1c9
   requirements-lock.txt: cceeb27192c58b671d9c1728c64a5447d98702bd7896db8d888262b65f74f699
-  scripts/validate_repo.py: 87ffad266235f8b220a930742c1ebb4b0c4121bb2858e57a90d3103488098b40
+  scripts/validate_repo.py: 499f09909b14b697d2f891a5c56e4f760c1bf4504a34a9b35168f0485ef3b671

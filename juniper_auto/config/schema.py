@@ -85,6 +85,7 @@ class AttentionConfig(StrictModel):
 
 class DenseFFNConfig(StrictModel):
     kind: Literal["swiglu"]
+    activation: Literal["silu"]
     dim: int = Field(gt=0)
     expansion: float = Field(gt=0)
     bias: bool
@@ -95,7 +96,11 @@ class MoEConfig(StrictModel):
     n_shared_experts: int = Field(ge=0)
     top_k: int = Field(gt=0)
     shared_expert_always_active: bool
+    shared_expert_gated: bool
     expert_ffn_dim: int = Field(gt=0)
+    expert_kind: Literal["swiglu"]
+    expert_activation: Literal["silu"]
+    expert_bias: bool
     router_bias: bool
     router_input_dim: int = Field(gt=0)
     router_output_dim: int = Field(gt=0)
@@ -105,9 +110,12 @@ class MoEConfig(StrictModel):
     dropless: bool
     token_dropping_allowed: bool
     renormalize_top_k_weights: bool
+    expert_output_combination: Literal["sum"]
     load_balance_loss_coefficient: float = Field(ge=0)
     router_z_loss_coefficient: float = Field(ge=0)
-    training_router_jitter: bool
+    training_router_jitter_policy: Literal["experiment_only"]
+    training_router_jitter_magnitude: float | None = Field(default=None, gt=0)
+    evaluation_router_jitter: bool
     inference_router_jitter: bool
 
     @model_validator(mode="after")
@@ -121,13 +129,6 @@ class MoEConfig(StrictModel):
                 "router_output_dim must equal n_routed_experts "
                 f"({self.router_output_dim} != {self.n_routed_experts})"
             )
-        if self.inference_router_jitter:
-            raise ValueError("inference_router_jitter must be false (v0.1 policy: no inference jitter)")
-        if not self.dropless or self.token_dropping_allowed:
-            raise ValueError(
-                "ja150m-v0.1 requires dropless routing: dropless must be true and "
-                "token_dropping_allowed must be false"
-            )
         return self
 
 
@@ -136,12 +137,17 @@ class NormalizationConfig(StrictModel):
     placement: Literal["pre_norm", "post_norm"]
     epsilon: float = Field(gt=0)
     reduction_dtype: Literal["fp32", "fp16", "bf16"]
+    attention_norm: bool
+    ffn_or_moe_norm: bool
+    final_norm: bool
+    layernorm_bias: bool
 
 
 class PositionEncodingConfig(StrictModel):
     kind: Literal["rope"]
     theta: float = Field(gt=0)
     initial_scaling: float = Field(gt=0)
+    rotary_fraction: float = Field(gt=0, le=1)
     rotary_dim: int = Field(gt=0)
 
 
@@ -186,7 +192,7 @@ class PrecisionConfig(StrictModel):
 
 
 class ArchitectureConfig(StrictModel):
-    architecture_id: str
+    architecture_id: str = Field(pattern=r"^[a-z][a-z0-9.-]+$")
     kind: Literal["sparse", "dense"]
     core: CoreConfig
     attention: AttentionConfig
@@ -223,4 +229,11 @@ class ArchitectureConfig(StrictModel):
                 "n_query_heads * head_dim must equal d_model "
                 f"({self.attention.n_query_heads} * {self.attention.head_dim} != {self.core.d_model})"
             )
+        if self.embeddings.dim != self.core.d_model:
+            raise ValueError("embedding dimension must equal d_model")
+        if self.position_encoding.rotary_dim > self.attention.head_dim:
+            raise ValueError("rotary_dim cannot exceed attention head_dim")
+        if self.kind == "sparse" and self.moe is not None:
+            if self.moe.router_input_dim != self.core.d_model:
+                raise ValueError("router_input_dim must equal d_model")
         return self

@@ -35,22 +35,6 @@ jobs:
           source .venv/bin/activate
           pip install -e . --no-deps
 
-      - name: Static check -- lock file matches pyproject.toml declared deps
-        run: |
-          source .venv/bin/activate
-          python - <<'PY'
-          import tomllib
-          with open("pyproject.toml", "rb") as f:
-              proj = tomllib.load(f)
-          deps = [d.split(">=")[0].split("==")[0].split("<")[0].strip() for d in proj["project"]["dependencies"]]
-          with open("requirements-lock.txt") as f:
-              lock_text = f.read().lower()
-          missing = [d for d in deps if d.lower() not in lock_text]
-          if missing:
-              raise SystemExit(f"pyproject.toml dependencies missing from requirements-lock.txt: {missing}")
-          print("lock file covers all declared direct dependencies:", deps)
-          PY
-
       - name: Run canonical Phase 0 validation (imports, config, accounting, hashes, integrity, determinism, tests)
         run: |
           source .venv/bin/activate

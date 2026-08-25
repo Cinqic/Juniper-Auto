@@ -38,6 +38,7 @@ attention:
 
 dense_ffn:
   kind: swiglu
+  activation: silu
   dim: 1536
   expansion: 3.0
   bias: false
@@ -49,11 +50,16 @@ normalization:
   placement: pre_norm
   epsilon: 1.0e-5
   reduction_dtype: fp32
+  attention_norm: true
+  ffn_or_moe_norm: true
+  final_norm: true
+  layernorm_bias: false
 
 position_encoding:
   kind: rope
   theta: 100000
   initial_scaling: 1.0
+  rotary_fraction: 1.0
   rotary_dim: 64
 
 residual:

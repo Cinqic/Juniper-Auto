@@ -3,7 +3,7 @@
 Emits one JSON object per log line so future tooling can parse logs
 mechanically. Deliberately minimal for Phase 0 -- this is not an
 observability platform, just a consistent event shape:
-timestamp, level, event, phase, run_id, git_commit, config_id,
+timestamp, level, event, phase, run_id, experiment_id, git_commit, config_id,
 architecture_id, seed, env_id, plus arbitrary extra fields.
 """
 
@@ -35,6 +35,7 @@ class LogContext:
 
     phase: str | None = None
     run_id: str | None = None
+    experiment_id: str | None = None
     git_commit: str | None = None
     config_id: str | None = None
     architecture_id: str | None = None
@@ -46,6 +47,7 @@ class LogContext:
         d = {
             "phase": self.phase,
             "run_id": self.run_id,
+            "experiment_id": self.experiment_id,
             "git_commit": self.git_commit,
             "config_id": self.config_id,
             "architecture_id": self.architecture_id,

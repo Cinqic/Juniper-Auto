@@ -83,7 +83,9 @@ def run_foundation_probe(
         "foundation_probe.start",
         LogContext(
             phase="phase-0",
+            run_id=f"foundation-probe-seed-{seed}",
             git_commit=current_git_commit(),
+            config_id=cfg.architecture_id,
             architecture_id=cfg.architecture_id,
             seed=seed,
             env_id=env.short_id(),
@@ -106,7 +108,9 @@ def run_foundation_probe(
         "foundation_probe.complete",
         LogContext(
             phase="phase-0",
+            run_id=f"foundation-probe-seed-{seed}",
             git_commit=current_git_commit(),
+            config_id=cfg.architecture_id,
             architecture_id=cfg.architecture_id,
             seed=seed,
             env_id=env.short_id(),

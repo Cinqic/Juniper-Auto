@@ -87,9 +87,12 @@ def _dense_ffn_params(cfg: ArchitectureConfig) -> int:
 
 def _expert_params_per_expert(cfg: ArchitectureConfig) -> int:
     assert cfg.moe is not None
-    # Routed and shared experts share the same SwiGLU FFN shape at
-    # expert_ffn_dim, bias-free, per ja150m-v0.1.
-    return _swiglu_ffn_params(cfg.core.d_model, cfg.moe.expert_ffn_dim, bias=False)
+    # Routed and shared experts share the configured SwiGLU FFN shape.
+    return _swiglu_ffn_params(
+        cfg.core.d_model,
+        cfg.moe.expert_ffn_dim,
+        bias=cfg.moe.expert_bias,
+    )
 
 
 def _routed_expert_params(cfg: ArchitectureConfig) -> int:

@@ -18,6 +18,8 @@ PHASE_0_HASHED_ARTIFACTS: list[str] = [
     "configs/architecture/ja150m-v0.1-dense.yaml",
     "docs/research/project-charter.md",
     "docs/research/project-governance.md",
+    "docs/architecture/precision-policy.md",
+    "docs/research/project-roadmap.md",
     "requirements-lock.txt",
     "juniper_auto/accounting/parameter_count.py",
     "juniper_auto/config/schema.py",

@@ -4,7 +4,7 @@
 # A `status: frozen` artifact should have a corresponding entry in
 # manifests/phase-0-artifact-hashes.yaml (or its later-phase successor).
 # Do not invent hashes for artifacts that are not yet frozen -- see
-# docs/research/project-governance.md, rule 37.
+# docs/research/project-governance.md, rule 38.
 
 architecture:
   sparse:
@@ -33,11 +33,11 @@ special_token_map:
 
 runtime_protocol:
   status: not-yet-created
-  notes: Runtime protocol design is Phase 5+ scope.
+  notes: Runtime protocol design is Phase 4 scope.
 
 tool_schemas:
   status: not-yet-created
-  notes: Depends on the runtime protocol (Phase 5+).
+  notes: Depends on the runtime protocol (Phase 4).
 
 memory_schema:
   status: not-yet-created
@@ -47,7 +47,7 @@ memory_schema:
 
 state_schema:
   status: not-yet-created
-  notes: Runtime state schema is Phase 5+ scope.
+  notes: Runtime state schema is Phase 4 scope.
 
 permission_policy:
   status: not-yet-created
@@ -59,19 +59,25 @@ permission_policy:
 pretraining_dataset:
   status: not-yet-created
   target: "~4-5B unique approved tokens, ~6B effective exposures"
-  notes: Data acquisition/curation is Phase 3 scope. See project-charter.md.
+  notes: Unified pretraining data acquisition/curation is Phase 6 scope. See project-charter.md.
 
 post_training_dataset:
   status: not-yet-created
   target: "~100-300M curated tokens"
-  notes: Data acquisition/curation is Phase 3 scope.
+  notes: Post-training data is prepared for Phases 10-11.
 
 evaluation_suite:
   status: not-yet-created
   notes: >
     evals/ directory exists as a placeholder; the evaluation harness that
     would run both ja150m-v0.1 and ja150m-v0.1-dense through the same
-    tests is Phase 4+ scope.
+    tests is Phase 5 scope.
+
+training_precision_policy:
+  id: ja150m-v0.1-precision-policy
+  status: frozen
+  location: docs/architecture/precision-policy.md
+  notes: Phase 0 policy target; no training implementation or result is claimed.
 
 base_checkpoint:
   status: not-yet-created

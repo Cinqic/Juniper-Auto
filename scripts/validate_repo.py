@@ -14,9 +14,12 @@ installed and the package installed (`pip install -e . --no-deps`).
 from __future__ import annotations
 
 import argparse
+import csv
+import re
 import subprocess
 import sys
 import textwrap
+import tomllib
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -78,6 +81,41 @@ def gate_imports() -> None:
     for m in modules:
         importlib.import_module(m)
         print(f"import {m}: OK")
+
+
+def gate_dependency_consistency() -> None:
+    _header("dependency consistency")
+    with (REPO_ROOT / "pyproject.toml").open("rb") as f:
+        project = tomllib.load(f)
+    declared = list(project["project"]["dependencies"])
+    for values in project["project"].get("optional-dependencies", {}).values():
+        declared.extend(values)
+
+    def canonical_name(requirement: str) -> str:
+        match = re.match(r"[A-Za-z0-9_.-]+", requirement)
+        if not match:
+            raise GateFailure(f"cannot parse dependency declaration: {requirement!r}")
+        return re.sub(r"[-_.]+", "-", match.group(0)).lower()
+
+    lock_text = (REPO_ROOT / "requirements-lock.txt").read_text()
+    locked = {
+        re.sub(r"[-_.]+", "-", name).lower()
+        for name in re.findall(r"^([A-Za-z0-9_.-]+)==", lock_text, flags=re.MULTILINE)
+    }
+    missing = sorted({canonical_name(req) for req in declared} - locked)
+    if missing:
+        raise GateFailure(f"declared dependencies missing from lock: {missing}")
+    if "--generate-hashes" not in lock_text or "--hash=sha256:" not in lock_text:
+        raise GateFailure("requirements lock is not documented and populated as a hash-pinned lock")
+    pip_check = subprocess.run(
+        [sys.executable, "-m", "pip", "check"],
+        cwd=REPO_ROOT,
+        capture_output=True,
+        text=True,
+    )
+    if pip_check.returncode != 0:
+        raise GateFailure(f"installed environment dependency check failed: {pip_check.stdout.strip()}")
+    print(f"{len(declared)} direct/dev declarations covered by {len(locked)} locked distributions")
 
 
 def gate_config_validation() -> None:
@@ -157,13 +195,26 @@ def gate_frozen_artifact_manifest() -> None:
         raise GateFailure("architecture.sparse status must be 'frozen'")
     if manifest["architecture"]["sparse"]["id"] != "ja150m-v0.1":
         raise GateFailure("architecture.sparse id must be 'ja150m-v0.1'")
-    print("manifests/frozen-artifacts.yaml: parses and architecture entries present")
+    required_not_created = {
+        "tokenizer", "special_token_map", "runtime_protocol", "tool_schemas",
+        "memory_schema", "state_schema", "permission_policy", "pretraining_dataset",
+        "post_training_dataset", "evaluation_suite", "base_checkpoint",
+        "instruction_checkpoint", "autonomous_system_release",
+    }
+    missing = required_not_created - set(manifest)
+    if missing:
+        raise GateFailure(f"frozen-artifact categories missing: {sorted(missing)}")
+    dishonest = sorted(key for key in required_not_created if manifest[key].get("status") != "not-yet-created")
+    if dishonest:
+        raise GateFailure(f"Phase 0 future artifacts must be not-yet-created: {dishonest}")
+    precision = manifest.get("training_precision_policy", {})
+    if precision.get("status") != "frozen" or precision.get("location") != "docs/architecture/precision-policy.md":
+        raise GateFailure("training precision policy must be a versioned frozen artifact")
+    print("manifests/frozen-artifacts.yaml: all required Phase 0 categories and statuses verified")
 
 
 def gate_time_schema() -> None:
     _header("time-accounting schema")
-    import csv
-
     path = REPO_ROOT / "docs" / "time" / "phase-hours.csv"
     if not path.is_file():
         raise GateFailure(f"missing time-accounting file: {path}")
@@ -193,6 +244,19 @@ def gate_time_schema() -> None:
         if missing:
             raise GateFailure(f"phase-hours.csv missing required columns: {sorted(missing)}")
         rows = list(reader)
+    numeric = {
+        "engineering_hours", "self_review_hours", "independent_review_hours",
+        "ai_assisted_engineering_hours", "gpu_hours", "cpu_data_processing_hours",
+    }
+    for index, row in enumerate(rows, start=2):
+        try:
+            for field in numeric:
+                if float(row[field]) < 0:
+                    raise ValueError(f"{field} is negative")
+        except ValueError as exc:
+            raise GateFailure(f"phase-hours.csv row {index} has invalid numeric time: {exc}") from exc
+        if row["end_time"] == "PENDING" and row["outcome"] != "in-progress":
+            raise GateFailure(f"phase-hours.csv row {index}: PENDING end_time requires in-progress outcome")
     print(f"phase-hours.csv: schema OK, {len(rows)} rows")
 
 
@@ -224,6 +288,28 @@ def gate_repository_integrity() -> None:
     if violations:
         raise GateFailure(f"prohibited files are tracked in git: {violations}")
     print(f"{len(tracked)} tracked files scanned, no prohibited artifacts found")
+
+    oversized = [f for f in tracked if (REPO_ROOT / f).is_file() and (REPO_ROOT / f).stat().st_size > 1_000_000]
+    if oversized:
+        raise GateFailure(f"unexpected tracked files larger than 1 MB: {oversized}")
+
+    secret_patterns = {
+        "private-key header": re.compile(r"-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----"),
+        "AWS access key": re.compile(r"AKIA[0-9A-Z]{16}"),
+        "GitHub token": re.compile(r"gh[pousr]_[A-Za-z0-9]{30,}"),
+        "OpenAI-style secret": re.compile(r"sk-[A-Za-z0-9_-]{20,}"),
+    }
+    secret_files = []
+    for f in tracked:
+        full = REPO_ROOT / f
+        if not full.is_file():
+            continue
+        content = full.read_text(encoding="utf-8", errors="ignore")
+        if any(pattern.search(content) for pattern in secret_patterns.values()):
+            secret_files.append(f)
+    if secret_files:
+        raise GateFailure(f"possible secret material detected in tracked files: {secret_files}")
+    print("tracked-file size and credential-pattern scans: OK")
 
     # Absolute host-specific path check across versioned config/scripts/docs.
     suspicious = []
@@ -276,6 +362,7 @@ def gate_pytest() -> None:
 GATES = [
     ("environment sanity", gate_environment_sanity),
     ("imports", gate_imports),
+    ("dependency consistency", gate_dependency_consistency),
     ("config validation", gate_config_validation),
     ("parameter accounting", gate_parameter_accounting),
     ("frozen artifact manifest", gate_frozen_artifact_manifest),

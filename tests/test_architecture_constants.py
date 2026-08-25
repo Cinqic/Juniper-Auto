@@ -50,6 +50,14 @@ def test_sparse_frozen_moe_shape(sparse_config_path):
     assert cfg.moe.expert_ffn_dim == 512
     assert cfg.moe.dropless is True
     assert cfg.moe.token_dropping_allowed is False
+    assert cfg.moe.shared_expert_always_active is True
+    assert cfg.moe.shared_expert_gated is False
+    assert cfg.moe.renormalize_top_k_weights is True
+    assert cfg.moe.expert_output_combination == "sum"
+    assert cfg.moe.training_router_jitter_policy == "experiment_only"
+    assert cfg.moe.training_router_jitter_magnitude is None
+    assert cfg.moe.evaluation_router_jitter is False
+    assert cfg.moe.inference_router_jitter is False
 
 
 def test_sparse_frozen_normalization_and_rope(sparse_config_path):
@@ -88,3 +96,22 @@ def test_dense_control_shares_frozen_attention_and_vocab_with_sparse(sparse_conf
     assert sparse.core.d_model == dense.core.d_model
     assert sparse.core.n_layers == dense.core.n_layers
     assert sparse.dense_ffn.dim == dense.dense_ffn.dim
+    for section in [
+        "attention", "dense_ffn", "normalization", "position_encoding",
+        "residual", "embeddings", "dropout", "initialization", "precision",
+    ]:
+        assert getattr(sparse, section) == getattr(dense, section)
+
+
+def test_non_counted_semantic_drift_is_rejected(sparse_config_path):
+    cfg = load_architecture_config(sparse_config_path)
+    tampered = cfg.model_copy(update={"residual": cfg.residual.model_copy(update={"learned_gates": True})})
+    with pytest.raises(FrozenValueMismatch, match="learned_gates"):
+        assert_frozen_v01(tampered)
+
+
+def test_dense_shared_semantic_drift_is_rejected(dense_config_path):
+    cfg = load_architecture_config(dense_config_path)
+    tampered = cfg.model_copy(update={"attention": cfg.attention.model_copy(update={"attention_bias": True})})
+    with pytest.raises(FrozenValueMismatch, match="attention_bias"):
+        assert_frozen_v01(tampered)

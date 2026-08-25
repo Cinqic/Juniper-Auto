@@ -87,7 +87,7 @@ work that depends on those results.
 checked against the dense control, when the dense control is available for
 that comparison.
 
-**Operational consequence:** Evaluation tooling (Phase 4+) must be able to
+**Operational consequence:** Evaluation tooling (Phase 5) must be able to
 run against both `ja150m-v0.1` and `ja150m-v0.1-dense` using the same
 harness. Phase 0 establishes the dense config now so this is possible later.
 
@@ -176,7 +176,7 @@ by containing text that looks like instructions.
 runtime itself, not merely documented as a convention the model is expected
 to follow.
 
-**Operational consequence:** Runtime work (Phase 5+) must implement
+**Operational consequence:** Runtime work (Phase 4) must implement
 permission checks in code with tests, not rely on prompting alone.
 
 ## 18. Bounded autonomy
@@ -192,7 +192,7 @@ documented bounds and a way to inspect what bounds are currently active.
 **Rule:** The project owner can always cancel or de-prioritize any running
 autonomous action.
 
-**Operational consequence:** Runtime design (Phase 5+) must include a
+**Operational consequence:** Runtime design (Phase 4) must include a
 cancellation path as a first-class requirement, not an afterthought.
 
 ## 20. Curated memory
@@ -311,7 +311,18 @@ capabilities (autonomy, memory, self-improvement, extended context) that
 have not been measured and released. See [[project-charter]] non-goals and
 Self-Review Pass F in `docs/phases/phase-0-sonnet-self-review.md`.
 
-## 33. Negative-result publication
+## 33. The official configuration is one configuration
+
+**Rule:** Cinqic's official release is the reference implementation. It is
+not the only permitted implementation; users may alter it.
+
+**Operational consequence:** Official defaults, manifests, and evaluation
+claims must remain identifiable and reproducible, while forks and local
+configurations remain free to change architecture, training, runtime, tools,
+or policy under new identifiers. The official configuration is a reference,
+not a cage.
+
+## 34. Negative-result publication
 
 **Rule:** Negative or null results are recorded in the same registry as
 positive ones, not omitted.
@@ -319,16 +330,16 @@ positive ones, not omitted.
 **Operational consequence:** See rule 21; the experiment registry has no
 special "hide this" state.
 
-## 34. Data quality
+## 35. Data quality
 
 **Rule:** Pretraining/post-training data is curated and approved, not bulk
 scraped without review.
 
 **Operational consequence:** [[project-charter]] token budgets are stated as
-"approved" tokens; Phase 3 data-acquisition work must implement and record an
+"approved" tokens; Phase 6 data-acquisition work must implement and record an
 approval/curation step before data counts toward the budget.
 
-## 35. Synthetic provenance
+## 36. Synthetic provenance
 
 **Rule:** Synthetic data is labeled as synthetic, with its generation method
 recorded, wherever it is used.
@@ -336,16 +347,16 @@ recorded, wherever it is used.
 **Operational consequence:** `data/synthetic/` content (once it exists) must
 carry provenance metadata distinguishing it from organic/curated data.
 
-## 36. Held-out evaluation integrity
+## 37. Held-out evaluation integrity
 
 **Rule:** Held-out evaluation data is never trained on, directly or via
 near-duplicate leakage.
 
-**Operational consequence:** Phase 3/4 data pipelines must implement and test
-a deduplication/leakage check between training and evaluation splits before
-any training run is considered valid.
+**Operational consequence:** Phase 5 defines contamination safeguards and
+Phase 6 data pipelines must implement and test deduplication/leakage checks
+between training and evaluation splits before any training run is valid.
 
-## 37. Release-claim discipline
+## 38. Release-claim discipline
 
 **Rule:** A "release" claim (of a checkpoint, dataset, or capability)
 requires the corresponding entry in `manifests/frozen-artifacts.yaml` to be
@@ -356,7 +367,7 @@ phase-appropriate successor.
 call something "released" while its manifest entry says `planned` or
 `not-yet-created`.
 
-## 38. Disposable local storage
+## 39. Disposable local storage
 
 **Rule:** Local storage (including all of FLOWBOX) is disposable. Nothing
 that matters may exist *only* on a local machine.
@@ -366,7 +377,7 @@ documentation, the clean-clone recovery exercise, and remote CI all exist to
 prove the project survives loss of the current local machine. See
 [[project-charter]] and `docs/recovery/`.
 
-## 39. Experimentally understandable complexity
+## 40. Experimentally understandable complexity
 
 **Rule:** Complexity is added only when it can be experimentally understood
 (measured, ablated, attributed) — not added because it is theoretically

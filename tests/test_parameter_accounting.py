@@ -58,3 +58,9 @@ def test_accounting_changes_if_config_changes(sparse_config_path):
     perturbed_active = standard_active_parameter_breakdown(perturbed).total
     assert perturbed_active != baseline_active
     assert perturbed_active < baseline_active
+
+
+def test_expert_bias_accounting_is_configuration_derived(sparse_config_path):
+    cfg = load_architecture_config(sparse_config_path)
+    perturbed = cfg.model_copy(deep=True, update={"moe": cfg.moe.model_copy(update={"expert_bias": True})})
+    assert total_parameter_breakdown(perturbed).total > total_parameter_breakdown(cfg).total

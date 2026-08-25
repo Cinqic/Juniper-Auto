@@ -3,7 +3,7 @@ import copy
 import pytest
 from pydantic import ValidationError
 
-from juniper_auto.config import ArchitectureConfig, load_architecture_config
+from juniper_auto.config import ArchitectureConfig, FrozenValueMismatch, assert_frozen_v01, load_architecture_config
 
 
 def test_valid_sparse_configuration_accepted(sparse_config_path):
@@ -103,19 +103,44 @@ class TestMalformedConfigurationRejected:
     def test_token_dropping_rejected_for_v01(self, valid_sparse_dict):
         d = copy.deepcopy(valid_sparse_dict)
         d["moe"]["token_dropping_allowed"] = True
-        with pytest.raises(ValidationError, match="dropless"):
-            _rebuild(d)
+        with pytest.raises(FrozenValueMismatch, match="token_dropping_allowed"):
+            assert_frozen_v01(_rebuild(d))
 
     def test_dropless_false_rejected_for_v01(self, valid_sparse_dict):
         d = copy.deepcopy(valid_sparse_dict)
         d["moe"]["dropless"] = False
-        with pytest.raises(ValidationError, match="dropless"):
-            _rebuild(d)
+        with pytest.raises(FrozenValueMismatch, match="dropless"):
+            assert_frozen_v01(_rebuild(d))
 
     def test_invalid_frozen_architecture_id_kind_mismatch(self, valid_sparse_dict):
         d = copy.deepcopy(valid_sparse_dict)
         d["architecture_id"] = "ja150m-v0.1-dense"  # known id, wrong kind for this payload
         with pytest.raises(ValidationError, match="invalid frozen architecture id"):
+            _rebuild(d)
+
+    def test_malformed_architecture_id(self, valid_sparse_dict):
+        d = copy.deepcopy(valid_sparse_dict)
+        d["architecture_id"] = "Not valid/id"
+        with pytest.raises(ValidationError, match="architecture_id"):
+            _rebuild(d)
+
+    def test_wrong_frozen_vocabulary(self, valid_sparse_dict):
+        d = copy.deepcopy(valid_sparse_dict)
+        d["embeddings"]["vocab_size"] = 32000
+        with pytest.raises(FrozenValueMismatch, match="vocab_size"):
+            assert_frozen_v01(_rebuild(d))
+
+    def test_shared_expert_disabled_for_frozen_v01(self, valid_sparse_dict):
+        d = copy.deepcopy(valid_sparse_dict)
+        d["moe"]["shared_expert_always_active"] = False
+        with pytest.raises(FrozenValueMismatch, match="shared_expert_always_active"):
+            assert_frozen_v01(_rebuild(d))
+
+    def test_router_dimension_must_match_model(self, valid_sparse_dict):
+        d = copy.deepcopy(valid_sparse_dict)
+        d["architecture_id"] = "future-sparse-v1"
+        d["moe"]["router_input_dim"] = 256
+        with pytest.raises(ValidationError, match="router_input_dim"):
             _rebuild(d)
 
     def test_sparse_kind_requires_moe_section(self, valid_sparse_dict):
