@@ -14,6 +14,7 @@ from dataclasses import dataclass
 
 import torch
 from torch import nn
+from torch.utils.checkpoint import checkpoint as torch_checkpoint
 
 from juniper_auto.config.schema import ArchitectureConfig
 from juniper_auto.model.attention import GroupedQueryAttention
@@ -67,6 +68,18 @@ class JuniperAutoModel(nn.Module):
         self.load_balance_coefficient = cfg.moe.load_balance_loss_coefficient if cfg.moe is not None else 0.0
         self.router_z_coefficient = cfg.moe.router_z_loss_coefficient if cfg.moe is not None else 0.0
 
+        # Optional, off by default -- see juniper_auto.model.model.JuniperAutoModel.set_gradient_checkpointing.
+        self.gradient_checkpointing = False
+
+    def set_gradient_checkpointing(self, enabled: bool) -> None:
+        """Enables/disables per-block activation (gradient) checkpointing:
+        recomputes each block's forward during backward instead of holding
+        its activations, trading compute for peak activation memory. Only
+        takes effect in training mode, and is incompatible with
+        `return_diagnostics=True` (per-layer MoE diagnostics would have to
+        be recomputed and discarded, defeating the purpose)."""
+        self.gradient_checkpointing = enabled
+
     def forward(
         self,
         input_ids: torch.Tensor,
@@ -87,10 +100,19 @@ class JuniperAutoModel(nn.Module):
         router_z_raws: list[torch.Tensor] = []
         layer_diagnostics: list[MoEDiagnostics | None] | None = [] if return_diagnostics else None
 
+        use_checkpointing = self.gradient_checkpointing and self.training
+        if use_checkpointing and return_diagnostics:
+            raise ValueError("gradient checkpointing does not support return_diagnostics=True")
+
         for block in self.layers:
-            x, lb_raw, z_raw, diag = block(
-                x, position_ids, key_valid_mask, return_diagnostics=return_diagnostics
-            )
+            if use_checkpointing:
+                x, lb_raw, z_raw, diag = torch_checkpoint(
+                    block, x, position_ids, key_valid_mask, False, use_reentrant=False
+                )
+            else:
+                x, lb_raw, z_raw, diag = block(
+                    x, position_ids, key_valid_mask, return_diagnostics=return_diagnostics
+                )
             if lb_raw is not None:
                 load_balance_raws.append(lb_raw)
             if z_raw is not None:
