@@ -1,7 +1,8 @@
 # Juniper Auto
 
-**Status: Phase 0 (research foundation) -- candidate, pending independent
-review. No model has been trained. See below for what that means.**
+**Status: Phase 0 research foundation independently reviewed and approved
+with documented accepted limitations. The canonical approval commit is the
+target of tag `phase-0-foundation`. No model has been trained.**
 
 Juniper Auto is a research project asking: how capable, efficient,
 autonomous, persistent, adaptable, reliable, and meaningfully

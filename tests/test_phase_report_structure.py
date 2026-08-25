@@ -43,7 +43,10 @@ def test_phase_0_report_does_not_self_approve(repo_root):
     """Sonnet is the implementer, not the independent reviewer -- the report
     must never claim final approval on its own authority."""
     text = (repo_root / "docs" / "phases" / "phase-0-foundation.md").read_text()
-    assert "APPROVED BY" not in text or "PENDING INDEPENDENT REVIEW" in text
+    if "APPROVED" in text:
+        assert "GPT-5.6 SOL MEDIUM" in text
+        assert "phase-0-sol-independent-review.md" in text
+        assert "phase-0-foundation" in text
     assert "COMPLETE" != text.strip()
 
 
@@ -52,8 +55,17 @@ def test_phase_0_report_approval_status_is_a_valid_value(repo_root):
     valid_markers = [
         "CANDIDATE - PENDING INDEPENDENT REVIEW",
         "APPROVED BY",
+        "APPROVED WITH ACCEPTED LIMITATIONS BY",
         "REJECTED BY",
     ]
     assert any(marker in text for marker in valid_markers), (
         "phase-0-foundation.md must declare an explicit, valid approval status"
     )
+
+
+def test_phase_0_report_distinguishes_candidate_handoff_and_approval(repo_root):
+    text = (repo_root / "docs/phases/phase-0-foundation.md").read_text()
+    assert "Sonnet substantive candidate" in text
+    assert "Sonnet metadata/handoff HEAD" in text
+    assert "Sol substantive reviewed repairs" in text
+    assert "resolved by the annotated" in text

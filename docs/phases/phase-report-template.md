@@ -122,6 +122,8 @@ review (if it has happened yet).
 
 ## Approval status
 
-Exactly one of: `CANDIDATE - PENDING INDEPENDENT REVIEW`,
-`APPROVED BY <reviewer> AT COMMIT <hash> ON <date>`, or
-`REJECTED BY <reviewer> AT COMMIT <hash> ON <date>: <reason>`.
+Exactly one of: `CANDIDATE - PENDING INDEPENDENT REVIEW`, `APPROVED`,
+`APPROVED WITH ACCEPTED LIMITATIONS`, or `REJECTED / BLOCKED`. Identify the
+reviewer and use an immutable approval tag to resolve the approved commit
+when putting a commit's own hash or CI identity in that commit would require
+impossible self-reference.
