@@ -21,12 +21,15 @@ from torch import nn
 
 
 class RotaryEmbedding(nn.Module):
-    def __init__(self, dim: int, theta: float = 100000.0):
+    def __init__(self, dim: int, theta: float = 100000.0, initial_scaling: float = 1.0):
         super().__init__()
         if dim % 2 != 0:
             raise ValueError(f"RoPE dim must be even, got {dim}")
+        if initial_scaling <= 0:
+            raise ValueError(f"initial_scaling must be positive, got {initial_scaling}")
         self.dim = dim
         self.theta = theta
+        self.initial_scaling = initial_scaling
         inv_freq = 1.0 / (theta ** (torch.arange(0, dim, 2, dtype=torch.float32) / dim))
         self.register_buffer("inv_freq", inv_freq, persistent=False)
 
@@ -37,9 +40,18 @@ class RotaryEmbedding(nn.Module):
         cast to the working activation dtype after the rotation is applied
         (or before, at the caller's discretion) -- this function itself
         never silently downcasts the trig computation.
+
+        `initial_scaling` (frozen at 1.0 for v0.1, hence a no-op today)
+        divides the position index before the frequency computation --
+        the standard linear position-interpolation convention for
+        stretching a RoPE-based model's effective context without
+        retraining. It is applied here, not silently dropped, so a future
+        config that sets it to something other than 1.0 is honored rather
+        than ignored.
         """
         inv_freq = self.inv_freq.to(device=position_ids.device)
-        freqs = position_ids.to(torch.float32)[..., None] * inv_freq[None, None, :]
+        scaled_positions = position_ids.to(torch.float32) / self.initial_scaling
+        freqs = scaled_positions[..., None] * inv_freq[None, None, :]
         emb = torch.cat([freqs, freqs], dim=-1)
         return emb.cos(), emb.sin()
 

@@ -51,13 +51,22 @@ class MoELayer(nn.Module):
             raise ValueError("MoELayer implementation requires sum expert-output combination")
         if not moe_cfg.dropless or moe_cfg.token_dropping_allowed:
             raise ValueError("MoELayer implementation requires dropless=True, token_dropping_allowed=False")
+        if moe_cfg.routing_kind != "token_choice":
+            raise ValueError(
+                f"unsupported moe.routing_kind: {moe_cfg.routing_kind!r} (only 'token_choice' is implemented)"
+            )
+        if moe_cfg.router_logits_dtype != "fp32" or moe_cfg.router_softmax_dtype != "fp32":
+            raise ValueError(
+                "MoELayer implementation always forces FP32 router logits/softmax regardless of ambient "
+                f"precision -- router_logits_dtype={moe_cfg.router_logits_dtype!r}, "
+                f"router_softmax_dtype={moe_cfg.router_softmax_dtype!r} would silently be overridden, so "
+                "this is rejected instead of silently ignored"
+            )
 
         self.n_routed_experts = moe_cfg.n_routed_experts
         self.n_shared_experts = moe_cfg.n_shared_experts
         self.top_k = moe_cfg.top_k
         self.renormalize = moe_cfg.renormalize_top_k_weights
-        self.load_balance_coefficient = moe_cfg.load_balance_loss_coefficient
-        self.router_z_coefficient = moe_cfg.router_z_loss_coefficient
 
         self.router = nn.Linear(moe_cfg.router_input_dim, moe_cfg.router_output_dim, bias=moe_cfg.router_bias)
 

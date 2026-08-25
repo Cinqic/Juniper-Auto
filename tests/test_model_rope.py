@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import math
 
+import pytest
 import torch
 
 from juniper_auto.model.rope import RotaryEmbedding, apply_rotary_pos_emb, rotate_half
@@ -100,6 +101,34 @@ def test_partial_rotary_dim_leaves_remaining_channels_untouched():
     torch.testing.assert_close(q_rot[..., rotary_dim:], q[..., rotary_dim:])
     torch.testing.assert_close(k_rot[..., rotary_dim:], k[..., rotary_dim:])
     assert not torch.allclose(q_rot[..., :rotary_dim], q[..., :rotary_dim])
+
+
+def test_initial_scaling_defaults_to_a_no_op():
+    dim = 8
+    unscaled = RotaryEmbedding(dim=dim, theta=100000.0, initial_scaling=1.0)
+    default = RotaryEmbedding(dim=dim, theta=100000.0)
+    pos = torch.tensor([[0, 3, 7]])
+    cos_a, sin_a = unscaled(pos)
+    cos_b, sin_b = default(pos)
+    torch.testing.assert_close(cos_a, cos_b)
+    torch.testing.assert_close(sin_a, sin_b)
+
+
+def test_initial_scaling_divides_effective_position():
+    dim = 8
+    scale = 2.0
+    scaled = RotaryEmbedding(dim=dim, theta=100000.0, initial_scaling=scale)
+    unscaled = RotaryEmbedding(dim=dim, theta=100000.0, initial_scaling=1.0)
+    # Position 8 under scaling=2.0 must match position 4 unscaled.
+    cos_scaled, sin_scaled = scaled(torch.tensor([[8]]))
+    cos_unscaled, sin_unscaled = unscaled(torch.tensor([[4]]))
+    torch.testing.assert_close(cos_scaled, cos_unscaled)
+    torch.testing.assert_close(sin_scaled, sin_unscaled)
+
+
+def test_initial_scaling_rejects_non_positive_value():
+    with pytest.raises(ValueError):
+        RotaryEmbedding(dim=8, theta=100000.0, initial_scaling=0.0)
 
 
 def test_rotate_half_is_the_standard_construction():

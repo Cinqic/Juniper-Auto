@@ -41,6 +41,19 @@ class JuniperAutoModel(nn.Module):
     def __init__(self, cfg: ArchitectureConfig):
         super().__init__()
         self.cfg = cfg
+        if cfg.embeddings.kind != "learned":
+            raise ValueError(f"unsupported embeddings.kind: {cfg.embeddings.kind!r} (only 'learned' is implemented)")
+        if not cfg.normalization.final_norm:
+            raise ValueError("normalization.final_norm must be true (the final norm is applied unconditionally)")
+        nonzero_dropout = {
+            name: value
+            for name, value in cfg.dropout.model_dump().items()
+            if value != 0.0
+        }
+        if nonzero_dropout:
+            raise ValueError(
+                f"nonzero dropout is not implemented (no nn.Dropout modules exist in this model): {nonzero_dropout}"
+            )
 
         self.embedding = nn.Embedding(cfg.embeddings.vocab_size, cfg.embeddings.dim)
         self.embedding_scale = cfg.embeddings.embedding_scale

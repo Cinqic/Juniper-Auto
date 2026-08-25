@@ -74,6 +74,14 @@ class GroupedQueryAttention(nn.Module):
         a = cfg.attention
         if a.n_query_heads % a.n_kv_heads != 0:
             raise ValueError("n_query_heads must be divisible by n_kv_heads")
+        if not a.causal:
+            raise ValueError("attention.causal=false is not implemented (this module always builds a causal mask)")
+        if a.sliding_window is not None:
+            raise ValueError(
+                f"attention.sliding_window={a.sliding_window!r} is not implemented (full causal attention only)"
+            )
+        if cfg.position_encoding.kind != "rope":
+            raise ValueError(f"unsupported position_encoding.kind: {cfg.position_encoding.kind!r} (only 'rope' is implemented)")
 
         self.n_query_heads = a.n_query_heads
         self.n_kv_heads = a.n_kv_heads
@@ -104,7 +112,11 @@ class GroupedQueryAttention(nn.Module):
             self.q_norm = None
             self.k_norm = None
 
-        self.rope = RotaryEmbedding(dim=cfg.position_encoding.rotary_dim, theta=cfg.position_encoding.theta)
+        self.rope = RotaryEmbedding(
+            dim=cfg.position_encoding.rotary_dim,
+            theta=cfg.position_encoding.theta,
+            initial_scaling=cfg.position_encoding.initial_scaling,
+        )
 
     def forward(
         self,
