@@ -10,11 +10,11 @@ status.
 
 ## Candidate commit reviewed
 
-Working state as of this review: local commits `232b775` and `89bbb76` on
-top of the pre-existing `a991db7`, plus the fix-cycle changes described
-below, committed as the final candidate at `PENDING_CANDIDATE_COMMIT`
-(filled in immediately before push -- see final commit hash in
-`docs/phases/phase-0-foundation.md`).
+Commits `232b775` and `89bbb76` (initial Phase 0 implementation) plus the
+fix-cycle changes described below, committed as the final Phase 0 candidate
+at `88b4ed452dd477849b4041137130f52cc814fb5b`, on top of the pre-existing
+`a991db7`. Pushed to `github.com/Cinqic/Juniper-Auto` `main`; see
+`docs/phases/phase-0-foundation.md` for the full commit and CI record.
 
 ## Date
 
@@ -211,14 +211,15 @@ After these fixes: **80 tests pass** (up from 69), and all 10
 ## Recovery result (post-fix)
 
 Re-ran the isolated fresh-clone/fresh-venv recovery exercise after the
-fix-cycle changes above (since `foundation/probe.py` changed). Same
-procedure as the first run (see
+fix-cycle changes above (since `foundation/probe.py` changed), and after
+the candidate commit was actually pushed -- this second run cloned directly
+from `https://github.com/Cinqic/Juniper-Auto.git` (the real canonical
+remote), not a local path, which is strictly stronger evidence than the
+first run. Full procedure and result recorded in
 [docs/phases/phase-0-foundation.md](phase-0-foundation.md), "Recovery
-status"): fresh `git clone` into an isolated scratch directory, fresh
-`venv`, `pip install -r requirements-lock.txt`, `pip install -e .
---no-deps`, `python scripts/validate_repo.py --all`. Result: **all gates
-passed**, 80/80 tests passed, foundation-probe checksum identical to the
-primary checkout's value under the same seed.
+status", Run 2: **all 10 gates passed**, 80/80 tests passed,
+foundation-probe checksum identical to Run 1 and to the primary FLOWBOX
+checkout under the same seed.
 
 ## Final local validation result
 
@@ -229,8 +230,13 @@ deterministic foundation probe, pytest suite -- 80 tests).
 
 ## Final remote CI result
 
-Recorded in [docs/phases/phase-0-foundation.md](phase-0-foundation.md), "CI
-workflow / run", after the candidate commit is pushed.
+**Success.** Workflow `Phase 0 Validation`, run
+[32875766794](https://github.com/Cinqic/Juniper-Auto/actions/runs/32875766794),
+`headSha=88b4ed452dd477849b4041137130f52cc814fb5b` (the exact candidate
+commit), conclusion `success`, all steps green, 1m47s, GitHub-hosted
+`ubuntu-latest`. Full detail in
+[docs/phases/phase-0-foundation.md](phase-0-foundation.md), "CI workflow /
+run".
 
 ## Remaining limitations
 
@@ -254,16 +260,18 @@ workflow / run", after the candidate commit is pushed.
   [ADR-0004](../adr/0004-dependency-locking-approach.md); CI's "static
   checks where adopted" gate is currently limited to a lock-file/
   `pyproject.toml` consistency check.
-- `docs/adr/`, `experiments/registry.yaml`, and time-accounting values with
-  `PENDING_CANDIDATE_COMMIT`/similar placeholders are updated with real
-  values as the very last step before push -- see
-  [docs/phases/phase-0-foundation.md](phase-0-foundation.md) for the final
-  values.
-
 ## Final candidate commit
 
-See [docs/phases/phase-0-foundation.md](phase-0-foundation.md), "Final
-commit".
+`88b4ed452dd477849b4041137130f52cc814fb5b`. See
+[docs/phases/phase-0-foundation.md](phase-0-foundation.md), "Final commit"
+and "CI workflow / run", for the full commit and CI record. This self-review
+report and `experiments/registry.yaml`'s `git_commit` fields were updated
+to this hash in a small follow-up commit after the candidate above was
+pushed and its CI run verified (a commit cannot contain its own hash, so
+this two-step sequence -- substantive candidate, then a metadata-only
+commit recording that candidate's already-verified hash -- is the only way
+to record it accurately; the follow-up commit was itself pushed and
+CI-verified in turn).
 
 ---
 

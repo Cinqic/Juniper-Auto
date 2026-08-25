@@ -25,8 +25,11 @@ reconnaissance before any Phase 0 file was written.
 
 ## Final commit
 
-`PENDING_CANDIDATE_COMMIT` -- filled in at the end of this engineering
-session, immediately before push. See "Approval status" below.
+`88b4ed452dd477849b4041137130f52cc814fb5b` -- pushed to
+`github.com/Cinqic/Juniper-Auto` `main` as a fast-forward
+(`a991db7..88b4ed4`). This is the Sonnet Phase 0 candidate commit. See
+"Approval status" below -- it is a candidate, not yet independently
+approved.
 
 ## Implementation summary
 
@@ -126,35 +129,56 @@ Not applicable.
 ## CI workflow / run
 
 Workflow: `Phase 0 Validation` (`.github/workflows/phase-0-validation.yml`).
-Run ID, commit tested, and conclusion: `PENDING_CI_VERIFICATION` -- filled
-in after the candidate commit is pushed and CI completes.
+
+| Field | Value |
+|---|---|
+| Run ID | [32875766794](https://github.com/Cinqic/Juniper-Auto/actions/runs/32875766794) |
+| Commit tested (`headSha`) | `88b4ed452dd477849b4041137130f52cc814fb5b` (exact candidate commit) |
+| Status | `completed` |
+| Conclusion | `success` |
+| Duration | 1m47s |
+| Runner | GitHub-hosted `ubuntu-latest`, CPU-only |
+
+All CI steps passed: checkout, Python 3.12 setup, venv creation, locked
+dependency install, editable package install, the lock/pyproject
+consistency check, and the full `scripts/validate_repo.py --all` run (all
+10 gates, 80 tests).
 
 ## Recovery status
 
-**PASSED.** An isolated fresh-clone/fresh-venv recovery exercise was
-executed during this engineering session (not merely described):
+**PASSED, twice.** Two isolated fresh-clone/fresh-venv recovery exercises
+were executed during this engineering session (not merely described):
 
-1. `git clone --no-local` of the local repository (containing the Phase 0
-   candidate commits) into an isolated scratch directory sharing no state
-   (no `.venv`, no caches, no untracked files) with the working checkout.
-2. `python3 -m venv .venv` + `python -m ensurepip --upgrade` + `pip install
-   --upgrade pip` inside the fresh clone.
-3. `pip install -r requirements-lock.txt` (hash-verified install of all 44
+**Run 1** (before the self-review fix cycle, `git clone --no-local` from
+the local repository into an isolated scratch directory sharing no state --
+no `.venv`, no caches, no untracked files -- with the working checkout):
+all 10 gates passed, 69/69 tests, foundation-probe checksum
+`-42.402915954589844` under `seed=1234` on CPU.
+
+**Run 2** (after the self-review fix cycle, and after the candidate commit
+`88b4ed452dd477849b4041137130f52cc814fb5b` was actually pushed): `git clone
+https://github.com/Cinqic/Juniper-Auto.git` -- a genuine clone from the
+real GitHub remote, not a local path -- into a fresh scratch directory,
+then:
+
+1. `python3 -m venv .venv` + `python -m ensurepip --upgrade` + `pip install
+   --upgrade pip`.
+2. `pip install -r requirements-lock.txt` (hash-verified install of all 44
    pinned dependencies, including `torch`).
-4. `pip install -e . --no-deps`.
-5. `python scripts/validate_repo.py --all`.
+3. `pip install -e . --no-deps`.
+4. `python scripts/validate_repo.py --all`.
 
-Result: all 10 validation gates passed, including the full 69-test pytest
-suite and the deterministic foundation probe (`checksum=-42.402915954589844`
-under `seed=1234` on CPU -- identical to the value produced in the primary
-FLOWBOX checkout, additional cross-process determinism evidence).
+Result: all 10 validation gates passed, 80/80 tests, foundation-probe
+checksum `-42.402915954589844` under `seed=1234` on CPU -- identical to
+Run 1 and to the primary FLOWBOX checkout, additional cross-process
+determinism evidence.
 
-This is accurately an isolated fresh-clone/fresh-environment exercise on
-the same physical machine (FLOWBOX), not a literal from-scratch OS
+Both runs are accurately isolated fresh-clone/fresh-environment exercises
+on the same physical machine (FLOWBOX), not a literal from-scratch OS
 reinstallation -- see "Accepted limitations" below. GitHub Actions CI
-(`.github/workflows/phase-0-validation.yml`) separately validates on a
+(`.github/workflows/phase-0-validation.yml`) separately validated on a
 genuinely different, GitHub-hosted, CPU-only Linux machine; see "CI
-workflow / run" for that result once the candidate is pushed.
+workflow / run" above for that result.
 
 ## Engineering hours
 

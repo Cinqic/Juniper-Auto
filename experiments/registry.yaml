@@ -10,7 +10,7 @@
     counts specified in the research charter (150,031,360 total /
     79,252,480 standard active for the sparse model; 79,191,040 for the
     dense control) when counted programmatically rather than transcribed.
-  git_commit: PENDING_CANDIDATE_COMMIT
+  git_commit: 88b4ed452dd477849b4041137130f52cc814fb5b
   architecture_id: ja150m-v0.1, ja150m-v0.1-dense
   tokenizer_id: not-yet-created
   dataset_id: not-yet-created
@@ -41,7 +41,7 @@
     different output under a different seed, proving the seed framework in
     juniper_auto.util.seed actually has an effect and that determinism can
     be checked mechanically before any real model exists.
-  git_commit: PENDING_CANDIDATE_COMMIT
+  git_commit: 88b4ed452dd477849b4041137130f52cc814fb5b
   architecture_id: ja150m-v0.1
   tokenizer_id: not-yet-created
   dataset_id: not-yet-created
