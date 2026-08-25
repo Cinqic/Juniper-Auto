@@ -238,7 +238,7 @@ testing something.
 Confirmed weight tying survives a `state_dict` save/load round trip via
 object-identity re-verification after load, not just value equality
 (`tests/test_model_serialization.py`). Scanned every new Phase 1 file for
-absolute host-specific paths (`/home/cinqic`, etc.): none found outside
+absolute host-specific home-directory paths: none found outside
 the already-permitted Phase 0 exceptions. Confirmed no hidden local
 files, cache dependence, or undocumented environment-variable requirement
 was introduced by the training/profiling code (it only touches
