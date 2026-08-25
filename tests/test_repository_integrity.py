@@ -47,3 +47,17 @@ def test_gitignore_covers_venv_and_caches(repo_root):
 def test_no_env_files_present_in_tree(repo_root):
     tracked = _tracked_files(repo_root)
     assert not any(f == ".env" or f.endswith("/.env") for f in tracked)
+
+
+def test_no_unexpectedly_large_tracked_files(repo_root):
+    """Defense-in-depth against an accidentally committed dataset or
+    checkpoint that doesn't match a known extension pattern: no tracked
+    file should exceed 1 MB in Phase 0 (every legitimate Phase 0 artifact --
+    docs, configs, code, the dependency lock -- is far smaller than this)."""
+    tracked = _tracked_files(repo_root)
+    oversized = []
+    for f in tracked:
+        full = repo_root / f
+        if full.is_file() and full.stat().st_size > 1_000_000:
+            oversized.append((f, full.stat().st_size))
+    assert not oversized, f"unexpectedly large tracked files (>1MB): {oversized}"

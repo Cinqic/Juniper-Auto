@@ -26,7 +26,9 @@ import torch.nn as nn
 
 from juniper_auto.config.schema import ArchitectureConfig
 from juniper_auto.util.environment import EnvironmentIdentity, describe_environment
+from juniper_auto.util.logging import LogContext, current_git_commit, get_logger, log_event
 from juniper_auto.util.seed import SeedReport, apply_seed
+import logging as _logging
 
 
 @dataclass(frozen=True)
@@ -68,11 +70,26 @@ def run_foundation_probe(
     whose `output_checksum` is expected to be identical across runs with the
     same seed, device, and PyTorch/CUDA version (see
     juniper_auto.util.seed for the determinism caveats)."""
+    logger = get_logger("juniper_auto.foundation.probe")
     seed_report = apply_seed(seed)
     env = describe_environment()
 
     resolved_device = device or ("cuda" if env.cuda_available else "cpu")
     torch_device = torch.device(resolved_device)
+
+    log_event(
+        logger,
+        _logging.INFO,
+        "foundation_probe.start",
+        LogContext(
+            phase="phase-0",
+            git_commit=current_git_commit(),
+            architecture_id=cfg.architecture_id,
+            seed=seed,
+            env_id=env.short_id(),
+            extra={"device": resolved_device},
+        ),
+    )
 
     model = FoundationProbe(cfg.core.d_model).to(torch_device)
     model.eval()
@@ -82,6 +99,20 @@ def run_foundation_probe(
         y = model(x)
 
     checksum = float(y.sum().item())
+
+    log_event(
+        logger,
+        _logging.INFO,
+        "foundation_probe.complete",
+        LogContext(
+            phase="phase-0",
+            git_commit=current_git_commit(),
+            architecture_id=cfg.architecture_id,
+            seed=seed,
+            env_id=env.short_id(),
+            extra={"device": resolved_device, "output_checksum": checksum},
+        ),
+    )
 
     return FoundationProbeResult(
         seed_report=seed_report,

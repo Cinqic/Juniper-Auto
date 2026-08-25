@@ -57,9 +57,3 @@ def describe_environment() -> EnvironmentIdentity:
         cuda_device_name=device_name,
         cuda_driver_version=driver_version,
     )
-
-
-def is_ci() -> bool:
-    import os
-
-    return os.environ.get("CI", "").lower() in ("1", "true", "yes")
