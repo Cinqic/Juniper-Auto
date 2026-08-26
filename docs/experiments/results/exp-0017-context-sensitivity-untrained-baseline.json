@@ -1,0 +1,140 @@
+{
+  "result_identity": "exp-0017-context-sensitivity-untrained-baseline",
+  "git_commit": "12e40ece3b89bd7a4877e301d380079be4793f94",
+  "git_worktree_clean": true,
+  "canonical_result": true,
+  "git_status_porcelain": [],
+  "architecture_configs": [
+    {
+      "architecture_id": "ja150m-v0.1",
+      "config_path": "configs/architecture/ja150m-v0.1.yaml",
+      "config_sha256": "2fd81b5a602e08d28bf3510911d02e9fa43f09af81ba2b9dbe6f9ff9285558e3"
+    }
+  ],
+  "environment": {
+    "python_version": "3.12.3",
+    "platform": "Linux-7.0.0-30-generic",
+    "torch_version": "2.13.0+cu130",
+    "cuda_available": true,
+    "cuda_device_name": "NVIDIA GeForce RTX 2060",
+    "cuda_driver_version": "13.0"
+  },
+  "command": "scripts/run_phase2_experiment.py context-sensitivity-baseline --output /tmp/claude-1000/-home-cinqic-Documents-Juniper-Auto/23ca7c2e-4efd-46af-ab52-c1c66ef94137/scratchpad/phase2_exp_final/exp-0017-context-sensitivity-untrained-baseline.json --n-contexts 8",
+  "seed": 0,
+  "experiment": "context-sensitivity-untrained-baseline",
+  "label": "ENGINEERING/PROXY TEST -- NOT SEMANTIC SPECIALIZATION EVIDENCE. Model is untrained (random init); these numbers describe an untrained router's response to different hidden-state inputs, not learned context-aware routing.",
+  "architecture_id": "ja150m-v0.1",
+  "probe_token_id": 100,
+  "n_contexts": 8,
+  "metrics_by_moe_layer": {
+    "2": {
+      "top1_change_rate": 0.7857142857142857,
+      "exact_topk_change_rate": 1.0,
+      "pair_change_rate": 1.0,
+      "mean_entropy_difference": 0.0120954087802342,
+      "mean_js_divergence": 0.02685997066354113
+    },
+    "3": {
+      "top1_change_rate": 0.6785714285714286,
+      "exact_topk_change_rate": 0.9285714285714286,
+      "pair_change_rate": 0.9285714285714286,
+      "mean_entropy_difference": 0.04661648188318525,
+      "mean_js_divergence": 0.025344076799228787
+    },
+    "4": {
+      "top1_change_rate": 0.75,
+      "exact_topk_change_rate": 0.8928571428571429,
+      "pair_change_rate": 0.8928571428571429,
+      "mean_entropy_difference": 0.03614720276423863,
+      "mean_js_divergence": 0.02781976736150682
+    },
+    "6": {
+      "top1_change_rate": 0.8571428571428571,
+      "exact_topk_change_rate": 0.9642857142857143,
+      "pair_change_rate": 0.9642857142857143,
+      "mean_entropy_difference": 0.03775513172149658,
+      "mean_js_divergence": 0.0324649595921593
+    },
+    "7": {
+      "top1_change_rate": 0.8571428571428571,
+      "exact_topk_change_rate": 0.9285714285714286,
+      "pair_change_rate": 0.9285714285714286,
+      "mean_entropy_difference": 0.10879901051521301,
+      "mean_js_divergence": 0.059528459262635024
+    },
+    "8": {
+      "top1_change_rate": 0.9285714285714286,
+      "exact_topk_change_rate": 1.0,
+      "pair_change_rate": 1.0,
+      "mean_entropy_difference": 0.044227970497948785,
+      "mean_js_divergence": 0.0438594668438392
+    },
+    "9": {
+      "top1_change_rate": 0.6428571428571429,
+      "exact_topk_change_rate": 0.9642857142857143,
+      "pair_change_rate": 0.9642857142857143,
+      "mean_entropy_difference": 0.04192844458988735,
+      "mean_js_divergence": 0.03851081544001188
+    },
+    "11": {
+      "top1_change_rate": 0.9285714285714286,
+      "exact_topk_change_rate": 1.0,
+      "pair_change_rate": 1.0,
+      "mean_entropy_difference": 0.10200075166566032,
+      "mean_js_divergence": 0.05556225563798632
+    },
+    "12": {
+      "top1_change_rate": 0.9642857142857143,
+      "exact_topk_change_rate": 0.9642857142857143,
+      "pair_change_rate": 0.9642857142857143,
+      "mean_entropy_difference": 0.07603794762066432,
+      "mean_js_divergence": 0.0494480145030788
+    },
+    "13": {
+      "top1_change_rate": 0.9285714285714286,
+      "exact_topk_change_rate": 0.9642857142857143,
+      "pair_change_rate": 0.9642857142857143,
+      "mean_entropy_difference": 0.050200968980789185,
+      "mean_js_divergence": 0.038982401069785864
+    },
+    "14": {
+      "top1_change_rate": 0.9285714285714286,
+      "exact_topk_change_rate": 0.9642857142857143,
+      "pair_change_rate": 0.9642857142857143,
+      "mean_entropy_difference": 0.0746634134224483,
+      "mean_js_divergence": 0.04937637510842511
+    },
+    "16": {
+      "top1_change_rate": 0.7142857142857143,
+      "exact_topk_change_rate": 0.8928571428571429,
+      "pair_change_rate": 0.8928571428571429,
+      "mean_entropy_difference": 0.04064611877713885,
+      "mean_js_divergence": 0.0313135282402592
+    },
+    "17": {
+      "top1_change_rate": 0.6428571428571429,
+      "exact_topk_change_rate": 0.9642857142857143,
+      "pair_change_rate": 0.9642857142857143,
+      "mean_entropy_difference": 0.07774802190916878,
+      "mean_js_divergence": 0.04103675517918808
+    },
+    "18": {
+      "top1_change_rate": 0.8928571428571429,
+      "exact_topk_change_rate": 0.9642857142857143,
+      "pair_change_rate": 0.9642857142857143,
+      "mean_entropy_difference": 0.04850958074842181,
+      "mean_js_divergence": 0.03589966879891498
+    },
+    "19": {
+      "top1_change_rate": 0.9285714285714286,
+      "exact_topk_change_rate": 1.0,
+      "pair_change_rate": 1.0,
+      "mean_entropy_difference": 0.037271474088941305,
+      "mean_js_divergence": 0.031511436349579265
+    }
+  },
+  "gate": {
+    "harness_must_run_without_error_on_official_model": true
+  },
+  "gate_passed": true
+}

@@ -35,6 +35,21 @@ reference_model_implementation:
     instruction_checkpoint below remain not-yet-created, and no language
     capability is claimed.
 
+moe_routing_and_diagnostics_infrastructure:
+  id: ja150m-v0.1-moe-routing-diagnostics
+  status: frozen
+  location: juniper_auto/model/routing.py, juniper_auto/model/moe_dispatch.py, juniper_auto/model/moe_ablations.py, juniper_auto/model/moe_diagnostics.py, juniper_auto/model/moe.py, juniper_auto/analysis/
+  notes: >
+    Phase 2 sparse-routing/dispatch/diagnostics/ablation/context-sensitivity
+    infrastructure, hash-tracked via manifests/phase-2-artifact-hashes.yaml.
+    Two dispatch backends exist (reference, optimized); per
+    docs/adr/0009-moe-dispatch-backend-selection.md, MoELayer's default
+    remains "reference". This is engineering/measurement infrastructure
+    for a still-untrained model, not evidence of learned expert
+    specialization -- see docs/phases/phase-2-moe.md for what has and has
+    not been demonstrated. Pending GPT-5.6 Sol independent review; no
+    phase-2-moe approval tag exists yet.
+
 checkpoint_format:
   id: juniper-auto-checkpoint-v1
   status: frozen

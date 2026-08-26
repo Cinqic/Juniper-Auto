@@ -1,0 +1,306 @@
+{
+  "result_identity": "exp-0015-moe-reference-optimized-equivalence",
+  "git_commit": "12e40ece3b89bd7a4877e301d380079be4793f94",
+  "git_worktree_clean": true,
+  "canonical_result": true,
+  "git_status_porcelain": [],
+  "architecture_configs": [
+    {
+      "architecture_id": "ja150m-v0.1",
+      "config_path": "configs/architecture/ja150m-v0.1.yaml",
+      "config_sha256": "2fd81b5a602e08d28bf3510911d02e9fa43f09af81ba2b9dbe6f9ff9285558e3"
+    }
+  ],
+  "environment": {
+    "python_version": "3.12.3",
+    "platform": "Linux-7.0.0-30-generic",
+    "torch_version": "2.13.0+cu130",
+    "cuda_available": true,
+    "cuda_device_name": "NVIDIA GeForce RTX 2060",
+    "cuda_driver_version": "13.0"
+  },
+  "command": "scripts/run_phase2_experiment.py equivalence --output /tmp/claude-1000/-home-cinqic-Documents-Juniper-Auto/23ca7c2e-4efd-46af-ab52-c1c66ef94137/scratchpad/phase2_exp_final/exp-0015-moe-reference-optimized-equivalence.json --n-cases 30",
+  "seed": 0,
+  "experiment": "reference-vs-optimized-moe-equivalence",
+  "architecture_id": "ja150m-v0.1",
+  "device": "cpu",
+  "n_cases": 30,
+  "cases": [
+    {
+      "seed": 0,
+      "batch": 2,
+      "seq_len": 64,
+      "routing_identical": true,
+      "max_abs_output_diff": 8.381903171539307e-09,
+      "load_balance_loss_identical": true,
+      "router_z_loss_identical": true
+    },
+    {
+      "seed": 1,
+      "batch": 2,
+      "seq_len": 64,
+      "routing_identical": true,
+      "max_abs_output_diff": 9.313225746154785e-09,
+      "load_balance_loss_identical": true,
+      "router_z_loss_identical": true
+    },
+    {
+      "seed": 2,
+      "batch": 2,
+      "seq_len": 64,
+      "routing_identical": true,
+      "max_abs_output_diff": 9.953510016202927e-09,
+      "load_balance_loss_identical": true,
+      "router_z_loss_identical": true
+    },
+    {
+      "seed": 3,
+      "batch": 2,
+      "seq_len": 64,
+      "routing_identical": true,
+      "max_abs_output_diff": 9.313225746154785e-09,
+      "load_balance_loss_identical": true,
+      "router_z_loss_identical": true
+    },
+    {
+      "seed": 4,
+      "batch": 2,
+      "seq_len": 64,
+      "routing_identical": true,
+      "max_abs_output_diff": 1.1175870895385742e-08,
+      "load_balance_loss_identical": true,
+      "router_z_loss_identical": true
+    },
+    {
+      "seed": 5,
+      "batch": 2,
+      "seq_len": 64,
+      "routing_identical": true,
+      "max_abs_output_diff": 9.778887033462524e-09,
+      "load_balance_loss_identical": true,
+      "router_z_loss_identical": true
+    },
+    {
+      "seed": 6,
+      "batch": 2,
+      "seq_len": 64,
+      "routing_identical": true,
+      "max_abs_output_diff": 0.0,
+      "load_balance_loss_identical": true,
+      "router_z_loss_identical": true
+    },
+    {
+      "seed": 7,
+      "batch": 2,
+      "seq_len": 64,
+      "routing_identical": true,
+      "max_abs_output_diff": 7.450580596923828e-09,
+      "load_balance_loss_identical": true,
+      "router_z_loss_identical": true
+    },
+    {
+      "seed": 8,
+      "batch": 2,
+      "seq_len": 64,
+      "routing_identical": true,
+      "max_abs_output_diff": 1.1175870895385742e-08,
+      "load_balance_loss_identical": true,
+      "router_z_loss_identical": true
+    },
+    {
+      "seed": 9,
+      "batch": 2,
+      "seq_len": 64,
+      "routing_identical": true,
+      "max_abs_output_diff": 8.381903171539307e-09,
+      "load_balance_loss_identical": true,
+      "router_z_loss_identical": true
+    },
+    {
+      "seed": 10,
+      "batch": 2,
+      "seq_len": 64,
+      "routing_identical": true,
+      "max_abs_output_diff": 1.0244548320770264e-08,
+      "load_balance_loss_identical": true,
+      "router_z_loss_identical": true
+    },
+    {
+      "seed": 11,
+      "batch": 2,
+      "seq_len": 64,
+      "routing_identical": true,
+      "max_abs_output_diff": 1.1175870895385742e-08,
+      "load_balance_loss_identical": true,
+      "router_z_loss_identical": true
+    },
+    {
+      "seed": 12,
+      "batch": 2,
+      "seq_len": 64,
+      "routing_identical": true,
+      "max_abs_output_diff": 1.1175870895385742e-08,
+      "load_balance_loss_identical": true,
+      "router_z_loss_identical": true
+    },
+    {
+      "seed": 13,
+      "batch": 2,
+      "seq_len": 64,
+      "routing_identical": true,
+      "max_abs_output_diff": 7.450580596923828e-09,
+      "load_balance_loss_identical": true,
+      "router_z_loss_identical": true
+    },
+    {
+      "seed": 14,
+      "batch": 2,
+      "seq_len": 64,
+      "routing_identical": true,
+      "max_abs_output_diff": 9.313225746154785e-09,
+      "load_balance_loss_identical": true,
+      "router_z_loss_identical": true
+    },
+    {
+      "seed": 15,
+      "batch": 2,
+      "seq_len": 64,
+      "routing_identical": true,
+      "max_abs_output_diff": 1.210719347000122e-08,
+      "load_balance_loss_identical": true,
+      "router_z_loss_identical": true
+    },
+    {
+      "seed": 16,
+      "batch": 2,
+      "seq_len": 64,
+      "routing_identical": true,
+      "max_abs_output_diff": 9.313225746154785e-09,
+      "load_balance_loss_identical": true,
+      "router_z_loss_identical": true
+    },
+    {
+      "seed": 17,
+      "batch": 2,
+      "seq_len": 64,
+      "routing_identical": true,
+      "max_abs_output_diff": 9.313225746154785e-09,
+      "load_balance_loss_identical": true,
+      "router_z_loss_identical": true
+    },
+    {
+      "seed": 18,
+      "batch": 2,
+      "seq_len": 64,
+      "routing_identical": true,
+      "max_abs_output_diff": 7.450580596923828e-09,
+      "load_balance_loss_identical": true,
+      "router_z_loss_identical": true
+    },
+    {
+      "seed": 19,
+      "batch": 2,
+      "seq_len": 64,
+      "routing_identical": true,
+      "max_abs_output_diff": 7.450580596923828e-09,
+      "load_balance_loss_identical": true,
+      "router_z_loss_identical": true
+    },
+    {
+      "seed": 20,
+      "batch": 2,
+      "seq_len": 64,
+      "routing_identical": true,
+      "max_abs_output_diff": 6.05359673500061e-09,
+      "load_balance_loss_identical": true,
+      "router_z_loss_identical": true
+    },
+    {
+      "seed": 21,
+      "batch": 2,
+      "seq_len": 64,
+      "routing_identical": true,
+      "max_abs_output_diff": 5.820766091346741e-09,
+      "load_balance_loss_identical": true,
+      "router_z_loss_identical": true
+    },
+    {
+      "seed": 22,
+      "batch": 2,
+      "seq_len": 64,
+      "routing_identical": true,
+      "max_abs_output_diff": 7.450580596923828e-09,
+      "load_balance_loss_identical": true,
+      "router_z_loss_identical": true
+    },
+    {
+      "seed": 23,
+      "batch": 2,
+      "seq_len": 64,
+      "routing_identical": true,
+      "max_abs_output_diff": 1.0244548320770264e-08,
+      "load_balance_loss_identical": true,
+      "router_z_loss_identical": true
+    },
+    {
+      "seed": 24,
+      "batch": 2,
+      "seq_len": 64,
+      "routing_identical": true,
+      "max_abs_output_diff": 7.450580596923828e-09,
+      "load_balance_loss_identical": true,
+      "router_z_loss_identical": true
+    },
+    {
+      "seed": 25,
+      "batch": 2,
+      "seq_len": 64,
+      "routing_identical": true,
+      "max_abs_output_diff": 9.313225746154785e-09,
+      "load_balance_loss_identical": true,
+      "router_z_loss_identical": true
+    },
+    {
+      "seed": 26,
+      "batch": 2,
+      "seq_len": 64,
+      "routing_identical": true,
+      "max_abs_output_diff": 0.0,
+      "load_balance_loss_identical": true,
+      "router_z_loss_identical": true
+    },
+    {
+      "seed": 27,
+      "batch": 2,
+      "seq_len": 64,
+      "routing_identical": true,
+      "max_abs_output_diff": 7.450580596923828e-09,
+      "load_balance_loss_identical": true,
+      "router_z_loss_identical": true
+    },
+    {
+      "seed": 28,
+      "batch": 2,
+      "seq_len": 64,
+      "routing_identical": true,
+      "max_abs_output_diff": 6.51925802230835e-09,
+      "load_balance_loss_identical": true,
+      "router_z_loss_identical": true
+    },
+    {
+      "seed": 29,
+      "batch": 2,
+      "seq_len": 64,
+      "routing_identical": true,
+      "max_abs_output_diff": 7.916241884231567e-09,
+      "load_balance_loss_identical": true,
+      "router_z_loss_identical": true
+    }
+  ],
+  "max_abs_output_diff_across_all_cases": 1.210719347000122e-08,
+  "gate": {
+    "routing_must_be_identical": true,
+    "max_abs_output_diff_tolerance": 0.0001
+  },
+  "gate_passed": true
+}

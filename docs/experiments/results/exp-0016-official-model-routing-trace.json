@@ -1,0 +1,36 @@
+{
+  "result_identity": "exp-0016-official-model-routing-trace",
+  "git_commit": "12e40ece3b89bd7a4877e301d380079be4793f94",
+  "git_worktree_clean": true,
+  "canonical_result": true,
+  "git_status_porcelain": [],
+  "architecture_configs": [
+    {
+      "architecture_id": "ja150m-v0.1",
+      "config_path": "configs/architecture/ja150m-v0.1.yaml",
+      "config_sha256": "2fd81b5a602e08d28bf3510911d02e9fa43f09af81ba2b9dbe6f9ff9285558e3"
+    }
+  ],
+  "environment": {
+    "python_version": "3.12.3",
+    "platform": "Linux-7.0.0-30-generic",
+    "torch_version": "2.13.0+cu130",
+    "cuda_available": true,
+    "cuda_device_name": "NVIDIA GeForce RTX 2060",
+    "cuda_driver_version": "13.0"
+  },
+  "command": "scripts/run_phase2_experiment.py routing-trace --output /tmp/claude-1000/-home-cinqic-Documents-Juniper-Auto/23ca7c2e-4efd-46af-ab52-c1c66ef94137/scratchpad/phase2_exp_final/exp-0016-official-model-routing-trace.json",
+  "seed": 0,
+  "experiment": "official-model-routing-trace",
+  "architecture_id": "ja150m-v0.1",
+  "batch": 2,
+  "seq_len": 16,
+  "n_moe_layers": 15,
+  "n_trace_records": 480,
+  "expected_trace_records": 480,
+  "trace_artifact": "/tmp/claude-1000/-home-cinqic-Documents-Juniper-Auto/23ca7c2e-4efd-46af-ab52-c1c66ef94137/scratchpad/phase2_exp_final/exp-0016-official-model-routing-trace.trace.json",
+  "gate": {
+    "n_trace_records_must_equal_expected": true
+  },
+  "gate_passed": true
+}

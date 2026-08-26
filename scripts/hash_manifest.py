@@ -3,14 +3,17 @@
 
     python scripts/hash_manifest.py --phase 0   # manifests/phase-0-artifact-hashes.yaml (default)
     python scripts/hash_manifest.py --phase 1   # manifests/phase-1-artifact-hashes.yaml
+    python scripts/hash_manifest.py --phase 2   # manifests/phase-2-artifact-hashes.yaml
 
 Run this whenever a hashed artifact for that phase changes, then commit
 the regenerated manifest in the same change. scripts/validate_repo.py's
-(Phase 0) and scripts/validate_phase1.py's (Phase 1) "artifact hashes"
-gates fail if a manifest goes stale relative to the actual files. For
-Phase 1, run scripts/generate_phase1_test_manifest.py first if a Phase 1
-test file changed -- that manifest is itself one of Phase 1's hashed
-artifacts.
+(Phase 0), scripts/validate_phase1.py's (Phase 1), and
+scripts/validate_phase2.py's (Phase 2) "artifact hashes" gates fail if a
+manifest goes stale relative to the actual files. For Phase 1, run
+scripts/generate_phase1_test_manifest.py first if a Phase 1 test file
+changed; for Phase 2, run scripts/generate_phase2_test_manifest.py first if
+a Phase 2 test file changed -- each phase's test manifest is itself one of
+that phase's hashed artifacts.
 """
 
 from __future__ import annotations
@@ -27,12 +30,14 @@ import yaml  # noqa: E402
 from juniper_auto.util.hashing import (  # noqa: E402
     PHASE_0_HASHED_ARTIFACTS,
     PHASE_1_HASHED_ARTIFACTS,
+    PHASE_2_HASHED_ARTIFACTS,
     compute_hashes,
 )
 
 PHASES = {
     0: (PHASE_0_HASHED_ARTIFACTS, "manifests/phase-0-artifact-hashes.yaml", "Phase 0"),
     1: (PHASE_1_HASHED_ARTIFACTS, "manifests/phase-1-artifact-hashes.yaml", "Phase 1"),
+    2: (PHASE_2_HASHED_ARTIFACTS, "manifests/phase-2-artifact-hashes.yaml", "Phase 2"),
 }
 
 

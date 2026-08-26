@@ -1,0 +1,41 @@
+name: Phase 2 Validation
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch: {}
+
+jobs:
+  validate-phase2:
+    name: Validate Phase 2 (CPU-only, clean Linux runner)
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      - name: Create virtual environment
+        run: python -m venv .venv
+
+      - name: Install dependencies from locked requirements
+        run: |
+          source .venv/bin/activate
+          python -m pip install --upgrade pip
+          pip install -r requirements-lock.txt
+
+      - name: Install project package (editable, no re-resolve)
+        run: |
+          source .venv/bin/activate
+          pip install -e . --no-deps
+
+      - name: Run canonical Phase 2 validation (includes the Phase 0/Phase 1 baselines, frozen-architecture/parameter-count checks, reference/optimized MoE equivalence, dropless invariants, diagnostics/ablation/context-sensitivity smoke, reproducibility, full pytest suite, documentation/hash/experiment/time-accounting checks)
+        run: |
+          source .venv/bin/activate
+          python scripts/validate_phase2.py --all

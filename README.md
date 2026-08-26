@@ -1,11 +1,16 @@
 # Juniper Auto
 
-**Status: Phase 0 approved; Phase 1 approved; Phase 2 not started.** See
-the annotated tags `phase-0-foundation` and `phase-1-architecture`, plus
-the GPT-5.6 Sol
-[independent Phase 1 review](docs/phases/phase-1-sol-independent-review.md).
-**No model has been trained on real data, and no base or instruction-tuned
-checkpoint exists.**
+**Status: Phase 0 approved; Phase 1 approved; Phase 2 candidate complete,
+pending independent review.** See the annotated tags `phase-0-foundation`
+and `phase-1-architecture`, the GPT-5.6 Sol
+[independent Phase 1 review](docs/phases/phase-1-sol-independent-review.md),
+and the Phase 2 candidate report at
+[docs/phases/phase-2-moe.md](docs/phases/phase-2-moe.md) (approval status:
+`CANDIDATE - PENDING INDEPENDENT REVIEW` -- no `phase-2-moe` tag exists
+yet; that tag is reserved for GPT-5.6 Sol's independent approval). **No
+model has been trained on real data, no base or instruction-tuned
+checkpoint exists, no tokenizer or real pretraining corpus exists, and no
+expert specialization has been demonstrated.**
 
 Juniper Auto is a research project asking: how capable, efficient,
 autonomous, persistent, adaptable, reliable, and meaningfully
@@ -48,7 +53,56 @@ is the final intended license for trained model weights/datasets is an
 open governance item, not yet decided -- see the charter's License status
 section.
 
-## What exists right now (approved Phase 0 + Phase 1)
+## What exists right now (approved Phase 0 + Phase 1, Phase 2 candidate)
+
+### Phase 2 (candidate, pending independent review)
+
+Phase 2 validates the sparse MoE routing/dispatch machinery itself:
+correctness, droplessness, reproducibility, per-token inspectability,
+numerical stability, instrumentation, ablatability, and context-sensitivity
+measurement infrastructure -- see
+[docs/phases/phase-2-moe.md](docs/phases/phase-2-moe.md) for the full
+report and
+[docs/architecture/moe-routing-diagnostics.md](docs/architecture/moe-routing-diagnostics.md)
+for the implementation details. What was actually verified, with executed
+evidence:
+
+- The Phase 1 correctness-first reference dispatch is preserved bit-for-
+  bit for its default call, proven directly against a copy of `moe.py`
+  loaded from the immutable `phase-1-architecture` git tag.
+- A new pure-PyTorch optimized dispatch backend is numerically equivalent
+  to the reference backend (routing identical; output within 1e-5
+  tolerance on CPU, forward and backward) and measured 1.5x-2.6x faster
+  on FLOWBOX's RTX 2060 across five representative shapes with negligible
+  VRAM difference -- the reference backend remains `MoELayer`'s default
+  (see [ADR-0009](docs/adr/0009-moe-dispatch-backend-selection.md)).
+- Dropless routing invariants (every valid token gets exactly two unique
+  routed experts, weights sum to one, no token dropped) hold across 212
+  randomized (seed, shape, expert count, top_k, padding layout) cases.
+- Full per-token, per-MoE-layer routing traces work end to end on the
+  official architecture (480/480 expected records produced).
+- Extended router instrumentation (entropy, margins, expert-pair
+  co-activation, contribution norms, router-logit magnitude, window
+  aggregation) and six routing-health detectors, each validated against
+  synthetic healthy and pathological cases.
+- Six evaluation-only ablation modes (disable/replace/zero expert,
+  uniform/seeded-random router override), each proven exactly against
+  hand-computed expected outputs and proven not to leak into normal
+  inference.
+- A context-sensitivity probe harness, validated on synthetic hidden
+  states with known context-independent/partial/strong regimes.
+- 23 deliberate fault-injection tests proving the test suite is
+  load-bearing (would fail on the specific broken behavior each targets).
+
+**What Phase 2 explicitly does not claim:** no expert specialization,
+semantic routing, or context-aware routing has been demonstrated (no
+training has occurred); routing-health detector thresholds are engineering
+defaults validated only against synthetic cases, not tuned against any
+real training run; the optimized dispatch backend, though measured
+faster, is not the production default; CUDA determinism claims are not
+broadened beyond what Phase 1 already established. See
+[docs/phases/phase-2-moe.md](docs/phases/phase-2-moe.md)'s accepted
+limitations for the full list.
 
 ### Phase 1 (independently approved)
 
@@ -126,28 +180,30 @@ What Phase 0 actually builds:
 trained checkpoint (base or instruction-tuned), a runtime, tools, memory,
 or autonomy of any kind. Juniper Auto has **not** been trained on any real
 tokens, does not have 16K validated context, and does not have measured
-expert specialization. Phase 1 (above) implements the model architecture
-and training plumbing as executable software; production pretraining is a
-later phase.
+expert specialization. Phase 1 implements the model architecture and
+training plumbing as executable software; Phase 2 (above) validates the
+sparse routing subsystem specifically; production pretraining is a later
+phase.
 
 ## Repository layout
 
 ```
 configs/architecture/   frozen ja150m-v0.1 and ja150m-v0.1-dense configs
-juniper_auto/            config, accounting, foundation probe, util (Phase 0); model, training (Phase 1)
-juniper_auto/model/       reference model implementation (RMSNorm, RoPE, GQA, MoE, blocks, losses)
+juniper_auto/            config, accounting, foundation probe, util (Phase 0); model, training (Phase 1); analysis (Phase 2)
+juniper_auto/model/       reference model implementation (RMSNorm, RoPE, GQA, blocks, losses); MoE routing/dispatch/ablations/diagnostics (Phase 2)
 juniper_auto/training/    checkpointing, tiny-overfit harness, FLOWBOX profiling
+juniper_auto/analysis/    context-sensitivity probe harness (Phase 2)
 docs/research/          charter, governance
 docs/adr/                architecture decision records
-docs/architecture/       environment specification, precision policy, reference-model implementation
+docs/architecture/       environment specification, precision policy, reference-model implementation, MoE routing/diagnostics (Phase 2)
 docs/experiments/        experiment registry documentation + results (docs/experiments/results/)
 docs/time/                engineering time accounting
 docs/phases/              phase report template + phase reports
 docs/recovery/            clean-machine recovery procedure
-manifests/                frozen-artifact registry + artifact hashes (Phase 0 and Phase 1)
-scripts/                  validate_repo.py / validate_phase1.py (validators), hash_manifest.py, run_phase1_experiment.py
+manifests/                frozen-artifact registry + artifact hashes (Phase 0, Phase 1, Phase 2)
+scripts/                  validate_repo.py / validate_phase1.py / validate_phase2.py (validators), hash_manifest.py, run_phase1_experiment.py, run_phase2_experiment.py
 tests/                    pytest suite for everything above
-.github/workflows/        CI (Phase 0 Validation, Phase 1 Validation)
+.github/workflows/        CI (Phase 0 Validation, Phase 1 Validation, Phase 2 Validation)
 ```
 
 `runtime/`, `tools/`, `data/`, `evals/` exist as reserved top-level

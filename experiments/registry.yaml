@@ -430,3 +430,210 @@
     Host memory fields are lifetime peak RSS, not stage-local RSS.
   conclusion: Sparse practical execution and full supported context independently verified; reference dispatch remains much slower than dense.
   artifact_locations: docs/experiments/results/exp-0014-sol-flowbox-sparse-profile.json
+
+- experiment_id: exp-0015
+  date: "2026-08-26"
+  phase: phase-2
+  hypothesis: >
+    The Phase 2 pure-PyTorch optimized MoE dispatch backend (sort-and-group)
+    produces the exact same routing decisions and a numerically equivalent
+    output to the Phase 1 reference dispatch, on the official ja150m-v0.1
+    architecture's first MoE layer, across many randomized batches/padding
+    layouts.
+  git_commit: 12e40ece3b89bd7a4877e301d380079be4793f94
+  architecture_id: ja150m-v0.1
+  tokenizer_id: not-yet-created
+  dataset_id: not-applicable
+  sampler_id: not-applicable
+  starting_checkpoint: not-applicable
+  configuration: batch=2, seq_len=64, 30 randomized seeds/padding layouts; full configuration in artifact
+  seed: 0
+  environment: FLOWBOX CPU path, exact environment recorded in artifact
+  token_budget: not-applicable
+  status: completed
+  result: >
+    Gate passed across all 30 randomized cases: routing (topk_idx,
+    topk_weights) identical between reference and optimized backends in
+    every case (routing math is shared code, not duplicated per backend),
+    and maximum absolute output difference across all cases was
+    1.21e-08, far inside the 1e-4 tolerance gate.
+  conclusion: The optimized dispatch backend is numerically equivalent to the reference dispatch on the official architecture.
+  artifact_locations: docs/experiments/results/exp-0015-moe-reference-optimized-equivalence.json
+
+- experiment_id: exp-0016
+  date: "2026-08-26"
+  phase: phase-2
+  hypothesis: >
+    A full per-token, per-MoE-layer routing trace can be produced for the
+    official ja150m-v0.1 architecture, covering exactly every (layer,
+    token) pair with no lost records.
+  git_commit: 12e40ece3b89bd7a4877e301d380079be4793f94
+  architecture_id: ja150m-v0.1
+  tokenizer_id: not-yet-created
+  dataset_id: not-applicable
+  sampler_id: not-applicable
+  starting_checkpoint: not-applicable
+  configuration: batch=2, seq_len=16 (one row with trailing padding); full configuration in artifact
+  seed: 0
+  environment: FLOWBOX CPU path, exact environment recorded in artifact
+  token_budget: not-applicable
+  status: completed
+  result: >
+    Gate passed. 15 MoE layers x batch(2) x seq_len(16) = 480 expected
+    trace records; 480 produced, matching exactly. Exported to
+    docs/experiments/results/exp-0016-official-model-routing-trace.trace.json.
+  conclusion: Full per-token routing traceability works end to end on the official architecture.
+  artifact_locations: docs/experiments/results/exp-0016-official-model-routing-trace.json
+
+- experiment_id: exp-0017
+  date: "2026-08-26"
+  phase: phase-2
+  hypothesis: >
+    ENGINEERING/PROXY TEST, NOT SEMANTIC EVIDENCE: the context-sensitivity
+    probe harness runs end to end on the official untrained ja150m-v0.1
+    model and reports per-layer routing-change metrics for a repeated
+    token id embedded in different synthetic surrounding sequences.
+  git_commit: 12e40ece3b89bd7a4877e301d380079be4793f94
+  architecture_id: ja150m-v0.1
+  tokenizer_id: not-yet-created
+  dataset_id: not-applicable
+  sampler_id: not-applicable
+  starting_checkpoint: not-applicable
+  configuration: probe token id 100, 8 synthetic random surrounding contexts, seq_len 32; full configuration in artifact
+  seed: 0
+  environment: FLOWBOX CPU path, exact environment recorded in artifact
+  token_budget: not-applicable
+  status: completed
+  result: >
+    Gate passed (harness ran without error and returned metrics for all 15
+    MoE layers). top1_change_rate ranged 0.64-0.96 and mean_js_divergence
+    ranged 0.025-0.059 across layers. This is an untrained, randomly
+    initialized router's response to different hidden-state inputs at
+    initialization -- it is NOT evidence of learned context-aware or
+    semantic routing, since no training, tokenizer, or corpus exists yet.
+    High change rates here mainly reflect that an untrained router's
+    decision boundaries are effectively random with respect to any
+    structure in the (also synthetic/random) inputs.
+  conclusion: The probe harness is functional end to end on the official model; no specialization claim is made or supported.
+  artifact_locations: docs/experiments/results/exp-0017-context-sensitivity-untrained-baseline.json
+
+- experiment_id: exp-0018
+  date: "2026-08-26"
+  phase: phase-2
+  hypothesis: >
+    The routing-health detectors (dead/starved/dominant expert, routing
+    collapse, router saturation) fire on deliberately constructed
+    pathological synthetic statistics and do not fire on a constructed
+    healthy baseline.
+  git_commit: 12e40ece3b89bd7a4877e301d380079be4793f94
+  architecture_id: not-applicable
+  tokenizer_id: not-yet-created
+  dataset_id: not-applicable
+  sampler_id: not-applicable
+  starting_checkpoint: not-applicable
+  configuration: 5 synthetic load-share/entropy/margin/logit-magnitude cases; full configuration in artifact
+  seed: 0
+  environment: FLOWBOX CPU path, exact environment recorded in artifact
+  token_budget: not-applicable
+  status: completed
+  result: >
+    Gate passed. Healthy uniform shares produced zero detections across
+    every detector; the dead-expert, dominant-expert, collapse, and
+    saturation synthetic cases each fired exactly the intended detector
+    and no others.
+  conclusion: Routing-health detection infrastructure is measurable and validated against known cases, not vibes-based.
+  artifact_locations: docs/experiments/results/exp-0018-routing-health-detector-validation.json
+
+- experiment_id: exp-0019
+  date: "2026-08-26"
+  phase: phase-2
+  hypothesis: >
+    Every required MoE ablation mode (disable routed/shared expert,
+    replace expert, uniform router, seeded random router, zero expert
+    output), executed against the official ja150m-v0.1 architecture's
+    first MoE layer, changes the output relative to normal inference, is
+    reproducible across repeated identical calls, and never leaks into a
+    subsequent ablation=None call.
+  git_commit: 12e40ece3b89bd7a4877e301d380079be4793f94
+  architecture_id: ja150m-v0.1
+  tokenizer_id: not-yet-created
+  dataset_id: not-applicable
+  sampler_id: not-applicable
+  starting_checkpoint: not-applicable
+  configuration: batch=1, seq_len=12, 6 ablation modes; full configuration in artifact
+  seed: 0
+  environment: FLOWBOX CPU path, exact environment recorded in artifact
+  token_budget: not-applicable
+  status: completed
+  result: >
+    Gate passed for all 6 modes: each differed from the unmodified
+    forward call, each reproduced bit-exactly across two repeated calls
+    with the same ablation, and each left the following ablation=None
+    call byte-identical to a pre-ablation baseline call.
+  conclusion: Evaluation-only ablation controls are correct, reproducible, and isolated from normal inference on the official architecture.
+  artifact_locations: docs/experiments/results/exp-0019-ablation-validation.json
+
+- experiment_id: exp-0020
+  date: "2026-08-26"
+  phase: phase-2
+  hypothesis: >
+    Fixed input, fixed weights (seed=0), and identical CPU backend
+    reproduce router logits/probs/selection/weights, assignment counts,
+    entropy, and both raw auxiliary losses exactly, on the official
+    ja150m-v0.1 architecture's first MoE layer.
+  git_commit: 12e40ece3b89bd7a4877e301d380079be4793f94
+  architecture_id: ja150m-v0.1
+  tokenizer_id: not-yet-created
+  dataset_id: not-applicable
+  sampler_id: not-applicable
+  starting_checkpoint: not-applicable
+  configuration: batch=2, seq_len=16, seed=0, two independent model+layer constructions; full configuration in artifact
+  seed: 0
+  environment: FLOWBOX CPU path, exact environment recorded in artifact
+  token_budget: not-applicable
+  status: completed
+  result: >
+    Gate passed. topk_idx, topk_weights, assignment_counts_per_expert,
+    entropy, load_balance_loss_raw, and router_z_loss_raw were all exactly
+    identical (torch.equal) between two independent runs from the same
+    seed and config.
+  conclusion: Diagnostic reproducibility holds exactly under the stated fixed-input/fixed-weight/fixed-backend conditions.
+  artifact_locations: docs/experiments/results/exp-0020-reproducibility.json
+
+- experiment_id: exp-0021
+  date: "2026-08-26"
+  phase: phase-2
+  hypothesis: >
+    The optimized MoE dispatch backend is measurably faster than the
+    reference dispatch on FLOWBOX's RTX 2060, across a representative
+    range of prefill shapes, without a meaningful VRAM regression.
+  git_commit: 12e40ece3b89bd7a4877e301d380079be4793f94
+  architecture_id: ja150m-v0.1
+  tokenizer_id: not-yet-created
+  dataset_id: not-applicable
+  sampler_id: not-applicable
+  starting_checkpoint: not-applicable
+  configuration: batch/seq shapes (1,128) (1,512) (1,1024) (1,4096) (4,256), FP32, single MoE layer, 2 warmup + 5 measured iters per shape/backend; full configuration in artifact
+  seed: 0
+  environment: FLOWBOX RTX 2060, exact environment recorded in artifact
+  token_budget: not-applicable
+  status: completed
+  result: >
+    No pass/fail gate (descriptive profiling, matching Phase 1's profiling
+    experiments). Reference vs optimized prefill throughput: (1,128)
+    24,433 vs 64,601 tok/s; (1,512) 90,227 vs 234,947 tok/s; (1,1024)
+    160,596 vs 394,052 tok/s; (1,4096) 403,449 vs 609,353 tok/s; (4,256)
+    169,805 vs 398,566 tok/s. Peak VRAM difference was under 2 MB at every
+    shape (optimized backend allocates a same-order-of-magnitude number of
+    intermediate tensors). Optimized was faster at every measured shape,
+    by 1.5x-2.6x depending on shape.
+  conclusion: >
+    The optimized backend is a measured, non-cherry-picked win on real
+    FLOWBOX hardware across the full profiled shape range; per Phase 2
+    instructions section 6 this is legitimate evidence it MAY become the
+    normal implementation, but the reference dispatch is retained as
+    MoELayer's default (see docs/adr/0009-moe-dispatch-backend-selection.md)
+    to keep the correctness-oracle default decoupled from a performance
+    decision. Callers that want the measured speedup select
+    backend="optimized" explicitly.
+  artifact_locations: docs/experiments/results/exp-0021-flowbox-moe-dispatch-profile.json

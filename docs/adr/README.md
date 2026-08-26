@@ -41,3 +41,4 @@ Each ADR has:
 | [0006](0006-validation-and-recovery-strategy.md) | Validation and recovery strategy | accepted |
 | [0007](0007-router-jitter-policy-separation.md) | Separate router-jitter permission from experiment enablement | accepted |
 | [0008](0008-moe-auxiliary-loss-semantics.md) | MoE auxiliary-loss (load-balancing and router Z-loss) semantics | accepted |
+| [0009](0009-moe-dispatch-backend-selection.md) | MoE dispatch backend selection (reference default, optimized available) | accepted |

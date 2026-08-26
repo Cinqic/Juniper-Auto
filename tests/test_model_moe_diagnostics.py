@@ -190,6 +190,57 @@ def test_router_saturation_detector_fires_on_large_logits_or_large_margin():
     assert detect_router_saturation(mean_logit_abs=1.0, mean_top1_margin=0.999)
 
 
+def test_diagnostics_remain_finite_and_stable_under_large_magnitude_router_inputs():
+    # Phase 2 instructions section 17: deliberately test large-magnitude
+    # router inputs/logits and confirm saturation-related diagnostics stay
+    # numerically stable (no inf/nan from softmax overflow or entropy log(0)).
+    cfg = make_tiny_sparse_config(
+        n_routed_experts=6, top_k=2, d_model=8, expert_ffn_dim=8, n_query_heads=1, n_kv_heads=1, head_dim=8
+    )
+    layer = MoELayer(cfg)
+    torch.nn.init.normal_(layer.router.weight, std=50.0)  # deliberately large router weights
+    x = torch.randn(1, 12, cfg.core.d_model) * 1000.0  # deliberately large-magnitude hidden states
+
+    out, lb, z, diag = layer(x, valid_mask=torch.ones(1, 12, dtype=torch.bool), return_diagnostics=True)
+
+    assert torch.isfinite(out).all()
+    assert torch.isfinite(lb).all() and torch.isfinite(z).all()
+    assert torch.isfinite(diag.router_logits).all()
+    assert torch.isfinite(diag.router_probs).all()
+    torch.testing.assert_close(diag.router_probs.sum(dim=-1), torch.ones(12), atol=1e-4, rtol=1e-4)
+    assert torch.isfinite(diag.entropy).all() and (diag.entropy >= 0).all()
+    assert torch.isfinite(diag.normalized_entropy).all()
+    assert torch.isfinite(diag.top1_top2_prob_margin).all()
+    assert torch.isfinite(diag.top1_top2_logit_margin).all()
+    assert torch.isfinite(diag.router_logit_abs_mean).item()
+    assert torch.isfinite(diag.router_logit_rms).item()
+    assert torch.isfinite(diag.router_logit_abs_max).item()
+    # This case is expected to genuinely trip the saturation detector --
+    # confirms the detector is reachable from a real forward pass, not just
+    # from hand-fed synthetic scalars.
+    from juniper_auto.model.moe_diagnostics import detect_router_saturation
+
+    assert detect_router_saturation(
+        mean_logit_abs=diag.router_logit_abs_mean.item(),
+        mean_top1_margin=diag.top1_top2_prob_margin.mean().item(),
+    )
+
+
+def test_diagnostics_remain_finite_under_large_magnitude_inputs_with_padding():
+    cfg = make_tiny_sparse_config(
+        n_routed_experts=6, top_k=2, d_model=8, expert_ffn_dim=8, n_query_heads=1, n_kv_heads=1, head_dim=8
+    )
+    layer = MoELayer(cfg)
+    x = torch.randn(1, 10, cfg.core.d_model) * 5000.0
+    valid = torch.ones(1, 10, dtype=torch.bool)
+    valid[0, -4:] = False
+    out, lb, z, diag = layer(x, valid_mask=valid, return_diagnostics=True)
+    assert torch.isfinite(out).all()
+    assert torch.isfinite(lb).all() and torch.isfinite(z).all()
+    assert torch.isfinite(diag.shared_contribution_norm_mean).item()
+    assert torch.isfinite(diag.routed_contribution_norm_mean).item()
+
+
 def test_routing_oscillation_detector_measures_top1_change_rate():
     a = torch.tensor([[0, 1], [2, 3], [0, 2]])
     b_identical = a.clone()

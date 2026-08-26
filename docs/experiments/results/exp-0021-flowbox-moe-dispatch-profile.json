@@ -1,0 +1,123 @@
+{
+  "result_identity": "exp-0021-flowbox-moe-dispatch-profile",
+  "git_commit": "12e40ece3b89bd7a4877e301d380079be4793f94",
+  "git_worktree_clean": true,
+  "canonical_result": true,
+  "git_status_porcelain": [],
+  "architecture_configs": [
+    {
+      "architecture_id": "ja150m-v0.1",
+      "config_path": "configs/architecture/ja150m-v0.1.yaml",
+      "config_sha256": "2fd81b5a602e08d28bf3510911d02e9fa43f09af81ba2b9dbe6f9ff9285558e3"
+    }
+  ],
+  "environment": {
+    "python_version": "3.12.3",
+    "platform": "Linux-7.0.0-30-generic",
+    "torch_version": "2.13.0+cu130",
+    "cuda_available": true,
+    "cuda_device_name": "NVIDIA GeForce RTX 2060",
+    "cuda_driver_version": "13.0"
+  },
+  "command": "scripts/run_phase2_experiment.py flowbox-moe-profile --output /tmp/claude-1000/-home-cinqic-Documents-Juniper-Auto/23ca7c2e-4efd-46af-ab52-c1c66ef94137/scratchpad/phase2_exp_final/exp-0021-flowbox-moe-dispatch-profile.json",
+  "seed": 0,
+  "experiment": "flowbox-moe-dispatch-profile",
+  "architecture_id": "ja150m-v0.1",
+  "device": "cuda",
+  "device_name": "NVIDIA GeForce RTX 2060",
+  "shapes_profiled": [
+    {
+      "batch": 1,
+      "seq_len": 128
+    },
+    {
+      "batch": 1,
+      "seq_len": 512
+    },
+    {
+      "batch": 1,
+      "seq_len": 1024
+    },
+    {
+      "batch": 1,
+      "seq_len": 4096
+    },
+    {
+      "batch": 4,
+      "seq_len": 256
+    }
+  ],
+  "note": "prefill-only latency/throughput (single forward pass per iteration, no autoregressive decode loop exists in this reference model), warmup + CUDA sync + peak-memory-stat reset before each timed/measured block, cache emptied between backends.",
+  "profiles": [
+    {
+      "batch": 1,
+      "seq_len": 128,
+      "reference": {
+        "latency_seconds": 0.005238878199997998,
+        "tokens_per_second": 24432.711567917137,
+        "peak_vram_bytes": 37999616
+      },
+      "optimized": {
+        "latency_seconds": 0.0019813913999314537,
+        "tokens_per_second": 64601.067716569356,
+        "peak_vram_bytes": 38081024
+      }
+    },
+    {
+      "batch": 1,
+      "seq_len": 512,
+      "reference": {
+        "latency_seconds": 0.005674566600009712,
+        "tokens_per_second": 90227.15496882594,
+        "peak_vram_bytes": 41425408
+      },
+      "optimized": {
+        "latency_seconds": 0.0021792137999909755,
+        "tokens_per_second": 234947.11716772363,
+        "peak_vram_bytes": 41693696
+      }
+    },
+    {
+      "batch": 1,
+      "seq_len": 1024,
+      "reference": {
+        "latency_seconds": 0.0063762666000002355,
+        "tokens_per_second": 160595.54347993576,
+        "peak_vram_bytes": 45908480
+      },
+      "optimized": {
+        "latency_seconds": 0.00259864240006209,
+        "tokens_per_second": 394051.90955690295,
+        "peak_vram_bytes": 46490624
+      }
+    },
+    {
+      "batch": 1,
+      "seq_len": 4096,
+      "reference": {
+        "latency_seconds": 0.010152461399957246,
+        "tokens_per_second": 403448.96066457825,
+        "peak_vram_bytes": 74841088
+      },
+      "optimized": {
+        "latency_seconds": 0.006721881800058327,
+        "tokens_per_second": 609353.172494711,
+        "peak_vram_bytes": 75358208
+      }
+    },
+    {
+      "batch": 4,
+      "seq_len": 256,
+      "reference": {
+        "latency_seconds": 0.006030435599950579,
+        "tokens_per_second": 169805.31224119067,
+        "peak_vram_bytes": 45916672
+      },
+      "optimized": {
+        "latency_seconds": 0.002569210799993016,
+        "tokens_per_second": 398565.9720886988,
+        "peak_vram_bytes": 46523392
+      }
+    }
+  ]
+}
