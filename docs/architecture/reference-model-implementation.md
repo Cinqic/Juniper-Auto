@@ -113,6 +113,13 @@ gets a forced self-attend fallback so softmax cannot divide by zero; the
 output at that row is discarded downstream (no loss, no cross-token
 effect) so only its finiteness matters.
 
+The public model forward path requires `attention_mask`, `labels`, and
+`position_ids` (when supplied) to match `input_ids` exactly in batch and
+sequence shape, and rejects device mismatches before broadcasting can hide
+an invalid call. Sequence lengths above the frozen 4,096-token supported
+context raise a clear error. The 16,384-token future target is therefore
+not accidentally executable or advertised as a Phase 1 capability.
+
 ## SwiGLU (`ffn.py`)
 
 `down_proj(SiLU(gate_proj(x)) * up_proj(x))`, all three projections
@@ -162,7 +169,9 @@ counts via `valid_mask`.
 ## Losses (`losses.py`, `docs/adr/0008`)
 
 `causal_lm_loss` shifts logits/labels by one position and computes FP32
-cross-entropy with `ignore_index=-100`. The load-balance and router
+cross-entropy with `ignore_index=-100`. A batch with no non-ignored
+next-token target raises `ValueError` rather than accepting PyTorch's NaN
+mean reduction as a training result. The load-balance and router
 Z-loss formulas are defined in ADR-0008; both are computed over valid
 tokens only and averaged across the 15 MoE layers before the frozen
 coefficients (0.01, 0.001) are applied, in `JuniperAutoModel.forward`.
@@ -195,7 +204,9 @@ Applied after construction, in a fixed module-traversal order, so a given
 `torch.Generator` seed always produces the same final weights regardless
 of what PyTorch's default `nn.Linear`/`nn.Embedding` init happened to
 sample first (that default init is entirely overwritten, never blended
-in):
+in). When `seed` is explicit, construction is wrapped in a CPU RNG fork so
+even the overwritten default initialization cannot consume or perturb the
+caller's ambient RNG state:
 
 - Q/K/V projections, FFN/expert gate & up projections: `N(0, base_std^2)`.
 - Attention `o_proj`, every FFN/expert `down_proj` (dense, routed, shared):
@@ -213,7 +224,9 @@ in):
 `SyntheticSequenceStream` (`juniper_auto/training/state.py`) is Phase 1's
 only training data source: a fixed pool of deterministic random-token-id
 sequences, served in shuffled batches from an independently checkpointable
-generator. It is always labeled `synthetic Phase 1 engineering data`
+generator. Restore validates every construction identity field, cursor,
+and shuffle permutation before accepting the state. It is always labeled
+`synthetic Phase 1 engineering data`
 wherever it appears (checkpoints, experiment registry) -- there is no
 tokenizer or real corpus yet.
 
@@ -223,5 +236,16 @@ NumPy, torch CPU, all CUDA devices), the sampler state, step counters,
 architecture identity + full config, git commit, and dataset/tokenizer
 identity, written atomically (temp file + `os.replace`) and validated
 (missing field / wrong format version / wrong architecture id) before any
-state is applied. See `docs/phases/phase-1-architecture.md` for the
+state is applied. Restoration returns the sampler and sequence-curriculum
+state to the caller rather than merely retaining those keys in the payload.
+Non-null scheduler and GradScaler round trips are tested, including a real
+CUDA FP16 scaler exercise when CUDA is available. See
+`docs/phases/phase-1-architecture.md` for the
 executed checkpoint/resume equivalence result.
+
+FLOWBOX profiling reports full-sequence inference explicitly as prefill
+latency/throughput (not autoregressive decode), labels Linux `ru_maxrss` as
+lifetime host peak RSS, uses untimed warmup plus CUDA synchronization, and
+includes AMP unscale and global gradient clipping in the timed optimizer
+stage. The training profile also fails on non-finite loss/gradient norm and
+checks final parameter finiteness.

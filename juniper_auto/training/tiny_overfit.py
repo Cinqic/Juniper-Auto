@@ -62,6 +62,7 @@ class TinyOverfitResult:
     elapsed_seconds: float
     peak_vram_bytes: int | None
     any_nonfinite_event: bool
+    final_parameters_finite: bool
     global_valid_token_count: int
     history: list[TinyOverfitStepRecord] = field(default_factory=list)
 
@@ -108,6 +109,7 @@ class TinyOverfitHarness:
 
         self.global_step = 0
         self.global_valid_token_count = 0
+        self.sequence_curriculum_state = {"status": "not-implemented-phase-1"}
 
     def train_step(self) -> tuple[TinyOverfitStepRecord, bool]:
         batch = self.stream.next_batch().to(self.run_cfg.device)
@@ -132,7 +134,11 @@ class TinyOverfitHarness:
         n_valid_tokens = int(labels[..., 1:].numel())  # synthetic stream has no padding
         self.global_valid_token_count += n_valid_tokens
         self.global_step += 1
-        nonfinite = not bool(torch.isfinite(out.loss).item())
+        nonfinite = not bool(
+            torch.isfinite(out.loss).item()
+            and torch.isfinite(out.lm_loss).item()
+            and torch.isfinite(grad_norm).item()
+        )
 
         record = TinyOverfitStepRecord(
             step=self.global_step,
@@ -174,12 +180,14 @@ class TinyOverfitHarness:
             git_commit=git_commit,
             dataset_identity=dataset_identity,
             tokenizer_identity=tokenizer_identity,
+            sequence_curriculum_state=self.sequence_curriculum_state,
         )
 
     def load_checkpoint_payload(self, payload: dict) -> None:
         resumed = restore_from_checkpoint(payload, model=self.model, optimizer=self.optimizer, scaler=self.scaler)
         self.global_step = resumed["global_step"]
         self.global_valid_token_count = resumed["global_valid_token_count"]
+        self.sequence_curriculum_state = resumed["sequence_curriculum_state"]
         self.stream.load_state_dict(resumed["sampler_state"])
 
 
@@ -200,6 +208,7 @@ def run_tiny_overfit(architecture_cfg: ArchitectureConfig, run_cfg: TinyOverfitC
     peak_vram = torch.cuda.max_memory_allocated(run_cfg.device) if harness.device_type == "cuda" else None
     lm_losses = [r.lm_loss for r in history]
     accuracies = [r.token_accuracy for r in history]
+    final_parameters_finite = all(torch.isfinite(p).all().item() for p in harness.model.parameters())
 
     return TinyOverfitResult(
         config=run_cfg,
@@ -213,6 +222,7 @@ def run_tiny_overfit(architecture_cfg: ArchitectureConfig, run_cfg: TinyOverfitC
         elapsed_seconds=elapsed,
         peak_vram_bytes=peak_vram,
         any_nonfinite_event=any_nonfinite,
+        final_parameters_finite=final_parameters_finite,
         global_valid_token_count=harness.global_valid_token_count,
         history=history,
     )

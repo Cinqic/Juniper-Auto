@@ -8,7 +8,8 @@ import torch
 from juniper_auto.config import load_architecture_config
 from juniper_auto.model import build_model
 from juniper_auto.model.attention import GroupedQueryAttention
-from juniper_auto.model.block import DenseBlock
+from juniper_auto.model.block import DenseBlock, MoEBlock
+from juniper_auto.model.model import JuniperAutoModel, initialize_weights
 from tests.model_fixtures import make_tiny_sparse_config
 
 SPARSE_CFG = load_architecture_config("configs/architecture/ja150m-v0.1.yaml")
@@ -31,6 +32,14 @@ def test_different_seed_changes_initialization():
         not torch.allclose(p_a, p_b) for p_a, p_b in zip(model_a.parameters(), model_b.parameters())
     )
     assert any_different
+
+
+def test_explicit_seed_does_not_consume_ambient_cpu_rng_state():
+    cfg = make_tiny_sparse_config()
+    torch.manual_seed(12345)
+    state_before = torch.get_rng_state().clone()
+    build_model(cfg, seed=777)
+    assert torch.equal(torch.get_rng_state(), state_before)
 
 
 def test_general_projection_std_close_to_base_std_on_official_model():
@@ -84,3 +93,39 @@ def test_norm_weights_are_exactly_ones_at_construction():
 def test_no_bias_parameters_to_initialize():
     model = build_model(SPARSE_CFG, seed=0)
     assert not any(name.endswith(".bias") for name, _ in model.named_parameters())
+
+
+def test_initialization_policy_reaches_every_projection_once(monkeypatch):
+    cfg = make_tiny_sparse_config()
+    model = JuniperAutoModel(cfg)
+    calls = {}
+
+    def record(weight, mean, std, generator):
+        assert id(weight) not in calls, "a tied or traversed weight was initialized twice"
+        calls[id(weight)] = (mean, std)
+
+    monkeypatch.setattr("juniper_auto.model.model._init_normal", record)
+    initialize_weights(model, cfg, generator=torch.Generator().manual_seed(1))
+
+    base = (cfg.initialization.mean, cfg.initialization.base_std)
+    residual = (cfg.initialization.mean, cfg.initialization.residual_output_projection_std)
+    router = (cfg.initialization.mean, cfg.initialization.router_std)
+    embedding = (cfg.initialization.mean, cfg.initialization.embedding_std)
+    assert calls[id(model.embedding.weight)] == embedding
+    assert model.embedding.weight is model.lm_head.weight
+
+    for block in model.layers:
+        attn = block.attention
+        for projection in (attn.q_proj, attn.k_proj, attn.v_proj):
+            assert calls[id(projection.weight)] == base
+        assert calls[id(attn.o_proj.weight)] == residual
+        if isinstance(block, DenseBlock):
+            experts = [block.ffn]
+        else:
+            assert isinstance(block, MoEBlock)
+            assert calls[id(block.moe.router.weight)] == router
+            experts = [*block.moe.routed_experts, block.moe.shared_expert]
+        for expert in experts:
+            assert calls[id(expert.gate_proj.weight)] == base
+            assert calls[id(expert.up_proj.weight)] == base
+            assert calls[id(expert.down_proj.weight)] == residual

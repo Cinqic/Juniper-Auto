@@ -68,6 +68,24 @@ def test_normalization_final_norm_disabled_is_rejected():
         JuniperAutoModel(broken)
 
 
+def test_non_fp32_rmsnorm_reduction_is_rejected():
+    cfg = make_tiny_sparse_config()
+    broken = cfg.model_copy(
+        update={"normalization": cfg.normalization.model_copy(update={"reduction_dtype": "fp16"})}
+    )
+    with pytest.raises(ValueError, match="reduction_dtype"):
+        JuniperAutoModel(broken)
+
+
+def test_rmsnorm_bias_request_is_rejected():
+    cfg = make_tiny_sparse_config()
+    broken = cfg.model_copy(
+        update={"normalization": cfg.normalization.model_copy(update={"layernorm_bias": True})}
+    )
+    with pytest.raises(ValueError, match="layernorm_bias"):
+        JuniperAutoModel(broken)
+
+
 def test_attention_non_causal_is_rejected():
     cfg = make_tiny_sparse_config()
     broken = cfg.model_copy(update={"attention": cfg.attention.model_copy(update={"causal": False})})
@@ -109,6 +127,30 @@ def test_moe_non_fp32_router_softmax_dtype_is_rejected():
     cfg = make_tiny_sparse_config()
     broken = cfg.model_copy(update={"moe": cfg.moe.model_copy(update={"router_softmax_dtype": "bf16"})})
     with pytest.raises(ValueError, match="router_softmax_dtype"):
+        MoELayer(broken)
+
+
+def test_moe_non_always_active_shared_expert_is_rejected():
+    cfg = make_tiny_sparse_config()
+    broken = cfg.model_copy(
+        update={"moe": cfg.moe.model_copy(update={"shared_expert_always_active": False})}
+    )
+    with pytest.raises(ValueError, match="shared_expert_always_active"):
+        MoELayer(broken)
+
+
+@pytest.mark.parametrize(
+    "field,value",
+    [
+        ("training_router_jitter_magnitude", 0.1),
+        ("evaluation_router_jitter", True),
+        ("inference_router_jitter", True),
+    ],
+)
+def test_router_jitter_requests_are_rejected(field, value):
+    cfg = make_tiny_sparse_config()
+    broken = cfg.model_copy(update={"moe": cfg.moe.model_copy(update={field: value})})
+    with pytest.raises(ValueError, match="router jitter"):
         MoELayer(broken)
 
 

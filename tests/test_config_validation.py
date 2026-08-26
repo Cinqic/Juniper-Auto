@@ -94,6 +94,14 @@ class TestMalformedConfigurationRejected:
         with pytest.raises(ValidationError, match="d_model"):
             _rebuild(d)
 
+    def test_rotary_fraction_must_match_rotary_dimension(self, valid_sparse_dict):
+        d = copy.deepcopy(valid_sparse_dict)
+        d["architecture_id"] = "future-sparse-v1"
+        d["position_encoding"]["rotary_dim"] = 32
+        d["position_encoding"]["rotary_fraction"] = 1.0
+        with pytest.raises(ValidationError, match="rotary_fraction"):
+            _rebuild(d)
+
     def test_invalid_context_length(self, valid_sparse_dict):
         d = copy.deepcopy(valid_sparse_dict)
         d["attention"]["context_length"] = 0

@@ -45,8 +45,17 @@ def causal_lm_loss(
     label. Computed and reduced in FP32 regardless of the input logits
     dtype.
     """
+    if logits.ndim != 3:
+        raise ValueError(f"logits must have shape [batch, seq_len, vocab], got {tuple(logits.shape)}")
+    if labels.shape != logits.shape[:2]:
+        raise ValueError(
+            f"labels must match logits' [batch, seq_len] shape {tuple(logits.shape[:2])}, "
+            f"got {tuple(labels.shape)}"
+        )
     shift_logits = logits[..., :-1, :].to(torch.float32).contiguous()
     shift_labels = labels[..., 1:].contiguous()
+    if shift_labels.numel() == 0 or not torch.any(shift_labels != ignore_index):
+        raise ValueError("causal_lm_loss requires at least one non-ignored next-token target")
     return F.cross_entropy(
         shift_logits.view(-1, shift_logits.size(-1)),
         shift_labels.view(-1),

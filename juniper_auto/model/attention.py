@@ -124,7 +124,17 @@ class GroupedQueryAttention(nn.Module):
         position_ids: torch.Tensor,
         key_valid_mask: torch.Tensor | None = None,
     ) -> torch.Tensor:
+        if x.ndim != 3:
+            raise ValueError(f"x must have shape [batch, seq_len, d_model], got {tuple(x.shape)}")
         batch, seq_len, _ = x.shape
+        if position_ids.shape != (batch, seq_len):
+            raise ValueError(
+                f"position_ids must have shape {(batch, seq_len)}, got {tuple(position_ids.shape)}"
+            )
+        if key_valid_mask is not None and key_valid_mask.shape != (batch, seq_len):
+            raise ValueError(
+                f"key_valid_mask must have shape {(batch, seq_len)}, got {tuple(key_valid_mask.shape)}"
+            )
 
         q = self.q_proj(x).view(batch, seq_len, self.n_query_heads, self.head_dim)
         k = self.k_proj(x).view(batch, seq_len, self.n_kv_heads, self.head_dim)

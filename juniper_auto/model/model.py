@@ -45,6 +45,10 @@ class JuniperAutoModel(nn.Module):
             raise ValueError(f"unsupported embeddings.kind: {cfg.embeddings.kind!r} (only 'learned' is implemented)")
         if not cfg.normalization.final_norm:
             raise ValueError("normalization.final_norm must be true (the final norm is applied unconditionally)")
+        if cfg.normalization.reduction_dtype != "fp32":
+            raise ValueError("normalization.reduction_dtype must be 'fp32' (RMSNorm reductions are forced to FP32)")
+        if cfg.normalization.layernorm_bias:
+            raise ValueError("normalization.layernorm_bias=true is unsupported (RMSNorm has no bias)")
         nonzero_dropout = {
             name: value
             for name, value in cfg.dropout.model_dump().items()
@@ -57,6 +61,7 @@ class JuniperAutoModel(nn.Module):
 
         self.embedding = nn.Embedding(cfg.embeddings.vocab_size, cfg.embeddings.dim)
         self.embedding_scale = cfg.embeddings.embedding_scale
+        self.context_length = cfg.attention.context_length
 
         layer_kind: dict[int, str] = {}
         for layer_num in cfg.core.dense_layers:
@@ -101,7 +106,24 @@ class JuniperAutoModel(nn.Module):
         position_ids: torch.Tensor | None = None,
         return_diagnostics: bool = False,
     ) -> ModelOutput:
+        if input_ids.ndim != 2:
+            raise ValueError(f"input_ids must have shape [batch, seq_len], got {tuple(input_ids.shape)}")
         batch, seq_len = input_ids.shape
+        if batch == 0 or seq_len == 0:
+            raise ValueError("input_ids must contain at least one batch row and one token")
+        if seq_len > self.context_length:
+            raise ValueError(
+                f"sequence length {seq_len} exceeds the supported context length {self.context_length}; "
+                "the future context target is not a validated capability"
+            )
+        for name, value in (("attention_mask", attention_mask), ("labels", labels), ("position_ids", position_ids)):
+            if value is not None and value.shape != input_ids.shape:
+                raise ValueError(
+                    f"{name} must have the same [batch, seq_len] shape as input_ids "
+                    f"({tuple(input_ids.shape)}), got {tuple(value.shape)}"
+                )
+            if value is not None and value.device != input_ids.device:
+                raise ValueError(f"{name} must be on the same device as input_ids")
         if position_ids is None:
             position_ids = torch.arange(seq_len, device=input_ids.device).unsqueeze(0).expand(batch, seq_len)
 
@@ -168,9 +190,11 @@ class JuniperAutoModel(nn.Module):
         )
 
 
-def _init_normal(weight: torch.Tensor, std: float, generator: torch.Generator | None) -> None:
+def _init_normal(
+    weight: torch.Tensor, mean: float, std: float, generator: torch.Generator | None
+) -> None:
     with torch.no_grad():
-        weight.normal_(mean=0.0, std=std, generator=generator)
+        weight.normal_(mean=mean, std=std, generator=generator)
 
 
 def initialize_weights(
@@ -198,18 +222,18 @@ def initialize_weights(
     init_cfg = cfg.initialization
     for module in model.modules():
         if isinstance(module, GroupedQueryAttention):
-            _init_normal(module.q_proj.weight, init_cfg.base_std, generator)
-            _init_normal(module.k_proj.weight, init_cfg.base_std, generator)
-            _init_normal(module.v_proj.weight, init_cfg.base_std, generator)
-            _init_normal(module.o_proj.weight, init_cfg.residual_output_projection_std, generator)
+            _init_normal(module.q_proj.weight, init_cfg.mean, init_cfg.base_std, generator)
+            _init_normal(module.k_proj.weight, init_cfg.mean, init_cfg.base_std, generator)
+            _init_normal(module.v_proj.weight, init_cfg.mean, init_cfg.base_std, generator)
+            _init_normal(module.o_proj.weight, init_cfg.mean, init_cfg.residual_output_projection_std, generator)
         elif isinstance(module, SwiGLU):
-            _init_normal(module.gate_proj.weight, init_cfg.base_std, generator)
-            _init_normal(module.up_proj.weight, init_cfg.base_std, generator)
-            _init_normal(module.down_proj.weight, init_cfg.residual_output_projection_std, generator)
+            _init_normal(module.gate_proj.weight, init_cfg.mean, init_cfg.base_std, generator)
+            _init_normal(module.up_proj.weight, init_cfg.mean, init_cfg.base_std, generator)
+            _init_normal(module.down_proj.weight, init_cfg.mean, init_cfg.residual_output_projection_std, generator)
         elif isinstance(module, MoELayer):
-            _init_normal(module.router.weight, init_cfg.router_std, generator)
+            _init_normal(module.router.weight, init_cfg.mean, init_cfg.router_std, generator)
 
-    _init_normal(model.embedding.weight, init_cfg.embedding_std, generator)
+    _init_normal(model.embedding.weight, init_cfg.mean, init_cfg.embedding_std, generator)
 
 
 def build_model(
@@ -229,7 +253,15 @@ def build_model(
     safely with `juniper_auto.util.seed.apply_seed` or with no seeding at
     all (in which case initialization consumes ambient global RNG state).
     """
-    model = JuniperAutoModel(cfg)
+    # PyTorch module constructors perform their own default initialization.
+    # When an explicit seed requests local-generator isolation, protect the
+    # ambient CPU RNG from that otherwise-observable constructor work; the
+    # real frozen initialization below is then driven solely by `generator`.
+    if seed is not None:
+        with torch.random.fork_rng(devices=[]):
+            model = JuniperAutoModel(cfg)
+    else:
+        model = JuniperAutoModel(cfg)
     generator = None
     if seed is not None:
         generator = torch.Generator(device="cpu")

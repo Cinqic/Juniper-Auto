@@ -6,6 +6,7 @@ from __future__ import annotations
 import random
 
 import numpy as np
+import pytest
 import torch
 
 from juniper_auto.training.state import (
@@ -87,6 +88,40 @@ def test_synthetic_stream_state_dict_rejects_mismatched_stream():
         assert False, "expected ValueError for seed mismatch"
     except ValueError:
         pass
+
+
+@pytest.mark.parametrize(
+    "overrides",
+    [
+        {"n_sequences": 7},
+        {"batch_size": 3},
+    ],
+)
+def test_synthetic_stream_restore_rejects_all_construction_identity_mismatches(overrides):
+    source = SyntheticSequenceStream(seed=1, vocab_size=50, seq_len=8, n_sequences=6, batch_size=2)
+    kwargs = {"seed": 1, "vocab_size": 50, "seq_len": 8, "n_sequences": 6, "batch_size": 2}
+    kwargs.update(overrides)
+    target = SyntheticSequenceStream(**kwargs)
+    with pytest.raises(ValueError, match="construction parameters"):
+        target.load_state_dict(source.state_dict())
+
+
+def test_synthetic_stream_restore_rejects_corrupt_cursor_and_order():
+    stream = SyntheticSequenceStream(seed=1, vocab_size=50, seq_len=8, n_sequences=6, batch_size=2)
+    bad_cursor = stream.state_dict()
+    bad_cursor["cursor"] = 7
+    with pytest.raises(ValueError, match="cursor"):
+        stream.load_state_dict(bad_cursor)
+
+    bad_order = stream.state_dict()
+    bad_order["order"] = torch.arange(5)
+    with pytest.raises(ValueError, match="order"):
+        stream.load_state_dict(bad_order)
+
+    duplicate_order = stream.state_dict()
+    duplicate_order["order"] = torch.zeros(6, dtype=torch.long)
+    with pytest.raises(ValueError, match="permutation"):
+        stream.load_state_dict(duplicate_order)
 
 
 def test_synthetic_stream_rejects_batch_size_larger_than_pool():

@@ -9,6 +9,7 @@ loaded, already-schema-valid config against the exact frozen v0.1 spec.
 
 from __future__ import annotations
 
+import math
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
@@ -233,6 +234,12 @@ class ArchitectureConfig(StrictModel):
             raise ValueError("embedding dimension must equal d_model")
         if self.position_encoding.rotary_dim > self.attention.head_dim:
             raise ValueError("rotary_dim cannot exceed attention head_dim")
+        expected_fraction = self.position_encoding.rotary_dim / self.attention.head_dim
+        if not math.isclose(self.position_encoding.rotary_fraction, expected_fraction):
+            raise ValueError(
+                "rotary_fraction must equal rotary_dim / attention.head_dim "
+                f"({self.position_encoding.rotary_fraction} != {expected_fraction})"
+            )
         if self.kind == "sparse" and self.moe is not None:
             if self.moe.router_input_dim != self.core.d_model:
                 raise ValueError("router_input_dim must equal d_model")

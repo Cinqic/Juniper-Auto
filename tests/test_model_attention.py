@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import torch
 import torch.nn.functional as F
+import pytest
 
 from juniper_auto.model.attention import GroupedQueryAttention, build_attention_mask, repeat_kv
 from tests.model_fixtures import make_tiny_sparse_config
@@ -49,6 +50,20 @@ def test_gqa_forward_shape_and_no_bias():
     assert out.shape == (2, 7, 32)
     for proj in (attn.q_proj, attn.k_proj, attn.v_proj, attn.o_proj):
         assert proj.bias is None
+
+
+@pytest.mark.parametrize(
+    "position_shape,mask_shape,match",
+    [((1, 4), (2, 5), "position_ids"), ((2, 5), (1, 5), "key_valid_mask")],
+)
+def test_gqa_rejects_invalid_position_or_mask_shapes(position_shape, mask_shape, match):
+    cfg = make_tiny_sparse_config()
+    attn = GroupedQueryAttention(cfg)
+    x = torch.randn(2, 5, cfg.core.d_model)
+    position_ids = torch.zeros(position_shape, dtype=torch.long)
+    key_valid_mask = torch.ones(mask_shape, dtype=torch.bool)
+    with pytest.raises(ValueError, match=match):
+        attn(x, position_ids, key_valid_mask)
 
 
 def test_causality_future_tokens_do_not_affect_earlier_logits():

@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import math
 
+import pytest
 import torch
 
 from juniper_auto.model.losses import (
@@ -31,8 +32,8 @@ def test_causal_lm_loss_exact_shift_two_token_example():
 def test_causal_lm_loss_ignores_masked_labels():
     logits = torch.randn(1, 3, 5)
     labels = torch.tensor([[-100, -100, -100]])
-    loss = causal_lm_loss(logits, labels)
-    assert torch.isnan(loss) or loss.item() == 0.0  # cross_entropy with all-ignored targets
+    with pytest.raises(ValueError, match="non-ignored next-token target"):
+        causal_lm_loss(logits, labels)
 
 
 def test_causal_lm_loss_off_by_one_shift_is_load_bearing():

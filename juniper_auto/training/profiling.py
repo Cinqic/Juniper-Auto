@@ -35,10 +35,10 @@ class InferenceProfileResult:
     seq_len: int
     warmup_iters: int
     measured_iters: int
-    latency_seconds: float
-    tokens_per_second: float
+    prefill_latency_seconds: float
+    prefill_tokens_per_second: float
     peak_vram_bytes: int | None
-    host_rss_bytes: int | None
+    host_peak_rss_bytes: int | None
 
 
 def profile_inference(
@@ -83,10 +83,10 @@ def profile_inference(
         seq_len=seq_len,
         warmup_iters=warmup_iters,
         measured_iters=measured_iters,
-        latency_seconds=per_iter_seconds,
-        tokens_per_second=tokens_per_second,
+        prefill_latency_seconds=per_iter_seconds,
+        prefill_tokens_per_second=tokens_per_second,
         peak_vram_bytes=peak_vram,
-        host_rss_bytes=_host_rss_bytes(),
+        host_peak_rss_bytes=_host_rss_bytes(),
     )
 
 
@@ -97,6 +97,7 @@ class TrainingStepProfileResult:
     grad_accumulation_steps: int
     activation_checkpointing: bool
     use_amp: bool
+    grad_clip_norm: float
     warmup_iters: int
     measured_iters: int
     forward_seconds: float
@@ -105,7 +106,8 @@ class TrainingStepProfileResult:
     total_step_seconds: float
     training_tokens_per_second: float
     peak_vram_bytes: int | None
-    host_rss_bytes: int | None
+    host_peak_rss_bytes: int | None
+    numerical_finite: bool
 
 
 def profile_training_step(
@@ -119,6 +121,7 @@ def profile_training_step(
     device: str,
     use_amp: bool,
     activation_checkpointing: bool = False,
+    grad_clip_norm: float = 1.0,
     warmup_iters: int = 2,
     measured_iters: int = 5,
 ) -> TrainingStepProfileResult:
@@ -145,6 +148,8 @@ def profile_training_step(
                     out = model(ids, labels=labels)
             else:
                 out = model(ids, labels=labels)
+            if not torch.isfinite(out.loss):
+                raise RuntimeError("non-finite loss encountered during training profile")
             _sync(device)
             t1 = time.perf_counter()
 
@@ -161,9 +166,16 @@ def profile_training_step(
 
         t3 = time.perf_counter()
         if scaler.is_enabled():
+            scaler.unscale_(optimizer)
+            grad_norm = torch.nn.utils.clip_grad_norm_(model.parameters(), grad_clip_norm)
+            if not torch.isfinite(grad_norm):
+                raise RuntimeError("non-finite gradient norm encountered during training profile")
             scaler.step(optimizer)
             scaler.update()
         else:
+            grad_norm = torch.nn.utils.clip_grad_norm_(model.parameters(), grad_clip_norm)
+            if not torch.isfinite(grad_norm):
+                raise RuntimeError("non-finite gradient norm encountered during training profile")
             optimizer.step()
         _sync(device)
         t4 = time.perf_counter()
@@ -189,6 +201,7 @@ def profile_training_step(
     tokens_per_step = microbatch_size * seq_len * grad_accumulation_steps
     tokens_per_second = tokens_per_step / total_step
     peak_vram = torch.cuda.max_memory_allocated(device) if torch.device(device).type == "cuda" else None
+    parameters_finite = all(torch.isfinite(p).all().item() for p in model.parameters())
 
     return TrainingStepProfileResult(
         microbatch_size=microbatch_size,
@@ -196,6 +209,7 @@ def profile_training_step(
         grad_accumulation_steps=grad_accumulation_steps,
         activation_checkpointing=activation_checkpointing,
         use_amp=use_amp,
+        grad_clip_norm=grad_clip_norm,
         warmup_iters=warmup_iters,
         measured_iters=measured_iters,
         forward_seconds=forward_avg,
@@ -204,7 +218,8 @@ def profile_training_step(
         total_step_seconds=total_step,
         training_tokens_per_second=tokens_per_second,
         peak_vram_bytes=peak_vram,
-        host_rss_bytes=_host_rss_bytes(),
+        host_peak_rss_bytes=_host_rss_bytes(),
+        numerical_finite=parameters_finite,
     )
 
 

@@ -20,6 +20,7 @@ from __future__ import annotations
 import argparse
 import dataclasses
 import json
+import shlex
 import subprocess
 import sys
 from pathlib import Path
@@ -37,6 +38,7 @@ from juniper_auto.training.checkpoint import restore_from_checkpoint  # noqa: E4
 from juniper_auto.training.profiling import profile_checkpoint_io, profile_inference, profile_training_step  # noqa: E402
 from juniper_auto.training.tiny_overfit import TinyOverfitConfig, TinyOverfitHarness, run_tiny_overfit  # noqa: E402
 from juniper_auto.util.environment import describe_environment  # noqa: E402
+from juniper_auto.util.hashing import sha256_file  # noqa: E402
 
 SPARSE_PATH = REPO_ROOT / "configs/architecture/ja150m-v0.1.yaml"
 DENSE_PATH = REPO_ROOT / "configs/architecture/ja150m-v0.1-dense.yaml"
@@ -52,6 +54,18 @@ def _git_commit() -> str:
         return "unknown"
 
 
+def _git_status_porcelain() -> str:
+    out = subprocess.run(
+        ["git", "status", "--porcelain=v1", "--untracked-files=all"],
+        cwd=REPO_ROOT,
+        capture_output=True,
+        text=True,
+        timeout=10,
+        check=True,
+    )
+    return out.stdout
+
+
 def _asdict(obj):
     if dataclasses.is_dataclass(obj):
         return {k: _asdict(v) for k, v in dataclasses.asdict(obj).items()}
@@ -62,11 +76,47 @@ def _asdict(obj):
     return obj
 
 
-def _write(path: Path, payload: dict) -> None:
+def _config_identity(path: Path) -> dict:
+    cfg = load_architecture_config(path)
+    return {
+        "architecture_id": cfg.architecture_id,
+        "config_path": str(path.relative_to(REPO_ROOT)),
+        "config_sha256": sha256_file(path),
+    }
+
+
+def _write(path: Path, payload: dict, *, args, config_paths: list[Path], seed: int) -> None:
+    if path.exists() and not args.overwrite:
+        raise FileExistsError(f"refusing to overwrite existing result artifact without --overwrite: {path}")
+
+    status = _git_status_porcelain()
+    clean = status == ""
+    if not clean and not args.allow_dirty:
+        raise RuntimeError(
+            "refusing to produce a canonical experiment result from a dirty working tree; "
+            "commit/stash the changes or pass --allow-dirty for an explicitly non-canonical diagnostic result"
+        )
+
+    commit = _git_commit()
+    if commit == "unknown" and not args.allow_dirty:
+        raise RuntimeError("refusing to produce a canonical experiment result without a resolvable Git HEAD")
+
     path.parent.mkdir(parents=True, exist_ok=True)
     payload = {
-        "git_commit": _git_commit(),
+        "result_identity": args.result_id or path.stem,
+        "git_commit": commit,
+        "git_worktree_clean": clean,
+        "canonical_result": clean,
+        "git_status_porcelain": status.splitlines(),
+        "architecture_configs": [_config_identity(p) for p in config_paths],
         "environment": describe_environment().as_dict(),
+        "command": shlex.join(sys.argv),
+        "run_configuration": {
+            key: value
+            for key, value in vars(args).items()
+            if key not in {"func", "output", "allow_dirty", "overwrite", "result_id"}
+        },
+        "seed": seed,
         **payload,
     }
     path.write_text(json.dumps(payload, indent=2, sort_keys=False) + "\n")
@@ -108,7 +158,20 @@ def cmd_param_verification(args) -> None:
             "weight_tying_verified": verify_weight_tying(dense_model),
         },
     }
-    _write(Path(args.output), result)
+    result["gate"] = {
+        "sparse_total_expected": 150_031_360,
+        "sparse_standard_active_expected": 79_252_480,
+        "dense_total_expected": 79_191_040,
+        "require_weight_tying": True,
+    }
+    result["gate_passed"] = bool(
+        method_a_sparse_total["total"] == method_b_sparse["total"] == 150_031_360
+        and method_a_sparse_active["total"] == 79_252_480
+        and method_a_dense_total["total"] == method_b_dense["total"] == 79_191_040
+        and verify_weight_tying(sparse_model)
+        and verify_weight_tying(dense_model)
+    )
+    _write(Path(args.output), result, args=args, config_paths=[SPARSE_PATH, DENSE_PATH], seed=0)
 
 
 def cmd_overfit(args, architecture_path: Path) -> None:
@@ -128,13 +191,34 @@ def cmd_overfit(args, architecture_path: Path) -> None:
         device=device,
     )
     result = run_tiny_overfit(cfg, run_cfg)
+    loss_reduction_fraction = 1.0 - (result.ending_lm_loss / result.starting_lm_loss)
+    gate = {
+        "max_ending_lm_loss": args.max_ending_lm_loss,
+        "min_ending_token_accuracy": args.min_ending_token_accuracy,
+        "min_loss_reduction_fraction": args.min_loss_reduction_fraction,
+        "require_no_nonfinite_event": True,
+        "require_final_parameters_finite": True,
+    }
+    gate_passed = bool(
+        result.ending_lm_loss <= args.max_ending_lm_loss
+        and result.ending_token_accuracy >= args.min_ending_token_accuracy
+        and loss_reduction_fraction >= args.min_loss_reduction_fraction
+        and not result.any_nonfinite_event
+        and result.final_parameters_finite
+    )
     _write(
         Path(args.output),
         {
             "experiment": f"{cfg.kind}-tiny-overfit",
             "architecture_id": cfg.architecture_id,
             "result": _asdict(result),
+            "loss_reduction_fraction": loss_reduction_fraction,
+            "gate": gate,
+            "gate_passed": gate_passed,
         },
+        args=args,
+        config_paths=[architecture_path],
+        seed=args.seed,
     )
 
 
@@ -172,6 +256,19 @@ def cmd_resume_equivalence(args) -> None:
 
     harness_resumed = TinyOverfitHarness(cfg, run_cfg(args.seed))
     harness_resumed.load_checkpoint_payload(payload)
+    sampler_state_after_restore = harness_resumed.stream.state_dict()
+    expected_stream = type(harness_resumed.stream)(
+        seed=args.seed,
+        vocab_size=cfg.embeddings.vocab_size,
+        seq_len=args.seq_len,
+        n_sequences=args.n_sequences,
+        batch_size=args.batch_size,
+    )
+    expected_stream.load_state_dict(payload["sampler_state"])
+    next_batch_identity_match = torch.equal(
+        expected_stream.next_batch(), harness_resumed.stream.next_batch()
+    )
+    harness_resumed.stream.load_state_dict(sampler_state_after_restore)
     history_resumed = [harness_resumed.train_step()[0] for _ in range(total_steps - split)]
 
     losses_a = [r.loss for r in history_a[split:]]
@@ -182,6 +279,20 @@ def cmd_resume_equivalence(args) -> None:
         (p_a - p_b).abs().max().item()
         for p_a, p_b in zip(harness_a.model.parameters(), harness_resumed.model.parameters())
     )
+    optimizer_state_exact_match = True
+    for state_a, state_b in zip(harness_a.optimizer.state.values(), harness_resumed.optimizer.state.values()):
+        if state_a.keys() != state_b.keys():
+            optimizer_state_exact_match = False
+            break
+        for key in state_a:
+            a, b = state_a[key], state_b[key]
+            if isinstance(a, torch.Tensor):
+                if not torch.equal(a, b):
+                    optimizer_state_exact_match = False
+                    break
+            elif a != b:
+                optimizer_state_exact_match = False
+                break
 
     result = {
         "experiment": "resume-equivalence",
@@ -195,8 +306,29 @@ def cmd_resume_equivalence(args) -> None:
         "max_parameter_abs_diff": max_param_diff,
         "global_step_match": harness_a.global_step == harness_resumed.global_step,
         "global_valid_token_count_match": harness_a.global_valid_token_count == harness_resumed.global_valid_token_count,
+        "optimizer_state_exact_match": optimizer_state_exact_match,
+        "next_batch_identity_match": next_batch_identity_match,
+        "sequence_curriculum_state_preserved": harness_resumed.sequence_curriculum_state
+        == payload["sequence_curriculum_state"],
     }
-    _write(Path(args.output), result)
+    result["gate"] = {
+        "require_exact_loss_match": True,
+        "max_parameter_abs_diff": 0.0,
+        "require_optimizer_state_exact_match": True,
+        "require_step_token_and_next_batch_identity_match": True,
+        "require_sequence_curriculum_state_preserved": True,
+    }
+    result["gate_passed"] = bool(
+        exact_loss_match
+        and max_param_diff == 0.0
+        and result["global_step_match"]
+        and result["global_valid_token_count_match"]
+        and optimizer_state_exact_match
+        and next_batch_identity_match
+        and result["sequence_curriculum_state_preserved"]
+    )
+    config_path = SPARSE_PATH if args.architecture == "sparse" else DENSE_PATH
+    _write(Path(args.output), result, args=args, config_paths=[config_path], seed=args.seed)
 
 
 def cmd_profile(args) -> None:
@@ -298,20 +430,42 @@ def cmd_profile(args) -> None:
         context_probe["detail"] = repr(exc)
     result["full_context_4096_batch1_probe"] = context_probe
 
-    _write(Path(args.output), result)
+    result["gate"] = {
+        "require_fp32_and_fp16_prefill_profiles_on_cuda": True,
+        "require_finite_training_step": True,
+        "require_checkpoint_write_and_load": True,
+        "require_full_context_4096_batch1_success": True,
+    }
+    precisions = {entry["precision_label"] for entry in inference_results}
+    result["gate_passed"] = bool(
+        device == "cuda"
+        and precisions == {"fp32", "fp16"}
+        and result["training_step"]["numerical_finite"]
+        and result["checkpoint_io"]["file_size_bytes"] > 0
+        and context_probe.get("status") == "success"
+    )
+
+    config_path = SPARSE_PATH if args.architecture == "sparse" else DENSE_PATH
+    _write(Path(args.output), result, args=args, config_paths=[config_path], seed=0)
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = parser.add_subparsers(dest="command", required=True)
 
+    def add_result_args(p):
+        p.add_argument("--output", required=True)
+        p.add_argument("--result-id")
+        p.add_argument("--allow-dirty", action="store_true")
+        p.add_argument("--overwrite", action="store_true")
+
     p = sub.add_parser("param-verification")
-    p.add_argument("--output", required=True)
+    add_result_args(p)
     p.set_defaults(func=cmd_param_verification)
 
     for name, path in [("dense-overfit", DENSE_PATH), ("sparse-overfit", SPARSE_PATH)]:
         p = sub.add_parser(name)
-        p.add_argument("--output", required=True)
+        add_result_args(p)
         p.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
         p.add_argument("--seed", type=int, default=1234)
         p.add_argument("--seq-len", type=int, default=32)
@@ -320,10 +474,13 @@ def main() -> int:
         p.add_argument("--lr", type=float, default=3e-3)
         p.add_argument("--max-steps", type=int, default=300)
         p.add_argument("--grad-clip-norm", type=float, default=1.0)
+        p.add_argument("--max-ending-lm-loss", type=float, default=0.01)
+        p.add_argument("--min-ending-token-accuracy", type=float, default=0.99)
+        p.add_argument("--min-loss-reduction-fraction", type=float, default=0.95)
         p.set_defaults(func=lambda a, path=path: cmd_overfit(a, path))
 
     p = sub.add_parser("resume-equivalence")
-    p.add_argument("--output", required=True)
+    add_result_args(p)
     p.add_argument("--architecture", choices=["sparse", "dense"], default="sparse")
     p.add_argument("--device", default="cpu")
     p.add_argument("--seed", type=int, default=42)
@@ -336,7 +493,7 @@ def main() -> int:
     p.set_defaults(func=cmd_resume_equivalence)
 
     p = sub.add_parser("profile")
-    p.add_argument("--output", required=True)
+    add_result_args(p)
     p.add_argument("--architecture", choices=["sparse", "dense"], required=True)
     p.add_argument("--inference-batch-size", type=int, default=1)
     p.add_argument("--inference-seq-len", type=int, default=512)

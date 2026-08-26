@@ -114,8 +114,17 @@ class SyntheticSequenceStream:
         }
 
     def load_state_dict(self, state: dict) -> None:
-        if state["seed"] != self.seed or state["vocab_size"] != self.vocab_size or state["seq_len"] != self.seq_len:
+        identity_fields = ("seed", "vocab_size", "seq_len", "n_sequences", "batch_size")
+        mismatched = [name for name in identity_fields if state[name] != getattr(self, name)]
+        if mismatched:
             raise ValueError("checkpointed sampler state does not match this stream's construction parameters")
+        if state["order"].shape != (self.n_sequences,):
+            raise ValueError("checkpointed sampler order has the wrong shape")
+        expected_order = torch.arange(self.n_sequences, dtype=state["order"].dtype)
+        if not torch.equal(torch.sort(state["order"].cpu()).values, expected_order):
+            raise ValueError("checkpointed sampler order is not a permutation of the sequence pool")
+        if not 0 <= state["cursor"] <= self.n_sequences:
+            raise ValueError("checkpointed sampler cursor is out of range")
         self._cursor = state["cursor"]
         self.step = state["step"]
         self._order = state["order"].clone()

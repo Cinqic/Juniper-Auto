@@ -8,6 +8,7 @@ from __future__ import annotations
 import torch
 
 from juniper_auto.training.tiny_overfit import TinyOverfitConfig, TinyOverfitHarness
+from juniper_auto.training.state import SyntheticSequenceStream
 from tests.model_fixtures import make_tiny_sparse_config
 
 
@@ -60,6 +61,19 @@ def test_uninterrupted_vs_resumed_training_matches_exactly_on_cpu():
     harness_b_resumed = TinyOverfitHarness(cfg, _run_cfg(seed=42))
     harness_b_resumed.load_checkpoint_payload(payload)
     assert harness_b_resumed.global_step == 10
+    assert harness_b_resumed.sequence_curriculum_state == payload["sequence_curriculum_state"]
+
+    # The next data identities are inspectable for this synthetic stream;
+    # prove the restored sampler will yield the exact checkpointed next
+    # batch, then rewind it before training continues.
+    reference_stream = SyntheticSequenceStream(
+        seed=42, vocab_size=61, seq_len=6, n_sequences=5, batch_size=2
+    )
+    reference_stream.load_state_dict(payload["sampler_state"])
+    expected_next_batch = reference_stream.next_batch()
+    actual_next_batch = harness_b_resumed.stream.next_batch()
+    assert torch.equal(actual_next_batch, expected_next_batch)
+    harness_b_resumed.stream.load_state_dict(payload["sampler_state"])
 
     history_b_resumed = []
     for _ in range(10):

@@ -45,6 +45,7 @@ def test_dense_tiny_overfit_reduces_loss_and_stays_finite():
     cfg = make_tiny_dense_config()
     result = run_tiny_overfit(cfg, _run_cfg())
     assert result.any_nonfinite_event is False
+    assert result.final_parameters_finite is True
     assert result.best_lm_loss < result.starting_lm_loss
     assert result.steps_run == 40
     assert result.global_valid_token_count == 40 * 2 * 7  # steps * batch * (seq_len - 1)
@@ -54,6 +55,7 @@ def test_sparse_tiny_overfit_reduces_loss_and_stays_finite():
     cfg = make_tiny_sparse_config()
     result = run_tiny_overfit(cfg, _run_cfg(max_steps=60))
     assert result.any_nonfinite_event is False
+    assert result.final_parameters_finite is True
     assert result.best_lm_loss < result.starting_lm_loss
 
 

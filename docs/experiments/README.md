@@ -28,6 +28,14 @@ itself the data.
 | `conclusion` | What was concluded from the result. |
 | `artifact_locations` | Where outputs live, or `not-applicable`. |
 
+Canonical Phase 1 JSON result artifacts additionally record a stable result
+identity, exact Git `HEAD`, clean/dirty worktree state, architecture-config
+SHA-256, full command/run configuration, seed, and environment. The runner
+refuses a dirty tree or an existing output by default. `--allow-dirty`
+creates an explicitly non-canonical diagnostic artifact; `--overwrite` is
+required to replace an existing path and must never be used to erase
+historical evidence.
+
 ## Rules
 
 - **No fabricated identities.** If a tokenizer, dataset, or checkpoint does

@@ -79,7 +79,11 @@ def build_checkpoint_payload(
         # Phase 1 does not implement a sequence-length curriculum; this is
         # recorded honestly rather than omitted, so a future phase that
         # does implement one has a defined field to populate.
-        "sequence_curriculum_state": sequence_curriculum_state or {"status": "not-implemented-phase-1"},
+        "sequence_curriculum_state": (
+            {"status": "not-implemented-phase-1"}
+            if sequence_curriculum_state is None
+            else sequence_curriculum_state
+        ),
         "model_state_dict": model.state_dict(),
         "optimizer_state_dict": optimizer.state_dict(),
         "scheduler_state_dict": scheduler.state_dict() if scheduler is not None else None,
@@ -162,8 +166,9 @@ def restore_from_checkpoint(
     """Applies model/optimizer/scheduler/scaler state (and, by default,
     every RNG stream) in place from an already-validated checkpoint
     payload. Returns the remaining resumable training-loop state
-    (global_step, global_valid_token_count, sampler_state) for the caller
-    to restore into its own loop variables and data stream.
+    (global_step, global_valid_token_count, sampler_state, and sequence
+    curriculum state) for the caller to restore into its own loop variables
+    and data stream.
     """
     model.load_state_dict(payload["model_state_dict"])
     if optimizer is not None:
@@ -182,4 +187,5 @@ def restore_from_checkpoint(
         "global_step": payload["global_step"],
         "global_valid_token_count": payload["global_valid_token_count"],
         "sampler_state": payload["sampler_state"],
+        "sequence_curriculum_state": payload["sequence_curriculum_state"],
     }

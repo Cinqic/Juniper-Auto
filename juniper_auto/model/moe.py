@@ -47,6 +47,8 @@ class MoELayer(nn.Module):
             raise ValueError("MoELayer requires a non-null moe config section")
         if moe_cfg.shared_expert_gated:
             raise ValueError("MoELayer implementation requires an ungated shared expert")
+        if not moe_cfg.shared_expert_always_active:
+            raise ValueError("MoELayer implementation requires shared_expert_always_active=True")
         if moe_cfg.expert_output_combination != "sum":
             raise ValueError("MoELayer implementation requires sum expert-output combination")
         if not moe_cfg.dropless or moe_cfg.token_dropping_allowed:
@@ -62,6 +64,12 @@ class MoELayer(nn.Module):
                 f"router_softmax_dtype={moe_cfg.router_softmax_dtype!r} would silently be overridden, so "
                 "this is rejected instead of silently ignored"
             )
+        if (
+            moe_cfg.training_router_jitter_magnitude is not None
+            or moe_cfg.evaluation_router_jitter
+            or moe_cfg.inference_router_jitter
+        ):
+            raise ValueError("router jitter is not implemented by the Phase 1 reference MoELayer")
 
         self.n_routed_experts = moe_cfg.n_routed_experts
         self.n_shared_experts = moe_cfg.n_shared_experts
@@ -94,7 +102,13 @@ class MoELayer(nn.Module):
         Returns (output [batch, seq_len, d_model], load_balance_loss_raw,
         router_z_loss_raw, diagnostics_or_None).
         """
+        if x.ndim != 3:
+            raise ValueError(f"x must have shape [batch, seq_len, d_model], got {tuple(x.shape)}")
         batch, seq_len, d_model = x.shape
+        if valid_mask is not None and valid_mask.shape != (batch, seq_len):
+            raise ValueError(
+                f"valid_mask must have shape {(batch, seq_len)}, got {tuple(valid_mask.shape)}"
+            )
         flat_x = x.reshape(-1, d_model)
         n_tokens = flat_x.shape[0]
 

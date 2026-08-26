@@ -13,6 +13,6 @@ sha256:
   docs/research/project-roadmap.md: 972564b21952154b4860d26fa57f3ed2ae3ad6fbe7d604948970f9e58310579f
   juniper_auto/accounting/parameter_count.py: e0af4a3a816958cfb06fceeb841de707c10a81351f85b5454b7567bb90abafd5
   juniper_auto/config/frozen.py: 7b11dbc6c8212967d0ef9e855ce8e2d32c352dbbbf4c1b15610e4401e6d10167
-  juniper_auto/config/schema.py: 3e13566525593c8f292b3cd789b9a13827385a71834d21f9bb3b6c1f57c6b1c9
+  juniper_auto/config/schema.py: e4f4a9fa5f7007765eadd0b30f12238ba87e68be9a9cbf86bbd5824d9098b6a4
   requirements-lock.txt: cceeb27192c58b671d9c1728c64a5447d98702bd7896db8d888262b65f74f699
   scripts/validate_repo.py: 499f09909b14b697d2f891a5c56e4f760c1bf4504a34a9b35168f0485ef3b671

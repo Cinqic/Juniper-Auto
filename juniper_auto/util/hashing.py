@@ -81,6 +81,8 @@ PHASE_1_TEST_FILES: list[str] = [
     "tests/test_training_checkpoint.py",
     "tests/test_training_tiny_overfit.py",
     "tests/test_training_resume_equivalence.py",
+    "tests/test_training_profiling.py",
+    "tests/test_experiment_provenance.py",
 ]
 
 

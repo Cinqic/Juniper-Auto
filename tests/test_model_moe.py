@@ -5,6 +5,7 @@ counting, router FP32 precision, padding exclusion, and gradient flow."""
 from __future__ import annotations
 
 import torch
+import pytest
 
 from juniper_auto.model.moe import MoELayer
 from tests.model_fixtures import make_tiny_sparse_config
@@ -44,6 +45,13 @@ def test_expert_counts_match_config():
     assert len(layer.routed_experts) == 4
     assert layer.n_shared_experts == 1
     assert isinstance(layer.shared_expert, torch.nn.Module)
+
+
+def test_moe_rejects_invalid_valid_mask_shape():
+    layer, cfg = _layer()
+    x = torch.randn(2, 5, cfg.core.d_model)
+    with pytest.raises(ValueError, match="valid_mask"):
+        layer(x, valid_mask=torch.ones(1, 5, dtype=torch.bool))
 
 
 def test_every_token_gets_exactly_top_k_unique_routed_experts():
@@ -155,6 +163,22 @@ def test_router_logits_and_softmax_are_fp32_under_cpu_autocast_bf16():
         _, _, _, diag = _call(layer, x, torch.ones(4, dtype=torch.bool), return_diagnostics=True)
     assert diag.router_logits.dtype == torch.float32
     assert diag.router_probs.dtype == torch.float32
+
+
+@pytest.mark.skipif(not torch.cuda.is_available(), reason="requires CUDA mixed-precision hardware")
+def test_router_fp32_path_and_gradients_under_real_cuda_fp16_autocast():
+    layer, cfg = _layer()
+    layer = layer.to("cuda")
+    x = torch.randn(4, cfg.core.d_model, device="cuda", requires_grad=True)
+    valid = torch.ones(4, dtype=torch.bool, device="cuda")
+    with torch.autocast(device_type="cuda", dtype=torch.float16):
+        out, lb, z, diag = _call(layer, x, valid, return_diagnostics=True)
+        loss = out.float().square().mean() + lb + z
+    assert diag.router_logits.dtype == torch.float32
+    assert diag.router_probs.dtype == torch.float32
+    loss.backward()
+    assert layer.router.weight.grad is not None
+    assert torch.isfinite(layer.router.weight.grad).all()
 
 
 def test_router_softmax_probabilities_sum_to_one():

@@ -16,19 +16,17 @@ def test_forward_shapes_across_batch_and_seq_len(kind, batch_size, seq_len):
     cfg = make_tiny_sparse_config() if kind == "sparse" else make_tiny_dense_config()
     model = build_model(cfg, seed=0)
     input_ids = torch.randint(0, cfg.embeddings.vocab_size, (batch_size, seq_len))
-    labels = input_ids.clone()
+    labels = input_ids.clone() if seq_len > 1 else None
 
     out = model(input_ids, labels=labels)
     assert out.logits.shape == (batch_size, seq_len, cfg.embeddings.vocab_size)
     assert torch.isfinite(out.logits).all()
-    assert out.loss.dim() == 0
-    assert out.lm_loss.dim() == 0
     if seq_len > 1:
-        # seq_len == 1 has no valid next-token target at all (nothing
-        # follows the only position), so the shifted loss is legitimately
-        # undefined (NaN) rather than a bug -- see
-        # test_single_token_sequence_has_no_valid_loss_target below.
+        assert out.loss.dim() == 0
+        assert out.lm_loss.dim() == 0
         assert torch.isfinite(out.loss)
+    else:
+        assert out.loss is None and out.lm_loss is None
 
 
 @pytest.mark.parametrize("kind", ["sparse", "dense"])
@@ -99,12 +97,27 @@ def test_position_ids_with_different_relative_spacing_changes_output():
     assert not torch.allclose(out_default.logits, out_wide.logits)
 
 
-def test_single_token_sequence_has_no_valid_loss_target():
-    # A length-1 sequence has no next-token label at all; the shifted loss
-    # is legitimately NaN (0 supervised predictions), not a computation bug.
+def test_single_token_sequence_with_labels_fails_clearly():
     cfg = make_tiny_sparse_config()
     model = build_model(cfg, seed=0)
     input_ids = torch.randint(0, cfg.embeddings.vocab_size, (1, 1))
-    out = model(input_ids, labels=input_ids.clone())
-    assert torch.isnan(out.loss)
-    assert torch.isfinite(out.logits).all()
+    with pytest.raises(ValueError, match="non-ignored next-token target"):
+        model(input_ids, labels=input_ids.clone())
+
+
+@pytest.mark.parametrize("field", ["attention_mask", "labels", "position_ids"])
+def test_forward_rejects_mismatched_auxiliary_shapes(field):
+    cfg = make_tiny_sparse_config()
+    model = build_model(cfg, seed=0)
+    input_ids = torch.randint(0, cfg.embeddings.vocab_size, (2, 5))
+    kwargs = {field: torch.ones(1, 5, dtype=torch.long)}
+    with pytest.raises(ValueError, match=field):
+        model(input_ids, **kwargs)
+
+
+def test_forward_enforces_supported_context_boundary():
+    cfg = make_tiny_sparse_config(context_length=8)
+    model = build_model(cfg, seed=0)
+    model(torch.randint(0, cfg.embeddings.vocab_size, (1, 8)))
+    with pytest.raises(ValueError, match="exceeds the supported context length 8"):
+        model(torch.randint(0, cfg.embeddings.vocab_size, (1, 9)))
