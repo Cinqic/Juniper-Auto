@@ -39,8 +39,8 @@ more than one thing, all are listed.
 | 29 | Serialization/deserialization passes | `torch.nn.Module.state_dict`/`load_state_dict` (standard) | `tests/test_model_serialization.py` | -- |
 | 30 | Dense full-model tiny-batch overfit passes its predefined gate | `juniper_auto/training/tiny_overfit.py` | -- | exp-0004: LM loss 10.60 -> 0.0012, 100% token accuracy, 0 non-finite events |
 | 31 | Sparse full-model tiny-batch overfit passes its predefined gate | `tiny_overfit.py` | -- | exp-0005: LM loss 10.61 -> 0.0003, 100% token accuracy, 0 non-finite events |
-| 32 | Checkpoint contains every required state | `juniper_auto/training/checkpoint.py` (`REQUIRED_CHECKPOINT_FIELDS`) | `tests/test_training_checkpoint.py` (validation rejects any missing field) | exp-0006, exp-0007, exp-0008 (real checkpoints written/read) |
-| 33 | Interrupted/resumed training comparison passes defined criteria | `tiny_overfit.py::TinyOverfitHarness` + `checkpoint.py` | `tests/test_training_resume_equivalence.py` (bit-exact, two negative controls) | exp-0006: exact match on full 150M sparse model, CPU |
+| 32 | Checkpoint contains and restores every required state | `juniper_auto/training/checkpoint.py` | `tests/test_training_checkpoint.py` (curriculum, non-null scheduler/scaler, real CUDA scaler) | exp-0012 |
+| 33 | Interrupted/resumed training comparison passes defined criteria | `tiny_overfit.py::TinyOverfitHarness` + `checkpoint.py` | `tests/test_training_resume_equivalence.py` (bit-exact, negative controls, next batch) | exp-0012: exact official sparse CPU match |
 | 34 | FLOWBOX dense profile completed | `juniper_auto/training/profiling.py` | -- | exp-0007 |
 | 35 | FLOWBOX sparse profile completed | `profiling.py` | -- | exp-0008 |
 | 36 | Practical microbatch/accumulation path demonstrated | `profiling.py::profile_training_step` | -- | exp-0007, exp-0008 (microbatch=2, seq=512, grad_accum=4, both fit comfortably under 6GB) |
@@ -58,10 +58,13 @@ more than one thing, all are listed.
 | 48 | Sonnet self-review completed | `docs/phases/phase-1-sonnet-self-review.md` | -- | -- |
 | 49 | Every self-review blocking/major defect repaired | same | -- | -- |
 | 50 | Final working tree clean | -- | -- | `git status` in recovery doc |
-| 51 | Exact final Sonnet candidate pushed | -- | -- | final handoff message |
-| 52 | Exact final Sonnet candidate passes remote CI | -- | -- | final handoff message |
-| 53 | Phase report says `CANDIDATE - PENDING INDEPENDENT REVIEW` | `docs/phases/phase-1-architecture.md` | -- | -- |
-| 54 | No `phase-1-architecture` approval tag created by Sonnet | -- | -- | verified in final handoff |
+| 51 | Exact final Sonnet candidate pushed | -- | -- | `6a7410130e4b5ae6039a794f66f9360b675fd945` on `origin/main` |
+| 52 | Sonnet candidate passed remote CI | -- | -- | Phase 1 `32891197755`; Phase 0 `32891197798`; success |
+| 53 | Independent review/repair complete | `docs/phases/phase-1-sol-independent-review.md` | 289-test substantive suite | exp-0009..0014 |
+| 54 | Experiment provenance is trustworthy | `scripts/run_phase1_experiment.py` | `tests/test_experiment_provenance.py`, registry linkage test | exp-0009..0014 clean at `e25b547...` |
+| 55 | Exact substantive reviewed candidate pushed and green | -- | -- | `9555bbcb...`; Phase 1 `32931520019`, Phase 0 `32931520056`; success |
+| 56 | Independent fresh-clone recovery passes | `docs/recovery/phase-1.md` | 289 tests, 33 Phase 1 hashes | exact `9555bbcb...` |
+| 57 | Approval metadata/tag closure | `phase-1-sol-independent-review.md` | final metadata CI | annotated `phase-1-architecture` tag |
 
 ## Requirements satisfied only by prose (none found as of this writing)
 

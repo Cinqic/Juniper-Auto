@@ -28,11 +28,10 @@ PHASE_0_HASHED_ARTIFACTS: list[str] = [
 ]
 
 # Phase 1 reference-model implementation, training-support, documentation,
-# and validator artifacts. Deliberately excludes the narrative phase
-# report and self-review documents (living status documents, not frozen
-# artifacts -- consistent with Phase 0 excluding phase-0-foundation.md and
-# phase-0-sonnet-self-review.md from PHASE_0_HASHED_ARTIFACTS) and the
-# artifact-hash manifests themselves (no recursive self-hashing).
+# and validator artifacts. Phase 1's approval and recovery records are
+# protected because they contain the evidence and limitations on which the
+# approval tag relies. The artifact-hash manifests themselves remain excluded
+# to avoid recursive self-hashing.
 PHASE_1_HASHED_ARTIFACTS: list[str] = [
     "juniper_auto/model/__init__.py",
     "juniper_auto/model/norm.py",
@@ -51,6 +50,12 @@ PHASE_1_HASHED_ARTIFACTS: list[str] = [
     "juniper_auto/training/profiling.py",
     "docs/adr/0008-moe-auxiliary-loss-semantics.md",
     "docs/architecture/reference-model-implementation.md",
+    "docs/phases/phase-1-architecture.md",
+    "docs/phases/phase-1-requirements-traceability.md",
+    "docs/phases/phase-1-sonnet-self-review.md",
+    "docs/phases/phase-1-sol-independent-review.md",
+    "docs/recovery/phase-1.md",
+    "docs/time/phase-hours.csv",
     "scripts/validate_phase1.py",
     "scripts/run_phase1_experiment.py",
     "experiments/registry.yaml",
@@ -96,6 +101,7 @@ PHASE_1_TEST_FILES: list[str] = [
     "tests/test_training_resume_equivalence.py",
     "tests/test_training_profiling.py",
     "tests/test_experiment_provenance.py",
+    "tests/test_phase_report_structure.py",
 ]
 
 

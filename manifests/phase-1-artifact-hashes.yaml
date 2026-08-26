@@ -19,6 +19,12 @@ sha256:
   docs/experiments/results/exp-0012-sol-resume-equivalence.json: 9015ff54397fc43ca21207cdd000782dc6b5d2ab22d113cc9f271ed7e1a4124f
   docs/experiments/results/exp-0013-sol-flowbox-dense-profile.json: 9ca0c07b6c3b4ef61ef867f39d3dde0581987796919109db1f91041496239d70
   docs/experiments/results/exp-0014-sol-flowbox-sparse-profile.json: 32b45b584608463567beb076bcd63736f868cb45a37473d311670819403a878b
+  docs/phases/phase-1-architecture.md: a2781f35ff2428e3ff0004f1d9ed064d43d4972e2c6e130d12eebc18f18b2677
+  docs/phases/phase-1-requirements-traceability.md: 06c3dfb2006626e5c9af4ea3a5230bd6df2fb9153587f637d8e371d9d3a0e2ff
+  docs/phases/phase-1-sol-independent-review.md: e5f4c81e60c9ba006d91ed8873654dca414be6aa4bb2e9d5530182d15973f199
+  docs/phases/phase-1-sonnet-self-review.md: 2508bbdcb6584528c3e41bfb0f94316adfe09df0ede555a52a7f87db29bef48b
+  docs/recovery/phase-1.md: 5ffcfb6502d7e12945cec78c8be9633c51279b21ae617635b16c3adaeae76f16
+  docs/time/phase-hours.csv: 538d13d222cd704c136cb2396aebe1b1c83b85fb6cbd032a17b0bd7d959c5d7c
   experiments/registry.yaml: d3a363e1565b14e9b22a24cce8c302c00c11f43413ed1eddeacf246777f924b1
   juniper_auto/model/__init__.py: c09234cdbb1d7812c077e20c5489a5034cccd793b177bc02ad1d7bf389211319
   juniper_auto/model/attention.py: 5471ea9609456ab12adc09d29329935c90be6ca2ceec87b0d39f6caf2cad21e1
@@ -35,6 +41,6 @@ sha256:
   juniper_auto/training/profiling.py: 7047c528280e2c709976dd1bf6e5c3fcf368edc55407b315ce319e14cf8e71e2
   juniper_auto/training/state.py: 4f44315f39b2ec2b50e4606d1ed24111ffe37c54ceab500f680c0b0d7b228325
   juniper_auto/training/tiny_overfit.py: 10a59a58a6e453f5cdac19cb0122d136b9a0c2e993b490bb280b6846e3bd5559
-  manifests/phase-1-test-manifest.yaml: 55fc14efee83fc7869aeaaf3f25777ef2909a400579e4ec3399dba563c977029
+  manifests/phase-1-test-manifest.yaml: 4cad624fb4cd437a0f5d2bb3e13a1166bdf55dadf003d2582248a4f3fbfb2f1a
   scripts/run_phase1_experiment.py: ff9a2528ea2dce3e4dffdac500e376a51abd53a78b60952584c1ce4e8c9cc8f5
-  scripts/validate_phase1.py: dcafe760ac6194a2540663c419a2c16e977f4197178ac4523531c0d93deed109
+  scripts/validate_phase1.py: 5f653e911fdaebd5c99376751c07bb318a4906a361670a269aafc9501c3bfee3

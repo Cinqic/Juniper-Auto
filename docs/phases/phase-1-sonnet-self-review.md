@@ -4,8 +4,9 @@
 
 All Phase 1 work committed on top of Phase 0's approved
 `f6f8b5397b41d31081f55cdd60cb6363ec052be4` (tag `phase-0-foundation`),
-through the commit immediately preceding this report's own commit (see
-the final handoff message for the exact hash). This review assumes the
+through substantive candidate `22893b7d580504a047254fe261799f1060dc2f88`;
+Sonnet's later metadata closure ended at
+`6a7410130e4b5ae6039a794f66f9360b675fd945`. This review assumes the
 implementation is wrong until each specific check below demonstrates
 otherwise -- it is a re-inspection of the repository as delivered, not a
 restatement of the engineering summary.
@@ -318,6 +319,11 @@ reproduce the same results (confirmed identical across the pre- and
 post-fix reruns here, since `residual.scale=1.0` and the other Pass B
 fixes are behavioral no-ops for the frozen v0.1 configs).
 
+Independent-review resolution: Sol confirmed this as a provenance defect,
+hardened the runner, preserved exp-0003..0008 as historical evidence, and
+produced clean canonical reruns exp-0009..0014 at
+`e25b5478d1c72503286dc4d831f752f028e1b56e`.
+
 ## Remaining limitations
 
 See `docs/phases/phase-1-architecture.md`'s "Accepted limitations"
@@ -329,8 +335,8 @@ during implementation.
 
 ## Remote CI
 
-`.github/workflows/phase-1-validation.yml` -- exact run ID for the final
-candidate commit recorded in the final handoff message.
+Sonnet final candidate `6a741013...`: Phase 1 run `32891197755` and Phase
+0 run `32891197798`, both success.
 
 ## Recovery result
 
@@ -338,8 +344,8 @@ See `docs/recovery/phase-1.md`.
 
 ## Final Sonnet candidate identity
 
-See the final handoff message at the end of this Phase 1 engineering
-session.
+`6a7410130e4b5ae6039a794f66f9360b675fd945` (final Sonnet metadata
+candidate; not the independent approval identity).
 
 ---
 

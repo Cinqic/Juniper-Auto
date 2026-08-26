@@ -69,3 +69,34 @@ def test_phase_0_report_distinguishes_candidate_handoff_and_approval(repo_root):
     assert "Sonnet metadata/handoff HEAD" in text
     assert "Sol substantive reviewed repairs" in text
     assert "resolved by the annotated" in text
+
+
+def test_phase_1_report_exists_and_has_required_sections(repo_root):
+    path = repo_root / "docs" / "phases" / "phase-1-architecture.md"
+    assert path.is_file(), "docs/phases/phase-1-architecture.md must exist"
+    text = path.read_text()
+    missing = [section for section in REQUIRED_SECTIONS if section not in text]
+    assert not missing, f"phase-1-architecture.md missing sections: {missing}"
+
+
+def test_phase_1_approval_has_independent_evidence_and_concrete_identity(repo_root):
+    report = repo_root / "docs" / "phases" / "phase-1-sol-independent-review.md"
+    assert report.is_file(), "independent Phase 1 review must be repository-contained"
+    text = report.read_text()
+    assert "PHASE 1 APPROVED" in text
+    assert "GPT-5.6 Sol" in text
+    assert "9555bbcb43d7b4f63762a5f11c2cea13e11fa7c8" in text
+    assert "phase-1-architecture" in text
+
+    records = "\n".join(
+        (repo_root / path).read_text()
+        for path in [
+            "README.md",
+            "docs/phases/phase-1-architecture.md",
+            "docs/phases/phase-1-requirements-traceability.md",
+            "docs/phases/phase-1-sonnet-self-review.md",
+            "docs/time/phase-hours.csv",
+        ]
+    )
+    assert "HEAD (this commit" not in records
+    assert "final handoff message" not in records

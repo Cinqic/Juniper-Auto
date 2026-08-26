@@ -203,6 +203,7 @@ def gate_phase1_documentation() -> None:
         "docs/phases/phase-1-architecture.md",
         "docs/phases/phase-1-requirements-traceability.md",
         "docs/phases/phase-1-sonnet-self-review.md",
+        "docs/phases/phase-1-sol-independent-review.md",
         "docs/architecture/reference-model-implementation.md",
         "docs/recovery/phase-1.md",
         "docs/adr/0008-moe-auxiliary-loss-semantics.md",

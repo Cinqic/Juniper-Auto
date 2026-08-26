@@ -37,8 +37,11 @@ python scripts/validate_phase1.py --all
 
 ## Result
 
-This exercise was actually run twice, into two separate genuinely fresh
-directories, from two different commits.
+Sonnet's recovery exercise was run twice, into two separate genuinely
+fresh directories, from two different intermediate commits. Its final
+metadata candidate was later closed at `6a741013...`; therefore the
+passing `22893b7...` exercise proves the substantive Sonnet candidate, not
+the later metadata-only identity.
 
 **First run, commit `e4cca8a141ff5205556642b5d28cd5c2b8648d19`: FAILED.**
 `scripts/validate_repo.py --all` failed at the "repository integrity"
@@ -156,3 +159,45 @@ repeat of exp-0004/exp-0005.
 - All other Phase 0 troubleshooting notes in
   [docs/recovery/README.md](README.md) apply unchanged (no standalone
   global `pip3`, large `torch` download, no CUDA/GPU determinism claim).
+
+## GPT-5.6 Sol independent recovery
+
+After repairs and clean canonical reruns were committed and pushed, Sol
+performed a new recovery from GitHub at exact substantive reviewed SHA
+`9555bbcb43d7b4f63762a5f11c2cea13e11fa7c8` on 2026-08-26:
+
+1. `git clone https://github.com/Cinqic/Juniper-Auto.git` into a new
+   temporary directory;
+2. detached checkout of exact `9555bbcb...`;
+3. new Python 3.12.3 venv;
+4. pip upgrade, locked requirements install, editable `--no-deps` install;
+5. both canonical validators from inside the clone directory.
+
+Results:
+
+```text
+python scripts/validate_repo.py --all
+  126 tracked files scanned
+  11 Phase 0 hashes verified
+  289 passed
+  exit 0
+
+python scripts/validate_phase1.py --all
+  sparse total 150031360; active 79252480
+  dense total 79191040
+  official sparse/dense forward+backward passed
+  checkpoint round trip passed
+  289 passed
+  22 protected test files / 33 Phase 1 hashes verified
+  12 Phase 1 registry entries found
+  exit 0
+```
+
+The CUDA-capable recovery emitted PyTorch's documented warning that its
+memory-efficient attention backward is nondeterministic; CUDA bitwise
+determinism remains an accepted limitation. An initial invocation using
+an absolute script path while the shell remained in `/tmp` also passed,
+but the standalone foundation log reported `git_commit=unknown` because
+that utility discovers Git from the process working directory. Both
+validators were rerun exactly as documented from inside the clone and
+logged `9555bbcb...`; this methodology warning is preserved here.

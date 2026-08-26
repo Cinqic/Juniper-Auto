@@ -1,12 +1,11 @@
 # Juniper Auto
 
-**Status: Phase 1 candidate - pending independent review.** Phase 0
-(research foundation) is independently reviewed and approved -- see tag
-`phase-0-foundation`. Phase 1 (the executable reference model and dense
-control architecture) is implemented and self-reviewed by Claude Sonnet 5
-but **not yet independently approved**; GPT-5.6 Sol has not reviewed this
-candidate. **No model has been trained on real data, and no base or
-instruction-tuned checkpoint exists.**
+**Status: Phase 0 approved; Phase 1 approved; Phase 2 not started.** See
+the annotated tags `phase-0-foundation` and `phase-1-architecture`, plus
+the GPT-5.6 Sol
+[independent Phase 1 review](docs/phases/phase-1-sol-independent-review.md).
+**No model has been trained on real data, and no base or instruction-tuned
+checkpoint exists.**
 
 Juniper Auto is a research project asking: how capable, efficient,
 autonomous, persistent, adaptable, reliable, and meaningfully
@@ -49,9 +48,9 @@ is the final intended license for trained model weights/datasets is an
 open governance item, not yet decided -- see the charter's License status
 section.
 
-## What exists right now (Phase 0 + Phase 1 candidate)
+## What exists right now (approved Phase 0 + Phase 1)
 
-### Phase 1 (candidate, pending independent review)
+### Phase 1 (independently approved)
 
 Phase 1 implements the full `ja150m-v0.1` (sparse MoE) and
 `ja150m-v0.1-dense` architectures as real, executable PyTorch code on one

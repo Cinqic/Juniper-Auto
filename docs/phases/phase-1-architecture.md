@@ -24,10 +24,12 @@ run `32879488449` was green at this exact commit).
 
 ## Final commit
 
-`CANDIDATE - PENDING INDEPENDENT REVIEW` -- see the Approval status
-section. The exact Sonnet substantive candidate commit hash is recorded in
-the final handoff message at the end of this Phase 1 engineering session,
-once documentation and self-review are complete and pushed.
+The Sonnet final metadata candidate was
+`6a7410130e4b5ae6039a794f66f9360b675fd945`. GPT-5.6 Sol's substantive
+reviewed candidate is `9555bbcb43d7b4f63762a5f11c2cea13e11fa7c8`.
+The final approval-metadata commit is resolved by the annotated
+`phase-1-architecture` tag, avoiding impossible commit self-reference.
+See `phase-1-sol-independent-review.md`.
 
 ## Implementation summary
 
@@ -57,11 +59,9 @@ once documentation and self-review are complete and pushed.
 - **`scripts/hash_manifest.py`** (extended, `--phase 0|1`) and
   **`scripts/generate_phase1_test_manifest.py`** (new): Phase 1
   artifact-hash tooling.
-- **133 new automated tests** across `tests/test_model_*.py` and
-  `tests/test_training_*.py` (116 model tests + 17 training tests, on top
-  of Phase 0's 98), including 15 deliberate fault-injection tests proving
-  the suite detects specific broken implementations (see Self-review
-  section and `tests/test_model_fault_injection.py`).
+- **289 automated tests in the final substantive suite**, including
+  deliberate fault injection and independent provenance, checkpoint,
+  sampler, context, invalid-shape, profiling, and live-CUDA checks.
 
 ## Architecture / configuration IDs
 
@@ -98,10 +98,9 @@ Phase 1 test file). `manifests/phase-0-artifact-hashes.yaml` is untouched.
 
 ## Tests
 
-`pytest tests/ -q` -- see the exact count and pass/fail result in this
-report's reproducibility procedure output. As of the candidate commit:
-Phase 0's 98 tests plus 133 new Phase 1 tests, all passing locally and in
-CI (see CI workflow section below for the exact run).
+`pytest tests/ -q`: 289 passed on the substantive reviewed candidate,
+locally and in clean remote CI. CUDA-capable local execution emits the
+accepted PyTorch nondeterministic-attention warning.
 
 ## Evaluations
 
@@ -115,9 +114,9 @@ gates are plumbing-correctness checks, not a research comparison.
 
 ## Experiments
 
-Six Phase 1 experiments registered in `experiments/registry.yaml`
-(`exp-0003`-`exp-0008`), all `status: completed`, each with a full JSON
-result artifact under `docs/experiments/results/`:
+Twelve Phase 1 experiments are registered. Sonnet's exp-0003..0008 are
+preserved as historical evidence. Approval relies on Sol's clean-tree,
+config-hashed reruns exp-0009..0014; see the independent review report.
 
 | ID | Experiment | Key result |
 |---|---|---|
@@ -128,13 +127,26 @@ result artifact under `docs/experiments/results/`:
 | exp-0007 | FLOWBOX dense hardware profile | FP16 inference 27,574 tok/s; 4,096-token batch-1 inference succeeds at 1.09 GB peak VRAM |
 | exp-0008 | FLOWBOX sparse hardware profile | FP16 inference 5,113 tok/s (near-FP32-parity, see Known limitations); 4,096-token batch-1 inference succeeds at 1.23 GB peak VRAM |
 
+Independent approval reruns:
+
+| ID | Experiment | Key result |
+|---|---|---|
+| exp-0009 | Parameter verification | Exact counts, tied identity, clean provenance |
+| exp-0010 | Dense tiny overfit | Loss 10.6038 → 0.001306; 100%; gate passed |
+| exp-0011 | Sparse tiny overfit | Loss 10.6148 → 0.000287; 100%; gate passed |
+| exp-0012 | Resume equivalence | Bit-exact parameters/losses/optimizer/counters/next batch |
+| exp-0013 | Corrected dense profile | Checkpointed training 7,510 tok/s; 4,096 succeeds |
+| exp-0014 | Corrected sparse profile | Checkpointed training 1,782 tok/s; 4,096 succeeds |
+
 ## CI workflow / run
 
 `.github/workflows/phase-1-validation.yml`, job `validate-phase1`, running
 `python scripts/validate_phase1.py --all` (which itself runs the Phase 0
 baseline first) on a clean `ubuntu-latest` GitHub Actions runner, no GPU.
-Exact run ID for the candidate commit: recorded in the final handoff
-message.
+Substantive reviewed SHA `9555bbcb43d7b4f63762a5f11c2cea13e11fa7c8`:
+Phase 1 run `32931520019` success; Phase 0 run `32931520056` success.
+Final metadata-commit CI identities are recorded in the annotated approval
+tag because they cannot be embedded in their own commit.
 
 ## Recovery status
 
@@ -158,7 +170,8 @@ engineering, per governance rule 6, once the dedicated self-review pass
 
 ## Independent review hours
 
-`0` / `PENDING`. GPT-5.6 Sol has not yet reviewed this candidate.
+Completed by GPT-5.6 Sol; see `docs/time/phase-hours.csv` and
+`phase-1-sol-independent-review.md`.
 
 ## GPU hours
 
@@ -258,9 +271,12 @@ recovery output.
 
 ## Reviewer identity
 
-Self-review: Claude Sonnet 5 (implementer). Independent review: GPT-5.6
-Sol (pending).
+Self-review: Claude Sonnet 5 (implementer). Independent reviewer and Phase
+1 approval authority: GPT-5.6 Sol.
 
 ## Approval status
 
-`CANDIDATE - PENDING INDEPENDENT REVIEW`
+`APPROVED WITH ACCEPTED LIMITATIONS BY GPT-5.6 SOL`
+
+Canonical approval identity is the annotated `phase-1-architecture` tag
+after exact metadata-commit remote CI succeeds.
