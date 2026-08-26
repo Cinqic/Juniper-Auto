@@ -22,6 +22,7 @@ from juniper_auto.model.block import DenseBlock, MoEBlock
 from juniper_auto.model.ffn import SwiGLU
 from juniper_auto.model.losses import causal_lm_loss
 from juniper_auto.model.moe import MoELayer, MoEDiagnostics
+from juniper_auto.model.moe_ablations import MoEAblationConfig
 from juniper_auto.model.norm import RMSNorm
 
 
@@ -105,7 +106,20 @@ class JuniperAutoModel(nn.Module):
         labels: torch.Tensor | None = None,
         position_ids: torch.Tensor | None = None,
         return_diagnostics: bool = False,
+        *,
+        return_trace: bool = False,
+        max_trace_tokens: int | None = 4096,
+        ablation: MoEAblationConfig | None = None,
     ) -> ModelOutput:
+        """`return_trace`, if True (requires `return_diagnostics=True`),
+        attaches a bounded per-token routing trace to each MoE layer's
+        diagnostics -- assemble a full-model trace with
+        `juniper_auto.model.moe_diagnostics.assemble_full_trace(model.layer_kinds, out.diagnostics)`.
+        `ablation`, if given, is applied identically to every MoE layer in
+        this forward call (evaluation-only; see
+        `juniper_auto.model.moe_ablations` for exact per-mode semantics);
+        `None` (the default) is the unmodified production path for every
+        layer."""
         if input_ids.ndim != 2:
             raise ValueError(f"input_ids must have shape [batch, seq_len], got {tuple(input_ids.shape)}")
         batch, seq_len = input_ids.shape
@@ -135,6 +149,9 @@ class JuniperAutoModel(nn.Module):
         router_z_raws: list[torch.Tensor] = []
         layer_diagnostics: list[MoEDiagnostics | None] | None = [] if return_diagnostics else None
 
+        if return_trace and not return_diagnostics:
+            raise ValueError("return_trace=True requires return_diagnostics=True")
+
         use_checkpointing = self.gradient_checkpointing and self.training
         if use_checkpointing and return_diagnostics:
             raise ValueError("gradient checkpointing does not support return_diagnostics=True")
@@ -146,7 +163,13 @@ class JuniperAutoModel(nn.Module):
                 )
             else:
                 x, lb_raw, z_raw, diag = block(
-                    x, position_ids, key_valid_mask, return_diagnostics=return_diagnostics
+                    x,
+                    position_ids,
+                    key_valid_mask,
+                    return_diagnostics=return_diagnostics,
+                    return_trace=return_trace,
+                    max_trace_tokens=max_trace_tokens,
+                    ablation=ablation,
                 )
             if lb_raw is not None:
                 load_balance_raws.append(lb_raw)

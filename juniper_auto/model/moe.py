@@ -5,42 +5,55 @@ ungated shared expert.
 
 with alpha_1 + alpha_2 == 1 after renormalizing the top-2 router
 probabilities. No capacity factor, no token dropping, no averaging
-divisor, no gate on the shared expert, no router/expert bias.
-
-This is a correctness-first *reference* dispatch: it loops over the 8
-routed experts and masks/gathers per expert, rather than a batched/kernel
-implementation, per the Phase 1 instruction to prioritize an inspectable
-implementation over a Phase-2-style optimized kernel. Every token
+divisor, no gate on the shared expert, no router/expert bias. Every token
 (including padding) is routed and produces a finite output, so the block
 output stays shape-stable; only the *statistics* used for the auxiliary
-losses are restricted to valid (non-padding) tokens, via `valid_mask`.
+losses (and the diagnostics in `moe_diagnostics.py`) are restricted to
+valid (non-padding) tokens, via `valid_mask`.
+
+This module is the MoELayer orchestrator: it owns the router/expert
+parameters and config validation, and delegates router math to
+`juniper_auto.model.routing`, dispatch to `juniper_auto.model.moe_dispatch`
+(a `backend="reference"` correctness-first path, preserved bit-for-bit
+identical to the approved Phase 1 implementation for the default no-ablation
+call, and an `backend="optimized"` pure-PyTorch alternative -- see
+`moe_dispatch.py` and tests/test_model_moe_dispatch.py for the equivalence
+proof), instrumentation to `juniper_auto.model.moe_diagnostics`, and
+evaluation-only ablation overrides to `juniper_auto.model.moe_ablations`.
+
+`MoEDiagnostics` is re-exported here (rather than only living in
+moe_diagnostics.py) because `juniper_auto.model.model` and existing Phase 1
+tests import it as `juniper_auto.model.moe.MoEDiagnostics`.
 """
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from typing import Literal
 
 import torch
-import torch.nn.functional as F
 from torch import nn
 
 from juniper_auto.config.schema import ArchitectureConfig
 from juniper_auto.model.ffn import SwiGLU
 from juniper_auto.model.losses import compute_load_balance_loss_raw, compute_router_z_loss_raw
+from juniper_auto.model.moe_ablations import (
+    MoEAblationConfig,
+    is_router_override,
+    resolve_dispatch_kwargs,
+    resolve_router_override,
+    should_disable_shared_expert,
+)
+from juniper_auto.model.moe_diagnostics import MoEDiagnostics, build_moe_diagnostics
+from juniper_auto.model.moe_dispatch import DISPATCH_BACKENDS
+from juniper_auto.model.routing import compute_router_logits_and_probs, select_topk
 
+DispatchBackend = Literal["reference", "optimized"]
 
-@dataclass
-class MoEDiagnostics:
-    router_logits: torch.Tensor  # [n_tokens, n_experts] fp32
-    router_probs: torch.Tensor  # [n_tokens, n_experts] fp32
-    topk_idx: torch.Tensor  # [n_tokens, top_k] long
-    topk_weights: torch.Tensor  # [n_tokens, top_k] fp32, renormalized, sums to 1 per valid token
-    valid_mask: torch.Tensor  # [n_tokens] bool
-    assignment_counts_per_expert: torch.Tensor  # [n_experts], valid tokens only
+__all__ = ["MoELayer", "MoEDiagnostics", "MoEAblationConfig", "DispatchBackend"]
 
 
 class MoELayer(nn.Module):
-    def __init__(self, cfg: ArchitectureConfig):
+    def __init__(self, cfg: ArchitectureConfig, *, backend: DispatchBackend = "reference"):
         super().__init__()
         moe_cfg = cfg.moe
         if moe_cfg is None:
@@ -69,12 +82,15 @@ class MoELayer(nn.Module):
             or moe_cfg.evaluation_router_jitter
             or moe_cfg.inference_router_jitter
         ):
-            raise ValueError("router jitter is not implemented by the Phase 1 reference MoELayer")
+            raise ValueError("router jitter is not implemented by the Phase 1/2 reference MoELayer")
+        if backend not in DISPATCH_BACKENDS:
+            raise ValueError(f"unsupported backend: {backend!r} (expected one of {sorted(DISPATCH_BACKENDS)})")
 
         self.n_routed_experts = moe_cfg.n_routed_experts
         self.n_shared_experts = moe_cfg.n_shared_experts
         self.top_k = moe_cfg.top_k
         self.renormalize = moe_cfg.renormalize_top_k_weights
+        self.backend: DispatchBackend = backend
 
         self.router = nn.Linear(moe_cfg.router_input_dim, moe_cfg.router_output_dim, bias=moe_cfg.router_bias)
 
@@ -95,9 +111,23 @@ class MoELayer(nn.Module):
         x: torch.Tensor,
         valid_mask: torch.Tensor | None = None,
         return_diagnostics: bool = False,
+        *,
+        backend: DispatchBackend | None = None,
+        ablation: MoEAblationConfig | None = None,
+        return_trace: bool = False,
+        max_trace_tokens: int | None = 4096,
     ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, MoEDiagnostics | None]:
         """x: [batch, seq_len, d_model]. valid_mask: [batch, seq_len] bool/int,
         True/1 for real tokens (defaults to all-valid if omitted).
+
+        `backend` overrides `self.backend` for this call only (used by
+        reference-vs-optimized comparison tests/experiments so a single
+        layer instance with fixed weights can be called both ways).
+        `ablation`, if given, applies one evaluation-only override -- see
+        `juniper_auto.model.moe_ablations` for exact semantics; `None`
+        (the default) is the unmodified production path. `return_trace`
+        requires `return_diagnostics=True` and attaches a bounded per-token
+        routing trace to the returned diagnostics.
 
         Returns (output [batch, seq_len, d_model], load_balance_loss_raw,
         router_z_loss_raw, diagnostics_or_None).
@@ -109,6 +139,9 @@ class MoELayer(nn.Module):
             raise ValueError(
                 f"valid_mask must have shape {(batch, seq_len)}, got {tuple(valid_mask.shape)}"
             )
+        if return_trace and not return_diagnostics:
+            raise ValueError("return_trace=True requires return_diagnostics=True")
+
         flat_x = x.reshape(-1, d_model)
         n_tokens = flat_x.shape[0]
 
@@ -117,37 +150,31 @@ class MoELayer(nn.Module):
         else:
             flat_valid = valid_mask.reshape(-1).to(torch.bool)
 
-        router_bias = self.router.bias.to(torch.float32) if self.router.bias is not None else None
-        with torch.autocast(device_type=x.device.type, enabled=False):
-            router_logits = F.linear(flat_x.to(torch.float32), self.router.weight.to(torch.float32), router_bias)
-            router_probs = F.softmax(router_logits, dim=-1)
+        router_logits, router_probs = compute_router_logits_and_probs(flat_x, self.router.weight, self.router.bias)
 
-        topk_probs, topk_idx = torch.topk(router_probs, k=self.top_k, dim=-1)
-        if self.renormalize:
-            denom = topk_probs.sum(dim=-1, keepdim=True).clamp_min(1e-20)
-            topk_weights = topk_probs / denom
+        if is_router_override(ablation):
+            topk_idx, topk_weights = resolve_router_override(
+                ablation, n_tokens=n_tokens, n_experts=self.n_routed_experts, top_k=self.top_k, device=x.device
+            )
         else:
-            topk_weights = topk_probs
+            topk_idx, topk_weights = select_topk(router_probs, self.top_k, self.renormalize)
 
-        output = self.shared_expert(flat_x)
+        shared_out = self.shared_expert(flat_x)
+        if should_disable_shared_expert(ablation):
+            shared_out = torch.zeros_like(shared_out)
 
-        # Weight cast is deferred until each expert_out is actually
-        # produced (rather than pre-cast to flat_x.dtype up front): under
-        # autocast, expert Linear layers may execute in a lower-precision
-        # dtype than flat_x itself, and index_add_ requires the source
-        # tensor's dtype to exactly match `output`'s -- casting per-slot
-        # against expert_out.dtype keeps this correct regardless of what
-        # autocast decided for that op.
-        for expert_id, expert in enumerate(self.routed_experts):
-            for slot in range(self.top_k):
-                slot_mask = topk_idx[:, slot] == expert_id
-                if not torch.any(slot_mask):
-                    continue
-                expert_out = expert(flat_x[slot_mask])
-                weight = topk_weights[slot_mask, slot : slot + 1].to(expert_out.dtype)
-                output = output.index_add(
-                    0, slot_mask.nonzero(as_tuple=True)[0], (weight * expert_out).to(output.dtype)
-                )
+        dispatch_fn = DISPATCH_BACKENDS[backend or self.backend]
+        dispatch_kwargs = resolve_dispatch_kwargs(ablation)
+        output = dispatch_fn(
+            flat_x,
+            self.routed_experts,
+            topk_idx,
+            topk_weights,
+            self.n_routed_experts,
+            self.top_k,
+            shared_out,
+            **dispatch_kwargs,
+        )
 
         load_balance_raw = compute_load_balance_loss_raw(
             router_probs, topk_idx, flat_valid, self.n_routed_experts, self.top_k
@@ -156,19 +183,28 @@ class MoELayer(nn.Module):
 
         diagnostics = None
         if return_diagnostics:
-            valid_topk_idx = topk_idx[flat_valid]
-            counts = torch.zeros(self.n_routed_experts, dtype=torch.long, device=x.device)
-            if valid_topk_idx.numel() > 0:
-                counts.scatter_add_(
-                    0, valid_topk_idx.reshape(-1), torch.ones_like(valid_topk_idx.reshape(-1))
-                )
-            diagnostics = MoEDiagnostics(
+            # routed_only is reconstructed by subtraction (rather than a
+            # second from-scratch dispatch pass) purely for contribution-norm
+            # reporting -- it is never used for the loss-critical `output`
+            # above, so this introduces no behavioral change to production
+            # output, only a small extra subtraction when diagnostics are
+            # explicitly requested.
+            routed_only_output = output - shared_out
+            diagnostics = build_moe_diagnostics(
                 router_logits=router_logits,
                 router_probs=router_probs,
                 topk_idx=topk_idx,
                 topk_weights=topk_weights,
                 valid_mask=flat_valid,
-                assignment_counts_per_expert=counts,
+                n_routed_experts=self.n_routed_experts,
+                shared_out=shared_out,
+                routed_only_output=routed_only_output,
+                load_balance_loss_raw=load_balance_raw,
+                router_z_loss_raw=router_z_raw,
+                return_trace=return_trace,
+                batch=batch,
+                seq_len=seq_len,
+                max_trace_tokens=max_trace_tokens,
             )
 
         return output.view(batch, seq_len, d_model), load_balance_raw, router_z_raw, diagnostics

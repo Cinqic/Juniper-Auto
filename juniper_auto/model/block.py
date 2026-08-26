@@ -60,7 +60,15 @@ class DenseBlock(nn.Module):
         position_ids: torch.Tensor,
         key_valid_mask: torch.Tensor | None,
         return_diagnostics: bool = False,
+        *,
+        return_trace: bool = False,
+        max_trace_tokens: int | None = 4096,
+        ablation=None,
     ):
+        # A dense block has no router/experts, so the diagnostics/trace/
+        # ablation parameters are accepted only for a uniform call signature
+        # with MoEBlock (JuniperAutoModel.forward calls every block the same
+        # way) and are otherwise no-ops here.
         x = x + self.residual_scale * self.attention(self.attention_norm(x), position_ids, key_valid_mask)
         x = x + self.residual_scale * self.ffn(self.ffn_norm(x))
         return x, None, None, None
@@ -82,10 +90,19 @@ class MoEBlock(nn.Module):
         position_ids: torch.Tensor,
         key_valid_mask: torch.Tensor | None,
         return_diagnostics: bool = False,
+        *,
+        return_trace: bool = False,
+        max_trace_tokens: int | None = 4096,
+        ablation=None,
     ):
         x = x + self.residual_scale * self.attention(self.attention_norm(x), position_ids, key_valid_mask)
         moe_out, load_balance_raw, router_z_raw, diagnostics = self.moe(
-            self.ffn_norm(x), valid_mask=key_valid_mask, return_diagnostics=return_diagnostics
+            self.ffn_norm(x),
+            valid_mask=key_valid_mask,
+            return_diagnostics=return_diagnostics,
+            return_trace=return_trace,
+            max_trace_tokens=max_trace_tokens,
+            ablation=ablation,
         )
         x = x + self.residual_scale * moe_out
         return x, load_balance_raw, router_z_raw, diagnostics
