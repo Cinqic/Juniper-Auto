@@ -291,3 +291,142 @@
     honestly-measured throughput ceiling for Phase 1 -- optimizing it is
     explicitly Phase 2 scope, not something to paper over here.
   artifact_locations: docs/experiments/results/exp-0008-flowbox-sparse-profile.json, juniper_auto/training/profiling.py, scripts/run_phase1_experiment.py
+
+- experiment_id: exp-0009
+  date: "2026-08-26"
+  phase: phase-1
+  hypothesis: >
+    Independent config-derived equations and the instantiated module tree
+    agree exactly on both official architectures after the Sol repair pass.
+  git_commit: e25b5478d1c72503286dc4d831f752f028e1b56e
+  architecture_id: ja150m-v0.1, ja150m-v0.1-dense
+  tokenizer_id: not-yet-created
+  dataset_id: not-applicable
+  sampler_id: not-applicable
+  starting_checkpoint: not-applicable
+  configuration: configs/architecture/ja150m-v0.1.yaml, configs/architecture/ja150m-v0.1-dense.yaml (SHA-256 recorded in artifact)
+  seed: 0
+  environment: FLOWBOX CPU, exact environment recorded in artifact
+  token_budget: not-applicable
+  status: completed
+  result: >
+    Clean-tree canonical gate passed: sparse total 150,031,360; sparse
+    standard active 79,252,480; dense total 79,191,040; field-by-field
+    config/module breakdowns match and tied weights share object identity.
+  conclusion: Independent parameter accounting confirms the repaired executable architectures remain exact.
+  artifact_locations: docs/experiments/results/exp-0009-sol-param-verification.json
+
+- experiment_id: exp-0010
+  date: "2026-08-26"
+  phase: phase-1
+  hypothesis: The official dense control passes the predeclared independent tiny-overfit gate on FLOWBOX CUDA FP16.
+  git_commit: e25b5478d1c72503286dc4d831f752f028e1b56e
+  architecture_id: ja150m-v0.1-dense
+  tokenizer_id: not-yet-created
+  dataset_id: synthetic Phase 1 engineering data (8 sequences x 32 tokens, vocabulary 36,864)
+  sampler_id: SyntheticSequenceStream (seed 1234, batch_size 4)
+  starting_checkpoint: not-applicable
+  configuration: artifact records full command/config and architecture-config SHA-256
+  seed: 1234
+  environment: FLOWBOX RTX 2060 CUDA FP16 AMP, exact environment recorded in artifact
+  token_budget: not-applicable
+  status: completed
+  result: >
+    Gate passed after 300 steps: LM loss 10.603769 -> 0.001306,
+    100% ending token accuracy, 99.9877% loss reduction, no non-finite
+    loss/gradient-norm event, finite final parameters, 1.672 GB peak VRAM,
+    29.73 seconds.
+  conclusion: Dense forward/backward/AdamW/clipping/AMP/GradScaler plumbing independently revalidated.
+  artifact_locations: docs/experiments/results/exp-0010-sol-dense-tiny-overfit.json
+
+- experiment_id: exp-0011
+  date: "2026-08-26"
+  phase: phase-1
+  hypothesis: The official sparse reference passes the same predeclared independent tiny-overfit gate on FLOWBOX CUDA FP16.
+  git_commit: e25b5478d1c72503286dc4d831f752f028e1b56e
+  architecture_id: ja150m-v0.1
+  tokenizer_id: not-yet-created
+  dataset_id: synthetic Phase 1 engineering data (8 sequences x 32 tokens, vocabulary 36,864)
+  sampler_id: SyntheticSequenceStream (seed 1234, batch_size 4)
+  starting_checkpoint: not-applicable
+  configuration: artifact records full command/config and architecture-config SHA-256
+  seed: 1234
+  environment: FLOWBOX RTX 2060 CUDA FP16 AMP, exact environment recorded in artifact
+  token_budget: not-applicable
+  status: completed
+  result: >
+    Gate passed after 300 steps: LM loss 10.614758 -> 0.000287,
+    100% ending token accuracy, 99.9973% loss reduction, no non-finite
+    loss/gradient-norm event, finite final parameters, 3.087 GB peak VRAM,
+    120.93 seconds.
+  conclusion: Sparse routing, experts, auxiliary losses, backward, clipping, AMP, and optimizer plumbing independently revalidated.
+  artifact_locations: docs/experiments/results/exp-0011-sol-sparse-tiny-overfit.json
+
+- experiment_id: exp-0012
+  date: "2026-08-26"
+  phase: phase-1
+  hypothesis: A destroyed/reconstructed official sparse CPU harness resumes bit-exactly with every inspectable loop state restored.
+  git_commit: e25b5478d1c72503286dc4d831f752f028e1b56e
+  architecture_id: ja150m-v0.1
+  tokenizer_id: not-yet-created
+  dataset_id: synthetic Phase 1 engineering data
+  sampler_id: SyntheticSequenceStream (seed 42, batch_size 2)
+  starting_checkpoint: experiment-created checkpoint at step 10
+  configuration: artifact records full command/config and architecture-config SHA-256
+  seed: 42
+  environment: FLOWBOX deterministic CPU path, exact environment recorded in artifact
+  token_budget: not-applicable
+  status: completed
+  result: >
+    Gate passed: tail losses and final parameters bit-exact (maximum
+    absolute difference 0), full optimizer state exact, global step/token
+    count exact, next batch identity exact, and sequence-curriculum
+    placeholder restored.
+  conclusion: Checkpoint resume is independently load-bearing for all inspectable Phase 1 state.
+  artifact_locations: docs/experiments/results/exp-0012-sol-resume-equivalence.json
+
+- experiment_id: exp-0013
+  date: "2026-08-26"
+  phase: phase-1
+  hypothesis: The dense control has a practical, correctly labeled FLOWBOX profile including activation checkpointing, accumulation, unscale, and clipping.
+  git_commit: e25b5478d1c72503286dc4d831f752f028e1b56e
+  architecture_id: ja150m-v0.1-dense
+  tokenizer_id: not-yet-created
+  dataset_id: synthetic Phase 1 engineering data
+  sampler_id: not-applicable
+  starting_checkpoint: not-applicable
+  configuration: microbatch 2, sequence 512, accumulation 4, activation checkpointing true; full configuration in artifact
+  seed: 0
+  environment: FLOWBOX RTX 2060, exact environment recorded in artifact
+  token_budget: not-applicable
+  status: completed
+  result: >
+    Gate passed. FP32/FP16 prefill 16,058/28,917 tok/s; finite training
+    7,510 tok/s at 2.127 GB peak VRAM; checkpoint 950.6 MB, write/load
+    1.08/0.31s; FP16 batch-1 4,096-token prefill succeeded at 1.090 GB.
+    Host memory fields are lifetime peak RSS, not stage-local RSS.
+  conclusion: Dense practical execution and full supported context independently verified with corrected methodology.
+  artifact_locations: docs/experiments/results/exp-0013-sol-flowbox-dense-profile.json
+
+- experiment_id: exp-0014
+  date: "2026-08-26"
+  phase: phase-1
+  hypothesis: The sparse reference has a practical, correctly labeled FLOWBOX profile under the same corrected methodology.
+  git_commit: e25b5478d1c72503286dc4d831f752f028e1b56e
+  architecture_id: ja150m-v0.1
+  tokenizer_id: not-yet-created
+  dataset_id: synthetic Phase 1 engineering data
+  sampler_id: not-applicable
+  starting_checkpoint: not-applicable
+  configuration: microbatch 2, sequence 512, accumulation 4, activation checkpointing true; full configuration in artifact
+  seed: 0
+  environment: FLOWBOX RTX 2060, exact environment recorded in artifact
+  token_budget: not-applicable
+  status: completed
+  result: >
+    Gate passed. FP32/FP16 prefill 4,878/5,167 tok/s; finite training
+    1,782 tok/s at 3.377 GB peak VRAM; checkpoint 1.619 GB, write/load
+    1.86/0.55s; FP16 batch-1 4,096-token prefill succeeded at 1.229 GB.
+    Host memory fields are lifetime peak RSS, not stage-local RSS.
+  conclusion: Sparse practical execution and full supported context independently verified; reference dispatch remains much slower than dense.
+  artifact_locations: docs/experiments/results/exp-0014-sol-flowbox-sparse-profile.json

@@ -1,0 +1,80 @@
+{
+  "result_identity": "exp-0012",
+  "git_commit": "e25b5478d1c72503286dc4d831f752f028e1b56e",
+  "git_worktree_clean": true,
+  "canonical_result": true,
+  "git_status_porcelain": [],
+  "architecture_configs": [
+    {
+      "architecture_id": "ja150m-v0.1",
+      "config_path": "configs/architecture/ja150m-v0.1.yaml",
+      "config_sha256": "2fd81b5a602e08d28bf3510911d02e9fa43f09af81ba2b9dbe6f9ff9285558e3"
+    }
+  ],
+  "environment": {
+    "python_version": "3.12.3",
+    "platform": "Linux-7.0.0-30-generic",
+    "torch_version": "2.13.0+cu130",
+    "cuda_available": true,
+    "cuda_device_name": "NVIDIA GeForce RTX 2060",
+    "cuda_driver_version": "13.0"
+  },
+  "command": "scripts/run_phase1_experiment.py resume-equivalence --output /tmp/exp-0012-sol-resume-equivalence.json --result-id exp-0012 --architecture sparse --device cpu",
+  "run_configuration": {
+    "command": "resume-equivalence",
+    "architecture": "sparse",
+    "device": "cpu",
+    "seed": 42,
+    "seq_len": 16,
+    "n_sequences": 6,
+    "batch_size": 2,
+    "lr": 0.001,
+    "max_steps": 20,
+    "grad_clip_norm": 1.0
+  },
+  "seed": 42,
+  "experiment": "resume-equivalence",
+  "architecture_id": "ja150m-v0.1",
+  "device": "cpu",
+  "total_steps": 20,
+  "split_at_step": 10,
+  "exact_loss_match": true,
+  "losses_uninterrupted_tail": [
+    6.628414154052734,
+    6.294356822967529,
+    5.3143110275268555,
+    5.196935653686523,
+    5.903799057006836,
+    4.407691478729248,
+    5.199448108673096,
+    5.180752277374268,
+    5.217070579528809,
+    4.25056791305542
+  ],
+  "losses_resumed": [
+    6.628414154052734,
+    6.294356822967529,
+    5.3143110275268555,
+    5.196935653686523,
+    5.903799057006836,
+    4.407691478729248,
+    5.199448108673096,
+    5.180752277374268,
+    5.217070579528809,
+    4.25056791305542
+  ],
+  "max_parameter_abs_diff": 0.0,
+  "global_step_match": true,
+  "global_valid_token_count_match": true,
+  "optimizer_state_exact_match": true,
+  "next_batch_identity_match": true,
+  "sequence_curriculum_state_preserved": true,
+  "gate": {
+    "require_exact_loss_match": true,
+    "max_parameter_abs_diff": 0.0,
+    "require_optimizer_state_exact_match": true,
+    "require_step_token_and_next_batch_identity_match": true,
+    "require_sequence_curriculum_state_preserved": true
+  },
+  "gate_passed": true
+}

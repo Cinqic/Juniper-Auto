@@ -1,0 +1,98 @@
+{
+  "result_identity": "exp-0013",
+  "git_commit": "e25b5478d1c72503286dc4d831f752f028e1b56e",
+  "git_worktree_clean": true,
+  "canonical_result": true,
+  "git_status_porcelain": [],
+  "architecture_configs": [
+    {
+      "architecture_id": "ja150m-v0.1-dense",
+      "config_path": "configs/architecture/ja150m-v0.1-dense.yaml",
+      "config_sha256": "4b356cf9c7022fbfea60879a9b8b5fd28c14325565d2e6e908c5b5a79cb95370"
+    }
+  ],
+  "environment": {
+    "python_version": "3.12.3",
+    "platform": "Linux-7.0.0-30-generic",
+    "torch_version": "2.13.0+cu130",
+    "cuda_available": true,
+    "cuda_device_name": "NVIDIA GeForce RTX 2060",
+    "cuda_driver_version": "13.0"
+  },
+  "command": "scripts/run_phase1_experiment.py profile --output /tmp/exp-0013-sol-flowbox-dense-profile.json --result-id exp-0013 --architecture dense --activation-checkpointing",
+  "run_configuration": {
+    "command": "profile",
+    "architecture": "dense",
+    "inference_batch_size": 1,
+    "inference_seq_len": 512,
+    "train_microbatch_size": 2,
+    "train_seq_len": 512,
+    "grad_accumulation_steps": 4,
+    "activation_checkpointing": true
+  },
+  "seed": 0,
+  "experiment": "flowbox-profile",
+  "architecture_id": "ja150m-v0.1-dense",
+  "device": "cuda",
+  "inference": [
+    {
+      "precision_label": "fp32",
+      "batch_size": 1,
+      "seq_len": 512,
+      "warmup_iters": 3,
+      "measured_iters": 10,
+      "prefill_latency_seconds": 0.03188424939999095,
+      "prefill_tokens_per_second": 16058.08540690142,
+      "peak_vram_bytes": 401860608,
+      "host_peak_rss_bytes": 942391296
+    },
+    {
+      "precision_label": "fp16",
+      "batch_size": 1,
+      "seq_len": 512,
+      "warmup_iters": 3,
+      "measured_iters": 10,
+      "prefill_latency_seconds": 0.017705960400007825,
+      "prefill_tokens_per_second": 28916.816057025277,
+      "peak_vram_bytes": 285948928,
+      "host_peak_rss_bytes": 1266520064
+    }
+  ],
+  "training_step": {
+    "microbatch_size": 2,
+    "seq_len": 512,
+    "grad_accumulation_steps": 4,
+    "activation_checkpointing": true,
+    "use_amp": true,
+    "grad_clip_norm": 1.0,
+    "warmup_iters": 2,
+    "measured_iters": 5,
+    "forward_seconds": 0.18196190359985848,
+    "backward_seconds": 0.33172987680000005,
+    "optimizer_step_seconds": 0.03175063740000041,
+    "total_step_seconds": 0.5454424177998589,
+    "training_tokens_per_second": 7509.500299815259,
+    "peak_vram_bytes": 2126587392,
+    "host_peak_rss_bytes": 1521438720,
+    "numerical_finite": true
+  },
+  "checkpoint_io": {
+    "checkpoint_path": "/tmp/exp-0013-sol-flowbox-dense-profile.checkpoint_probe.pt",
+    "file_size_bytes": 950630629,
+    "write_seconds": 1.0823821540002427,
+    "load_seconds": 0.305592279999928
+  },
+  "full_context_4096_batch1_probe": {
+    "batch_size": 1,
+    "seq_len": 4096,
+    "status": "success",
+    "peak_vram_bytes": 1090395136
+  },
+  "gate": {
+    "require_fp32_and_fp16_prefill_profiles_on_cuda": true,
+    "require_finite_training_step": true,
+    "require_checkpoint_write_and_load": true,
+    "require_full_context_4096_batch1_success": true
+  },
+  "gate_passed": true
+}

@@ -1,0 +1,2778 @@
+{
+  "result_identity": "exp-0010",
+  "git_commit": "e25b5478d1c72503286dc4d831f752f028e1b56e",
+  "git_worktree_clean": true,
+  "canonical_result": true,
+  "git_status_porcelain": [],
+  "architecture_configs": [
+    {
+      "architecture_id": "ja150m-v0.1-dense",
+      "config_path": "configs/architecture/ja150m-v0.1-dense.yaml",
+      "config_sha256": "4b356cf9c7022fbfea60879a9b8b5fd28c14325565d2e6e908c5b5a79cb95370"
+    }
+  ],
+  "environment": {
+    "python_version": "3.12.3",
+    "platform": "Linux-7.0.0-30-generic",
+    "torch_version": "2.13.0+cu130",
+    "cuda_available": true,
+    "cuda_device_name": "NVIDIA GeForce RTX 2060",
+    "cuda_driver_version": "13.0"
+  },
+  "command": "scripts/run_phase1_experiment.py dense-overfit --output /tmp/exp-0010-sol-dense-tiny-overfit.json --result-id exp-0010 --device cuda",
+  "run_configuration": {
+    "command": "dense-overfit",
+    "device": "cuda",
+    "seed": 1234,
+    "seq_len": 32,
+    "n_sequences": 8,
+    "batch_size": 4,
+    "lr": 0.003,
+    "max_steps": 300,
+    "grad_clip_norm": 1.0,
+    "max_ending_lm_loss": 0.01,
+    "min_ending_token_accuracy": 0.99,
+    "min_loss_reduction_fraction": 0.95
+  },
+  "seed": 1234,
+  "experiment": "dense-tiny-overfit",
+  "architecture_id": "ja150m-v0.1-dense",
+  "result": {
+    "config": {
+      "seed": 1234,
+      "vocab_size": 36864,
+      "seq_len": 32,
+      "n_sequences": 8,
+      "batch_size": 4,
+      "lr": 0.003,
+      "max_steps": 300,
+      "grad_clip_norm": 1.0,
+      "weight_decay": 0.0,
+      "use_amp": true,
+      "device": "cuda"
+    },
+    "architecture_id": "ja150m-v0.1-dense",
+    "starting_lm_loss": 10.603769302368164,
+    "ending_lm_loss": 0.0013059721095487475,
+    "best_lm_loss": 0.0012167543172836304,
+    "ending_token_accuracy": 1.0,
+    "best_token_accuracy": 1.0,
+    "steps_run": 300,
+    "elapsed_seconds": 29.729891962999773,
+    "peak_vram_bytes": 1671969792,
+    "any_nonfinite_event": false,
+    "final_parameters_finite": true,
+    "global_valid_token_count": 37200,
+    "history": [
+      {
+        "step": 1,
+        "loss": 10.603769302368164,
+        "lm_loss": 10.603769302368164,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.0,
+        "grad_norm": 32.007171630859375
+      },
+      {
+        "step": 2,
+        "loss": 10.64804744720459,
+        "lm_loss": 10.64804744720459,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.0,
+        "grad_norm": 11.839431762695312
+      },
+      {
+        "step": 3,
+        "loss": 10.31284236907959,
+        "lm_loss": 10.31284236907959,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.0,
+        "grad_norm": 9.895299911499023
+      },
+      {
+        "step": 4,
+        "loss": 9.510525703430176,
+        "lm_loss": 9.510525703430176,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.0,
+        "grad_norm": 2.2373287677764893
+      },
+      {
+        "step": 5,
+        "loss": 7.467550277709961,
+        "lm_loss": 7.467550277709961,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.0,
+        "grad_norm": 1.9556305408477783
+      },
+      {
+        "step": 6,
+        "loss": 6.934707164764404,
+        "lm_loss": 6.934707164764404,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.0,
+        "grad_norm": 2.082674741744995
+      },
+      {
+        "step": 7,
+        "loss": 5.878679275512695,
+        "lm_loss": 5.878679275512695,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.0,
+        "grad_norm": 1.6319173574447632
+      },
+      {
+        "step": 8,
+        "loss": 5.994206428527832,
+        "lm_loss": 5.994206428527832,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.0,
+        "grad_norm": 1.9498454332351685
+      },
+      {
+        "step": 9,
+        "loss": 5.5898847579956055,
+        "lm_loss": 5.5898847579956055,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.008064516129032258,
+        "grad_norm": 1.5314303636550903
+      },
+      {
+        "step": 10,
+        "loss": 5.946443557739258,
+        "lm_loss": 5.946443557739258,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.0,
+        "grad_norm": 2.05894136428833
+      },
+      {
+        "step": 11,
+        "loss": 5.361531734466553,
+        "lm_loss": 5.361531734466553,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.008064516129032258,
+        "grad_norm": 1.3344388008117676
+      },
+      {
+        "step": 12,
+        "loss": 5.967696666717529,
+        "lm_loss": 5.967696666717529,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.0,
+        "grad_norm": 2.160508632659912
+      },
+      {
+        "step": 13,
+        "loss": 5.213207244873047,
+        "lm_loss": 5.213207244873047,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.016129032258064516,
+        "grad_norm": 1.3835810422897339
+      },
+      {
+        "step": 14,
+        "loss": 5.577608108520508,
+        "lm_loss": 5.577608108520508,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.008064516129032258,
+        "grad_norm": 2.574531316757202
+      },
+      {
+        "step": 15,
+        "loss": 5.188119888305664,
+        "lm_loss": 5.188119888305664,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.008064516129032258,
+        "grad_norm": 1.6217111349105835
+      },
+      {
+        "step": 16,
+        "loss": 5.009286880493164,
+        "lm_loss": 5.009286880493164,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.024193548387096774,
+        "grad_norm": 3.4955520629882812
+      },
+      {
+        "step": 17,
+        "loss": 4.719146251678467,
+        "lm_loss": 4.719146251678467,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.008064516129032258,
+        "grad_norm": 1.8130362033843994
+      },
+      {
+        "step": 18,
+        "loss": 6.293246269226074,
+        "lm_loss": 6.293246269226074,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.0,
+        "grad_norm": 22.143896102905273
+      },
+      {
+        "step": 19,
+        "loss": 5.18202543258667,
+        "lm_loss": 5.18202543258667,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.008064516129032258,
+        "grad_norm": 2.4208741188049316
+      },
+      {
+        "step": 20,
+        "loss": 5.342413425445557,
+        "lm_loss": 5.342413425445557,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.008064516129032258,
+        "grad_norm": 2.753479480743408
+      },
+      {
+        "step": 21,
+        "loss": 4.869723320007324,
+        "lm_loss": 4.869723320007324,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.016129032258064516,
+        "grad_norm": 3.924924612045288
+      },
+      {
+        "step": 22,
+        "loss": 5.305720329284668,
+        "lm_loss": 5.305720329284668,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.0,
+        "grad_norm": 3.765064239501953
+      },
+      {
+        "step": 23,
+        "loss": 5.129429817199707,
+        "lm_loss": 5.129429817199707,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.0,
+        "grad_norm": 1.921155333518982
+      },
+      {
+        "step": 24,
+        "loss": 4.18662691116333,
+        "lm_loss": 4.18662691116333,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.024193548387096774,
+        "grad_norm": 3.033503293991089
+      },
+      {
+        "step": 25,
+        "loss": 4.587085723876953,
+        "lm_loss": 4.587085723876953,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.008064516129032258,
+        "grad_norm": 1.372833490371704
+      },
+      {
+        "step": 26,
+        "loss": 5.4901347160339355,
+        "lm_loss": 5.4901347160339355,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.016129032258064516,
+        "grad_norm": 2.4234437942504883
+      },
+      {
+        "step": 27,
+        "loss": 4.169878959655762,
+        "lm_loss": 4.169878959655762,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.024193548387096774,
+        "grad_norm": 1.6445338726043701
+      },
+      {
+        "step": 28,
+        "loss": 5.430826663970947,
+        "lm_loss": 5.430826663970947,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.008064516129032258,
+        "grad_norm": 1.5232006311416626
+      },
+      {
+        "step": 29,
+        "loss": 4.905971527099609,
+        "lm_loss": 4.905971527099609,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.024193548387096774,
+        "grad_norm": 1.6122101545333862
+      },
+      {
+        "step": 30,
+        "loss": 4.4912896156311035,
+        "lm_loss": 4.4912896156311035,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.016129032258064516,
+        "grad_norm": 79.8742904663086
+      },
+      {
+        "step": 31,
+        "loss": 4.619617938995361,
+        "lm_loss": 4.619617938995361,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.03225806451612903,
+        "grad_norm": 1.8274732828140259
+      },
+      {
+        "step": 32,
+        "loss": 4.445033073425293,
+        "lm_loss": 4.445033073425293,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.016129032258064516,
+        "grad_norm": 1.400329351425171
+      },
+      {
+        "step": 33,
+        "loss": 4.473408222198486,
+        "lm_loss": 4.473408222198486,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.024193548387096774,
+        "grad_norm": 1.3097193241119385
+      },
+      {
+        "step": 34,
+        "loss": 4.920190334320068,
+        "lm_loss": 4.920190334320068,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.008064516129032258,
+        "grad_norm": 2.2226815223693848
+      },
+      {
+        "step": 35,
+        "loss": 5.174951553344727,
+        "lm_loss": 5.174951553344727,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.016129032258064516,
+        "grad_norm": 1.794678807258606
+      },
+      {
+        "step": 36,
+        "loss": 3.892024040222168,
+        "lm_loss": 3.892024040222168,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.03225806451612903,
+        "grad_norm": 1.0587122440338135
+      },
+      {
+        "step": 37,
+        "loss": 4.751379013061523,
+        "lm_loss": 4.751379013061523,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.03225806451612903,
+        "grad_norm": 1.5355463027954102
+      },
+      {
+        "step": 38,
+        "loss": 3.991770029067993,
+        "lm_loss": 3.991770029067993,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.04032258064516129,
+        "grad_norm": 1.7084745168685913
+      },
+      {
+        "step": 39,
+        "loss": 4.175755500793457,
+        "lm_loss": 4.175755500793457,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.04032258064516129,
+        "grad_norm": 1.210889220237732
+      },
+      {
+        "step": 40,
+        "loss": 4.523892402648926,
+        "lm_loss": 4.523892402648926,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.024193548387096774,
+        "grad_norm": 2.0809452533721924
+      },
+      {
+        "step": 41,
+        "loss": 3.7558159828186035,
+        "lm_loss": 3.7558159828186035,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.03225806451612903,
+        "grad_norm": 1.8487412929534912
+      },
+      {
+        "step": 42,
+        "loss": 4.746926307678223,
+        "lm_loss": 4.746926307678223,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.016129032258064516,
+        "grad_norm": 1.3241448402404785
+      },
+      {
+        "step": 43,
+        "loss": 3.678471326828003,
+        "lm_loss": 3.678471326828003,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.06451612903225806,
+        "grad_norm": 1.507236361503601
+      },
+      {
+        "step": 44,
+        "loss": 4.452346324920654,
+        "lm_loss": 4.452346324920654,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.024193548387096774,
+        "grad_norm": 1.2390354871749878
+      },
+      {
+        "step": 45,
+        "loss": 3.7588255405426025,
+        "lm_loss": 3.7588255405426025,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.04032258064516129,
+        "grad_norm": 1.0149346590042114
+      },
+      {
+        "step": 46,
+        "loss": 4.2374162673950195,
+        "lm_loss": 4.2374162673950195,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.024193548387096774,
+        "grad_norm": 1.5669387578964233
+      },
+      {
+        "step": 47,
+        "loss": 3.730470657348633,
+        "lm_loss": 3.730470657348633,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.04032258064516129,
+        "grad_norm": 1.3283190727233887
+      },
+      {
+        "step": 48,
+        "loss": 3.924307346343994,
+        "lm_loss": 3.924307346343994,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.024193548387096774,
+        "grad_norm": 0.8560070395469666
+      },
+      {
+        "step": 49,
+        "loss": 3.682586193084717,
+        "lm_loss": 3.682586193084717,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.06451612903225806,
+        "grad_norm": 1.014024257659912
+      },
+      {
+        "step": 50,
+        "loss": 3.5229885578155518,
+        "lm_loss": 3.5229885578155518,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.04838709677419355,
+        "grad_norm": 2.3576114177703857
+      },
+      {
+        "step": 51,
+        "loss": 3.71500825881958,
+        "lm_loss": 3.71500825881958,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.04838709677419355,
+        "grad_norm": 3.4586598873138428
+      },
+      {
+        "step": 52,
+        "loss": 3.4796323776245117,
+        "lm_loss": 3.4796323776245117,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.056451612903225805,
+        "grad_norm": 1.183113932609558
+      },
+      {
+        "step": 53,
+        "loss": 3.641300916671753,
+        "lm_loss": 3.641300916671753,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.06451612903225806,
+        "grad_norm": 0.7235903739929199
+      },
+      {
+        "step": 54,
+        "loss": 3.290367364883423,
+        "lm_loss": 3.290367364883423,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.03225806451612903,
+        "grad_norm": 1.822127342224121
+      },
+      {
+        "step": 55,
+        "loss": 3.1240477561950684,
+        "lm_loss": 3.1240477561950684,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.07258064516129033,
+        "grad_norm": 1.5876845121383667
+      },
+      {
+        "step": 56,
+        "loss": 3.659423351287842,
+        "lm_loss": 3.659423351287842,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.04032258064516129,
+        "grad_norm": 2.1892340183258057
+      },
+      {
+        "step": 57,
+        "loss": 3.4399538040161133,
+        "lm_loss": 3.4399538040161133,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.056451612903225805,
+        "grad_norm": 0.785903811454773
+      },
+      {
+        "step": 58,
+        "loss": 3.6836628913879395,
+        "lm_loss": 3.6836628913879395,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.07258064516129033,
+        "grad_norm": 2.418471336364746
+      },
+      {
+        "step": 59,
+        "loss": 3.176198720932007,
+        "lm_loss": 3.176198720932007,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.08870967741935484,
+        "grad_norm": 1.094337821006775
+      },
+      {
+        "step": 60,
+        "loss": 3.374211072921753,
+        "lm_loss": 3.374211072921753,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.04838709677419355,
+        "grad_norm": 1.786346673965454
+      },
+      {
+        "step": 61,
+        "loss": 3.2090158462524414,
+        "lm_loss": 3.2090158462524414,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.056451612903225805,
+        "grad_norm": 2.032468795776367
+      },
+      {
+        "step": 62,
+        "loss": 3.241957426071167,
+        "lm_loss": 3.241957426071167,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.08064516129032258,
+        "grad_norm": 1.4918545484542847
+      },
+      {
+        "step": 63,
+        "loss": 2.9906246662139893,
+        "lm_loss": 2.9906246662139893,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.12096774193548387,
+        "grad_norm": 1.240092158317566
+      },
+      {
+        "step": 64,
+        "loss": 3.2312192916870117,
+        "lm_loss": 3.2312192916870117,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.08870967741935484,
+        "grad_norm": 0.9880955815315247
+      },
+      {
+        "step": 65,
+        "loss": 2.9327516555786133,
+        "lm_loss": 2.9327516555786133,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.12903225806451613,
+        "grad_norm": 0.9396058917045593
+      },
+      {
+        "step": 66,
+        "loss": 3.1713707447052,
+        "lm_loss": 3.1713707447052,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.08064516129032258,
+        "grad_norm": 1.7079776525497437
+      },
+      {
+        "step": 67,
+        "loss": 3.076967477798462,
+        "lm_loss": 3.076967477798462,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.0967741935483871,
+        "grad_norm": 0.9977749586105347
+      },
+      {
+        "step": 68,
+        "loss": 2.8871607780456543,
+        "lm_loss": 2.8871607780456543,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.12903225806451613,
+        "grad_norm": 1.7232036590576172
+      },
+      {
+        "step": 69,
+        "loss": 2.977416515350342,
+        "lm_loss": 2.977416515350342,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.10483870967741936,
+        "grad_norm": 0.8065064549446106
+      },
+      {
+        "step": 70,
+        "loss": 2.770433187484741,
+        "lm_loss": 2.770433187484741,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.1532258064516129,
+        "grad_norm": 1.6067967414855957
+      },
+      {
+        "step": 71,
+        "loss": 2.6815598011016846,
+        "lm_loss": 2.6815598011016846,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.11290322580645161,
+        "grad_norm": 0.8183234930038452
+      },
+      {
+        "step": 72,
+        "loss": 3.015631914138794,
+        "lm_loss": 3.015631914138794,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.08870967741935484,
+        "grad_norm": 1.5194321870803833
+      },
+      {
+        "step": 73,
+        "loss": 2.834146738052368,
+        "lm_loss": 2.834146738052368,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.0967741935483871,
+        "grad_norm": 0.8089072704315186
+      },
+      {
+        "step": 74,
+        "loss": 2.8089137077331543,
+        "lm_loss": 2.8089137077331543,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.13709677419354838,
+        "grad_norm": 3.3303043842315674
+      },
+      {
+        "step": 75,
+        "loss": 2.823615789413452,
+        "lm_loss": 2.823615789413452,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.12096774193548387,
+        "grad_norm": 1.1519768238067627
+      },
+      {
+        "step": 76,
+        "loss": 2.756746292114258,
+        "lm_loss": 2.756746292114258,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.12096774193548387,
+        "grad_norm": 1.6841187477111816
+      },
+      {
+        "step": 77,
+        "loss": 3.037012815475464,
+        "lm_loss": 3.037012815475464,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.10483870967741936,
+        "grad_norm": 0.9036777019500732
+      },
+      {
+        "step": 78,
+        "loss": 2.596283197402954,
+        "lm_loss": 2.596283197402954,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.1774193548387097,
+        "grad_norm": 2.684391736984253
+      },
+      {
+        "step": 79,
+        "loss": 2.325352907180786,
+        "lm_loss": 2.325352907180786,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.25,
+        "grad_norm": 1.3185254335403442
+      },
+      {
+        "step": 80,
+        "loss": 2.942641496658325,
+        "lm_loss": 2.942641496658325,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.10483870967741936,
+        "grad_norm": 1.269396424293518
+      },
+      {
+        "step": 81,
+        "loss": 2.874290704727173,
+        "lm_loss": 2.874290704727173,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.12903225806451613,
+        "grad_norm": 0.8069968819618225
+      },
+      {
+        "step": 82,
+        "loss": 2.075066089630127,
+        "lm_loss": 2.075066089630127,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.28225806451612906,
+        "grad_norm": 1.0216355323791504
+      },
+      {
+        "step": 83,
+        "loss": 2.31618332862854,
+        "lm_loss": 2.31618332862854,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.20161290322580644,
+        "grad_norm": 1.0279207229614258
+      },
+      {
+        "step": 84,
+        "loss": 2.5633983612060547,
+        "lm_loss": 2.5633983612060547,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.1532258064516129,
+        "grad_norm": 1.1951992511749268
+      },
+      {
+        "step": 85,
+        "loss": 2.3231775760650635,
+        "lm_loss": 2.3231775760650635,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.31451612903225806,
+        "grad_norm": 0.801664412021637
+      },
+      {
+        "step": 86,
+        "loss": 2.4064104557037354,
+        "lm_loss": 2.4064104557037354,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.1774193548387097,
+        "grad_norm": 1.214113712310791
+      },
+      {
+        "step": 87,
+        "loss": 2.742579698562622,
+        "lm_loss": 2.742579698562622,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.1532258064516129,
+        "grad_norm": 0.747084379196167
+      },
+      {
+        "step": 88,
+        "loss": 1.9641491174697876,
+        "lm_loss": 1.9641491174697876,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.29838709677419356,
+        "grad_norm": 2.037794589996338
+      },
+      {
+        "step": 89,
+        "loss": 1.8498966693878174,
+        "lm_loss": 1.8498966693878174,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.33064516129032256,
+        "grad_norm": 1.1106892824172974
+      },
+      {
+        "step": 90,
+        "loss": 2.5700507164001465,
+        "lm_loss": 2.5700507164001465,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.1935483870967742,
+        "grad_norm": 0.9713928699493408
+      },
+      {
+        "step": 91,
+        "loss": 2.390080451965332,
+        "lm_loss": 2.390080451965332,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.20967741935483872,
+        "grad_norm": 2.595737934112549
+      },
+      {
+        "step": 92,
+        "loss": 2.451840400695801,
+        "lm_loss": 2.451840400695801,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.1532258064516129,
+        "grad_norm": 2.029242992401123
+      },
+      {
+        "step": 93,
+        "loss": 1.7439824342727661,
+        "lm_loss": 1.7439824342727661,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.3951612903225806,
+        "grad_norm": 0.983113169670105
+      },
+      {
+        "step": 94,
+        "loss": 2.5988872051239014,
+        "lm_loss": 2.5988872051239014,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.22580645161290322,
+        "grad_norm": 1.507764458656311
+      },
+      {
+        "step": 95,
+        "loss": 2.167721748352051,
+        "lm_loss": 2.167721748352051,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.3064516129032258,
+        "grad_norm": 1.2346621751785278
+      },
+      {
+        "step": 96,
+        "loss": 2.863166093826294,
+        "lm_loss": 2.863166093826294,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.12903225806451613,
+        "grad_norm": 3.381787061691284
+      },
+      {
+        "step": 97,
+        "loss": 1.7546147108078003,
+        "lm_loss": 1.7546147108078003,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.3467741935483871,
+        "grad_norm": 1.4063149690628052
+      },
+      {
+        "step": 98,
+        "loss": 2.6575520038604736,
+        "lm_loss": 2.6575520038604736,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.16129032258064516,
+        "grad_norm": 1.516732931137085
+      },
+      {
+        "step": 99,
+        "loss": 2.2915353775024414,
+        "lm_loss": 2.2915353775024414,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.12903225806451613,
+        "grad_norm": 1.6351869106292725
+      },
+      {
+        "step": 100,
+        "loss": 2.253929376602173,
+        "lm_loss": 2.253929376602173,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.27419354838709675,
+        "grad_norm": 5.638851165771484
+      },
+      {
+        "step": 101,
+        "loss": 2.526113986968994,
+        "lm_loss": 2.526113986968994,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.1935483870967742,
+        "grad_norm": 1.852663278579712
+      },
+      {
+        "step": 102,
+        "loss": 2.169241189956665,
+        "lm_loss": 2.169241189956665,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.25,
+        "grad_norm": 2.182614326477051
+      },
+      {
+        "step": 103,
+        "loss": 2.128476858139038,
+        "lm_loss": 2.128476858139038,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.3225806451612903,
+        "grad_norm": 1.3165043592453003
+      },
+      {
+        "step": 104,
+        "loss": 1.9972662925720215,
+        "lm_loss": 1.9972662925720215,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.33064516129032256,
+        "grad_norm": 1.4732844829559326
+      },
+      {
+        "step": 105,
+        "loss": 1.914493203163147,
+        "lm_loss": 1.914493203163147,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.41935483870967744,
+        "grad_norm": 1.1625714302062988
+      },
+      {
+        "step": 106,
+        "loss": 2.0637030601501465,
+        "lm_loss": 2.0637030601501465,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.3225806451612903,
+        "grad_norm": 2.24680233001709
+      },
+      {
+        "step": 107,
+        "loss": 2.110379695892334,
+        "lm_loss": 2.110379695892334,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.2661290322580645,
+        "grad_norm": 1.6272977590560913
+      },
+      {
+        "step": 108,
+        "loss": 2.0018417835235596,
+        "lm_loss": 2.0018417835235596,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.31451612903225806,
+        "grad_norm": 1.7122236490249634
+      },
+      {
+        "step": 109,
+        "loss": 1.9922534227371216,
+        "lm_loss": 1.9922534227371216,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.3467741935483871,
+        "grad_norm": 1.1357383728027344
+      },
+      {
+        "step": 110,
+        "loss": 1.9527320861816406,
+        "lm_loss": 1.9527320861816406,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.3790322580645161,
+        "grad_norm": 1.7089961767196655
+      },
+      {
+        "step": 111,
+        "loss": 2.17539644241333,
+        "lm_loss": 2.17539644241333,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.33064516129032256,
+        "grad_norm": 1.37691330909729
+      },
+      {
+        "step": 112,
+        "loss": 1.8808097839355469,
+        "lm_loss": 1.8808097839355469,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.3629032258064516,
+        "grad_norm": 2.110161781311035
+      },
+      {
+        "step": 113,
+        "loss": 1.5918588638305664,
+        "lm_loss": 1.5918588638305664,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.4274193548387097,
+        "grad_norm": 1.5276039838790894
+      },
+      {
+        "step": 114,
+        "loss": 1.9694898128509521,
+        "lm_loss": 1.9694898128509521,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.25,
+        "grad_norm": 1.4786005020141602
+      },
+      {
+        "step": 115,
+        "loss": 1.836944580078125,
+        "lm_loss": 1.836944580078125,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.3467741935483871,
+        "grad_norm": 1.073808193206787
+      },
+      {
+        "step": 116,
+        "loss": 1.535374402999878,
+        "lm_loss": 1.535374402999878,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.45161290322580644,
+        "grad_norm": 1.4946174621582031
+      },
+      {
+        "step": 117,
+        "loss": 1.546234130859375,
+        "lm_loss": 1.546234130859375,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.46774193548387094,
+        "grad_norm": 0.985234797000885
+      },
+      {
+        "step": 118,
+        "loss": 1.7077134847640991,
+        "lm_loss": 1.7077134847640991,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.45161290322580644,
+        "grad_norm": 1.3781534433364868
+      },
+      {
+        "step": 119,
+        "loss": 1.4276518821716309,
+        "lm_loss": 1.4276518821716309,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.5725806451612904,
+        "grad_norm": 0.8891169428825378
+      },
+      {
+        "step": 120,
+        "loss": 1.7198458909988403,
+        "lm_loss": 1.7198458909988403,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.3548387096774194,
+        "grad_norm": 1.56668221950531
+      },
+      {
+        "step": 121,
+        "loss": 1.6244418621063232,
+        "lm_loss": 1.6244418621063232,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.4112903225806452,
+        "grad_norm": 1.0259696245193481
+      },
+      {
+        "step": 122,
+        "loss": 1.4386543035507202,
+        "lm_loss": 1.4386543035507202,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.49193548387096775,
+        "grad_norm": 1.9352561235427856
+      },
+      {
+        "step": 123,
+        "loss": 1.088768482208252,
+        "lm_loss": 1.088768482208252,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.6451612903225806,
+        "grad_norm": 0.8946390151977539
+      },
+      {
+        "step": 124,
+        "loss": 1.7896413803100586,
+        "lm_loss": 1.7896413803100586,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.4032258064516129,
+        "grad_norm": 1.820416808128357
+      },
+      {
+        "step": 125,
+        "loss": 1.2823313474655151,
+        "lm_loss": 1.2823313474655151,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.5483870967741935,
+        "grad_norm": 1.0411975383758545
+      },
+      {
+        "step": 126,
+        "loss": 1.7205171585083008,
+        "lm_loss": 1.7205171585083008,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.4274193548387097,
+        "grad_norm": 2.6145756244659424
+      },
+      {
+        "step": 127,
+        "loss": 1.1245125532150269,
+        "lm_loss": 1.1245125532150269,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.5887096774193549,
+        "grad_norm": 1.445967435836792
+      },
+      {
+        "step": 128,
+        "loss": 1.564100742340088,
+        "lm_loss": 1.564100742340088,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.5,
+        "grad_norm": 1.8975638151168823
+      },
+      {
+        "step": 129,
+        "loss": 0.9658073782920837,
+        "lm_loss": 0.9658073782920837,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.717741935483871,
+        "grad_norm": 1.9214462041854858
+      },
+      {
+        "step": 130,
+        "loss": 1.810499668121338,
+        "lm_loss": 1.810499668121338,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.45161290322580644,
+        "grad_norm": 2.6383683681488037
+      },
+      {
+        "step": 131,
+        "loss": 1.3064614534378052,
+        "lm_loss": 1.3064614534378052,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.5403225806451613,
+        "grad_norm": 1.4687113761901855
+      },
+      {
+        "step": 132,
+        "loss": 1.3046919107437134,
+        "lm_loss": 1.3046919107437134,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.5806451612903226,
+        "grad_norm": 1.661929726600647
+      },
+      {
+        "step": 133,
+        "loss": 1.4152228832244873,
+        "lm_loss": 1.4152228832244873,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.5645161290322581,
+        "grad_norm": 2.4234774112701416
+      },
+      {
+        "step": 134,
+        "loss": 1.1922954320907593,
+        "lm_loss": 1.1922954320907593,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.6612903225806451,
+        "grad_norm": 1.5284544229507446
+      },
+      {
+        "step": 135,
+        "loss": 1.043287992477417,
+        "lm_loss": 1.043287992477417,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.717741935483871,
+        "grad_norm": 0.8853104114532471
+      },
+      {
+        "step": 136,
+        "loss": 1.1649329662322998,
+        "lm_loss": 1.1649329662322998,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.6290322580645161,
+        "grad_norm": 1.479162335395813
+      },
+      {
+        "step": 137,
+        "loss": 1.0069597959518433,
+        "lm_loss": 1.0069597959518433,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.6854838709677419,
+        "grad_norm": 1.0175338983535767
+      },
+      {
+        "step": 138,
+        "loss": 0.9827010631561279,
+        "lm_loss": 0.9827010631561279,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.6854838709677419,
+        "grad_norm": 1.2711944580078125
+      },
+      {
+        "step": 139,
+        "loss": 0.6382230520248413,
+        "lm_loss": 0.6382230520248413,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.8306451612903226,
+        "grad_norm": 0.9753268957138062
+      },
+      {
+        "step": 140,
+        "loss": 1.191847801208496,
+        "lm_loss": 1.191847801208496,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.6854838709677419,
+        "grad_norm": 1.3193385601043701
+      },
+      {
+        "step": 141,
+        "loss": 0.945232629776001,
+        "lm_loss": 0.945232629776001,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.7258064516129032,
+        "grad_norm": 1.177530288696289
+      },
+      {
+        "step": 142,
+        "loss": 0.769996166229248,
+        "lm_loss": 0.769996166229248,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.7983870967741935,
+        "grad_norm": 0.9903810024261475
+      },
+      {
+        "step": 143,
+        "loss": 0.9208636283874512,
+        "lm_loss": 0.9208636283874512,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.7258064516129032,
+        "grad_norm": 1.8887401819229126
+      },
+      {
+        "step": 144,
+        "loss": 0.863121509552002,
+        "lm_loss": 0.863121509552002,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.8064516129032258,
+        "grad_norm": 1.4602998495101929
+      },
+      {
+        "step": 145,
+        "loss": 0.6582537293434143,
+        "lm_loss": 0.6582537293434143,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.8548387096774194,
+        "grad_norm": 1.1445523500442505
+      },
+      {
+        "step": 146,
+        "loss": 1.2973878383636475,
+        "lm_loss": 1.2973878383636475,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.5887096774193549,
+        "grad_norm": 2.8193962574005127
+      },
+      {
+        "step": 147,
+        "loss": 0.7413734197616577,
+        "lm_loss": 0.7413734197616577,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.7661290322580645,
+        "grad_norm": 1.1108458042144775
+      },
+      {
+        "step": 148,
+        "loss": 0.9359648823738098,
+        "lm_loss": 0.9359648823738098,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.7016129032258065,
+        "grad_norm": 2.5184037685394287
+      },
+      {
+        "step": 149,
+        "loss": 0.5617295503616333,
+        "lm_loss": 0.5617295503616333,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.8387096774193549,
+        "grad_norm": 1.3678460121154785
+      },
+      {
+        "step": 150,
+        "loss": 1.0092175006866455,
+        "lm_loss": 1.0092175006866455,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.6612903225806451,
+        "grad_norm": 2.2649435997009277
+      },
+      {
+        "step": 151,
+        "loss": 0.7730532884597778,
+        "lm_loss": 0.7730532884597778,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.7580645161290323,
+        "grad_norm": 1.5645849704742432
+      },
+      {
+        "step": 152,
+        "loss": 0.7655979990959167,
+        "lm_loss": 0.7655979990959167,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.7419354838709677,
+        "grad_norm": 1.6926532983779907
+      },
+      {
+        "step": 153,
+        "loss": 0.5322480201721191,
+        "lm_loss": 0.5322480201721191,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.8709677419354839,
+        "grad_norm": 1.3035142421722412
+      },
+      {
+        "step": 154,
+        "loss": 0.7386638522148132,
+        "lm_loss": 0.7386638522148132,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.7661290322580645,
+        "grad_norm": 1.3581655025482178
+      },
+      {
+        "step": 155,
+        "loss": 0.34281066060066223,
+        "lm_loss": 0.34281066060066223,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.9596774193548387,
+        "grad_norm": 0.8531073331832886
+      },
+      {
+        "step": 156,
+        "loss": 0.6690225005149841,
+        "lm_loss": 0.6690225005149841,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.7419354838709677,
+        "grad_norm": 1.3655091524124146
+      },
+      {
+        "step": 157,
+        "loss": 0.5305569767951965,
+        "lm_loss": 0.5305569767951965,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.9032258064516129,
+        "grad_norm": 0.8099141120910645
+      },
+      {
+        "step": 158,
+        "loss": 0.3912021219730377,
+        "lm_loss": 0.3912021219730377,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.8870967741935484,
+        "grad_norm": 0.8683766722679138
+      },
+      {
+        "step": 159,
+        "loss": 0.3052840828895569,
+        "lm_loss": 0.3052840828895569,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.9354838709677419,
+        "grad_norm": 0.9586162567138672
+      },
+      {
+        "step": 160,
+        "loss": 0.5745111107826233,
+        "lm_loss": 0.5745111107826233,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.8306451612903226,
+        "grad_norm": 1.2587534189224243
+      },
+      {
+        "step": 161,
+        "loss": 0.46833768486976624,
+        "lm_loss": 0.46833768486976624,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.8387096774193549,
+        "grad_norm": 3.4765665531158447
+      },
+      {
+        "step": 162,
+        "loss": 0.6022993326187134,
+        "lm_loss": 0.6022993326187134,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.8145161290322581,
+        "grad_norm": 1.3247380256652832
+      },
+      {
+        "step": 163,
+        "loss": 0.4163505733013153,
+        "lm_loss": 0.4163505733013153,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.9032258064516129,
+        "grad_norm": 1.0420130491256714
+      },
+      {
+        "step": 164,
+        "loss": 0.27952563762664795,
+        "lm_loss": 0.27952563762664795,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.9596774193548387,
+        "grad_norm": 0.8042601943016052
+      },
+      {
+        "step": 165,
+        "loss": 0.30842316150665283,
+        "lm_loss": 0.30842316150665283,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.9354838709677419,
+        "grad_norm": 1.071090579032898
+      },
+      {
+        "step": 166,
+        "loss": 0.5336598753929138,
+        "lm_loss": 0.5336598753929138,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.8225806451612904,
+        "grad_norm": 2.2277672290802
+      },
+      {
+        "step": 167,
+        "loss": 0.5093938708305359,
+        "lm_loss": 0.5093938708305359,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.8387096774193549,
+        "grad_norm": 1.437865138053894
+      },
+      {
+        "step": 168,
+        "loss": 0.2726972699165344,
+        "lm_loss": 0.2726972699165344,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.9193548387096774,
+        "grad_norm": 1.405293345451355
+      },
+      {
+        "step": 169,
+        "loss": 0.28609395027160645,
+        "lm_loss": 0.28609395027160645,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.8790322580645161,
+        "grad_norm": 1.5407122373580933
+      },
+      {
+        "step": 170,
+        "loss": 0.45180124044418335,
+        "lm_loss": 0.45180124044418335,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.8548387096774194,
+        "grad_norm": 1.466436743736267
+      },
+      {
+        "step": 171,
+        "loss": 0.21308058500289917,
+        "lm_loss": 0.21308058500289917,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.9596774193548387,
+        "grad_norm": 0.7986634373664856
+      },
+      {
+        "step": 172,
+        "loss": 0.28105342388153076,
+        "lm_loss": 0.28105342388153076,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.9112903225806451,
+        "grad_norm": 0.8748235702514648
+      },
+      {
+        "step": 173,
+        "loss": 0.2024652063846588,
+        "lm_loss": 0.2024652063846588,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.9596774193548387,
+        "grad_norm": 0.6681908965110779
+      },
+      {
+        "step": 174,
+        "loss": 0.1508302241563797,
+        "lm_loss": 0.1508302241563797,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.9758064516129032,
+        "grad_norm": 0.5720075964927673
+      },
+      {
+        "step": 175,
+        "loss": 0.20345626771450043,
+        "lm_loss": 0.20345626771450043,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.9596774193548387,
+        "grad_norm": 0.6088079810142517
+      },
+      {
+        "step": 176,
+        "loss": 0.19810962677001953,
+        "lm_loss": 0.19810962677001953,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.9596774193548387,
+        "grad_norm": 0.8819957971572876
+      },
+      {
+        "step": 177,
+        "loss": 0.18123503029346466,
+        "lm_loss": 0.18123503029346466,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.967741935483871,
+        "grad_norm": 0.6290810704231262
+      },
+      {
+        "step": 178,
+        "loss": 0.1440582126379013,
+        "lm_loss": 0.1440582126379013,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.967741935483871,
+        "grad_norm": 0.7342422604560852
+      },
+      {
+        "step": 179,
+        "loss": 0.18527860939502716,
+        "lm_loss": 0.18527860939502716,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.967741935483871,
+        "grad_norm": 0.7760127186775208
+      },
+      {
+        "step": 180,
+        "loss": 0.08286820352077484,
+        "lm_loss": 0.08286820352077484,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.9919354838709677,
+        "grad_norm": 0.45657750964164734
+      },
+      {
+        "step": 181,
+        "loss": 0.0613410547375679,
+        "lm_loss": 0.0613410547375679,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.9919354838709677,
+        "grad_norm": 0.3480341136455536
+      },
+      {
+        "step": 182,
+        "loss": 0.17772677540779114,
+        "lm_loss": 0.17772677540779114,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.9354838709677419,
+        "grad_norm": 0.8571591973304749
+      },
+      {
+        "step": 183,
+        "loss": 0.07381245493888855,
+        "lm_loss": 0.07381245493888855,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.9919354838709677,
+        "grad_norm": 0.43074366450309753
+      },
+      {
+        "step": 184,
+        "loss": 0.07520641386508942,
+        "lm_loss": 0.07520641386508942,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.9919354838709677,
+        "grad_norm": 0.4239412546157837
+      },
+      {
+        "step": 185,
+        "loss": 0.08582349121570587,
+        "lm_loss": 0.08582349121570587,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.9919354838709677,
+        "grad_norm": 0.6502283811569214
+      },
+      {
+        "step": 186,
+        "loss": 0.09898058325052261,
+        "lm_loss": 0.09898058325052261,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.967741935483871,
+        "grad_norm": 0.6193628907203674
+      },
+      {
+        "step": 187,
+        "loss": 0.05831282213330269,
+        "lm_loss": 0.05831282213330269,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.9919354838709677,
+        "grad_norm": 0.7482599020004272
+      },
+      {
+        "step": 188,
+        "loss": 0.06447242945432663,
+        "lm_loss": 0.06447242945432663,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.9919354838709677,
+        "grad_norm": 0.3578597605228424
+      },
+      {
+        "step": 189,
+        "loss": 0.027796249836683273,
+        "lm_loss": 0.027796249836683273,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 1.0,
+        "grad_norm": 0.10983818024396896
+      },
+      {
+        "step": 190,
+        "loss": 0.1872297078371048,
+        "lm_loss": 0.1872297078371048,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.9596774193548387,
+        "grad_norm": 2.911329507827759
+      },
+      {
+        "step": 191,
+        "loss": 0.028213446959853172,
+        "lm_loss": 0.028213446959853172,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.9919354838709677,
+        "grad_norm": 0.3326036334037781
+      },
+      {
+        "step": 192,
+        "loss": 0.07024722546339035,
+        "lm_loss": 0.07024722546339035,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.9838709677419355,
+        "grad_norm": 0.5002176761627197
+      },
+      {
+        "step": 193,
+        "loss": 0.217773899435997,
+        "lm_loss": 0.217773899435997,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.9435483870967742,
+        "grad_norm": 2.394568681716919
+      },
+      {
+        "step": 194,
+        "loss": 0.018619660288095474,
+        "lm_loss": 0.018619660288095474,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 1.0,
+        "grad_norm": 0.09060440957546234
+      },
+      {
+        "step": 195,
+        "loss": 0.0722423642873764,
+        "lm_loss": 0.0722423642873764,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.9919354838709677,
+        "grad_norm": 0.7733176350593567
+      },
+      {
+        "step": 196,
+        "loss": 0.09580741077661514,
+        "lm_loss": 0.09580741077661514,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.9838709677419355,
+        "grad_norm": 0.6475607752799988
+      },
+      {
+        "step": 197,
+        "loss": 0.0326932854950428,
+        "lm_loss": 0.0326932854950428,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 1.0,
+        "grad_norm": 0.2751888930797577
+      },
+      {
+        "step": 198,
+        "loss": 0.03158022463321686,
+        "lm_loss": 0.03158022463321686,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 1.0,
+        "grad_norm": 0.3490639328956604
+      },
+      {
+        "step": 199,
+        "loss": 0.07408023625612259,
+        "lm_loss": 0.07408023625612259,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.9758064516129032,
+        "grad_norm": 0.9742871522903442
+      },
+      {
+        "step": 200,
+        "loss": 0.03488076850771904,
+        "lm_loss": 0.03488076850771904,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 1.0,
+        "grad_norm": 0.32288599014282227
+      },
+      {
+        "step": 201,
+        "loss": 0.10866651684045792,
+        "lm_loss": 0.10866651684045792,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.9838709677419355,
+        "grad_norm": 0.8300203084945679
+      },
+      {
+        "step": 202,
+        "loss": 0.08090993762016296,
+        "lm_loss": 0.08090993762016296,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.9758064516129032,
+        "grad_norm": 1.4823408126831055
+      },
+      {
+        "step": 203,
+        "loss": 0.04946869984269142,
+        "lm_loss": 0.04946869984269142,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.9838709677419355,
+        "grad_norm": 0.6635863780975342
+      },
+      {
+        "step": 204,
+        "loss": 0.05550910532474518,
+        "lm_loss": 0.05550910532474518,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.9838709677419355,
+        "grad_norm": 0.6930209398269653
+      },
+      {
+        "step": 205,
+        "loss": 0.0235667135566473,
+        "lm_loss": 0.0235667135566473,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 1.0,
+        "grad_norm": 0.17575235664844513
+      },
+      {
+        "step": 206,
+        "loss": 0.08141613006591797,
+        "lm_loss": 0.08141613006591797,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.9919354838709677,
+        "grad_norm": 0.6665083169937134
+      },
+      {
+        "step": 207,
+        "loss": 0.029485344886779785,
+        "lm_loss": 0.029485344886779785,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 1.0,
+        "grad_norm": 0.33146342635154724
+      },
+      {
+        "step": 208,
+        "loss": 0.07777021825313568,
+        "lm_loss": 0.07777021825313568,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.9838709677419355,
+        "grad_norm": 0.6650591492652893
+      },
+      {
+        "step": 209,
+        "loss": 0.01709233783185482,
+        "lm_loss": 0.01709233783185482,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 1.0,
+        "grad_norm": 0.09431932866573334
+      },
+      {
+        "step": 210,
+        "loss": 0.09800778329372406,
+        "lm_loss": 0.09800778329372406,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.9838709677419355,
+        "grad_norm": 0.9093448519706726
+      },
+      {
+        "step": 211,
+        "loss": 0.028059087693691254,
+        "lm_loss": 0.028059087693691254,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 1.0,
+        "grad_norm": 0.2769192159175873
+      },
+      {
+        "step": 212,
+        "loss": 0.03044663928449154,
+        "lm_loss": 0.03044663928449154,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.9919354838709677,
+        "grad_norm": 0.4100649654865265
+      },
+      {
+        "step": 213,
+        "loss": 0.014590896666049957,
+        "lm_loss": 0.014590896666049957,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 1.0,
+        "grad_norm": 0.09931349009275436
+      },
+      {
+        "step": 214,
+        "loss": 0.11194445937871933,
+        "lm_loss": 0.11194445937871933,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.9516129032258065,
+        "grad_norm": 1.1801882982254028
+      },
+      {
+        "step": 215,
+        "loss": 0.010432817973196507,
+        "lm_loss": 0.010432817973196507,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 1.0,
+        "grad_norm": 0.0538836307823658
+      },
+      {
+        "step": 216,
+        "loss": 0.030353287234902382,
+        "lm_loss": 0.030353287234902382,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.9919354838709677,
+        "grad_norm": 0.43050894141197205
+      },
+      {
+        "step": 217,
+        "loss": 0.017230981960892677,
+        "lm_loss": 0.017230981960892677,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 1.0,
+        "grad_norm": 0.12582240998744965
+      },
+      {
+        "step": 218,
+        "loss": 0.014943120069801807,
+        "lm_loss": 0.014943120069801807,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 1.0,
+        "grad_norm": 0.2605517506599426
+      },
+      {
+        "step": 219,
+        "loss": 0.026284176856279373,
+        "lm_loss": 0.026284176856279373,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 0.9919354838709677,
+        "grad_norm": 0.40270838141441345
+      },
+      {
+        "step": 220,
+        "loss": 0.009435443207621574,
+        "lm_loss": 0.009435443207621574,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 1.0,
+        "grad_norm": 0.05460755154490471
+      },
+      {
+        "step": 221,
+        "loss": 0.012621740810573101,
+        "lm_loss": 0.012621740810573101,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 1.0,
+        "grad_norm": 0.116267129778862
+      },
+      {
+        "step": 222,
+        "loss": 0.017729822546243668,
+        "lm_loss": 0.017729822546243668,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 1.0,
+        "grad_norm": 0.1958121359348297
+      },
+      {
+        "step": 223,
+        "loss": 0.01601814292371273,
+        "lm_loss": 0.01601814292371273,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 1.0,
+        "grad_norm": 0.12896355986595154
+      },
+      {
+        "step": 224,
+        "loss": 0.007299529854208231,
+        "lm_loss": 0.007299529854208231,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 1.0,
+        "grad_norm": 0.024898327887058258
+      },
+      {
+        "step": 225,
+        "loss": 0.012261676602065563,
+        "lm_loss": 0.012261676602065563,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 1.0,
+        "grad_norm": 0.16115516424179077
+      },
+      {
+        "step": 226,
+        "loss": 0.007216440513730049,
+        "lm_loss": 0.007216440513730049,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 1.0,
+        "grad_norm": 0.023222895339131355
+      },
+      {
+        "step": 227,
+        "loss": 0.008592743426561356,
+        "lm_loss": 0.008592743426561356,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 1.0,
+        "grad_norm": 0.0642208531498909
+      },
+      {
+        "step": 228,
+        "loss": 0.00952980387955904,
+        "lm_loss": 0.00952980387955904,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 1.0,
+        "grad_norm": 0.07201971858739853
+      },
+      {
+        "step": 229,
+        "loss": 0.010095617733895779,
+        "lm_loss": 0.010095617733895779,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 1.0,
+        "grad_norm": 0.06787145882844925
+      },
+      {
+        "step": 230,
+        "loss": 0.007100752089172602,
+        "lm_loss": 0.007100752089172602,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 1.0,
+        "grad_norm": 0.11005110293626785
+      },
+      {
+        "step": 231,
+        "loss": 0.004919642116874456,
+        "lm_loss": 0.004919642116874456,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 1.0,
+        "grad_norm": 0.014008761383593082
+      },
+      {
+        "step": 232,
+        "loss": 0.00701884413138032,
+        "lm_loss": 0.00701884413138032,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 1.0,
+        "grad_norm": 0.027423886582255363
+      },
+      {
+        "step": 233,
+        "loss": 0.005574357230216265,
+        "lm_loss": 0.005574357230216265,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 1.0,
+        "grad_norm": 0.023522917181253433
+      },
+      {
+        "step": 234,
+        "loss": 0.0054788910783827305,
+        "lm_loss": 0.0054788910783827305,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 1.0,
+        "grad_norm": 0.01949867606163025
+      },
+      {
+        "step": 235,
+        "loss": 0.005075864028185606,
+        "lm_loss": 0.005075864028185606,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 1.0,
+        "grad_norm": 0.018376823514699936
+      },
+      {
+        "step": 236,
+        "loss": 0.005294794216752052,
+        "lm_loss": 0.005294794216752052,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 1.0,
+        "grad_norm": 0.030505346134305
+      },
+      {
+        "step": 237,
+        "loss": 0.004223240073770285,
+        "lm_loss": 0.004223240073770285,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 1.0,
+        "grad_norm": 0.01385904848575592
+      },
+      {
+        "step": 238,
+        "loss": 0.005189388059079647,
+        "lm_loss": 0.005189388059079647,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 1.0,
+        "grad_norm": 0.02582867629826069
+      },
+      {
+        "step": 239,
+        "loss": 0.004466775804758072,
+        "lm_loss": 0.004466775804758072,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 1.0,
+        "grad_norm": 0.01688271388411522
+      },
+      {
+        "step": 240,
+        "loss": 0.0040442366153001785,
+        "lm_loss": 0.0040442366153001785,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 1.0,
+        "grad_norm": 0.012596480548381805
+      },
+      {
+        "step": 241,
+        "loss": 0.003927943296730518,
+        "lm_loss": 0.003927943296730518,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 1.0,
+        "grad_norm": 0.011248430237174034
+      },
+      {
+        "step": 242,
+        "loss": 0.0037261054385453463,
+        "lm_loss": 0.0037261054385453463,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 1.0,
+        "grad_norm": 0.01024805661290884
+      },
+      {
+        "step": 243,
+        "loss": 0.003219614503905177,
+        "lm_loss": 0.003219614503905177,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 1.0,
+        "grad_norm": 0.008263040333986282
+      },
+      {
+        "step": 244,
+        "loss": 0.003773883916437626,
+        "lm_loss": 0.003773883916437626,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 1.0,
+        "grad_norm": 0.00994905550032854
+      },
+      {
+        "step": 245,
+        "loss": 0.0031763652805238962,
+        "lm_loss": 0.0031763652805238962,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 1.0,
+        "grad_norm": 0.007745934650301933
+      },
+      {
+        "step": 246,
+        "loss": 0.003382704919204116,
+        "lm_loss": 0.003382704919204116,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 1.0,
+        "grad_norm": 0.009201533161103725
+      },
+      {
+        "step": 247,
+        "loss": 0.0034375463146716356,
+        "lm_loss": 0.0034375463146716356,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 1.0,
+        "grad_norm": 0.008428698405623436
+      },
+      {
+        "step": 248,
+        "loss": 0.0027333127800375223,
+        "lm_loss": 0.0027333127800375223,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 1.0,
+        "grad_norm": 0.0069470894522964954
+      },
+      {
+        "step": 249,
+        "loss": 0.0029530890751630068,
+        "lm_loss": 0.0029530890751630068,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 1.0,
+        "grad_norm": 0.006989842746406794
+      },
+      {
+        "step": 250,
+        "loss": 0.0028405163902789354,
+        "lm_loss": 0.0028405163902789354,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 1.0,
+        "grad_norm": 0.006694690324366093
+      },
+      {
+        "step": 251,
+        "loss": 0.0029078121297061443,
+        "lm_loss": 0.0029078121297061443,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 1.0,
+        "grad_norm": 0.00652993842959404
+      },
+      {
+        "step": 252,
+        "loss": 0.0025668845046311617,
+        "lm_loss": 0.0025668845046311617,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 1.0,
+        "grad_norm": 0.005955991800874472
+      },
+      {
+        "step": 253,
+        "loss": 0.0027136183343827724,
+        "lm_loss": 0.0027136183343827724,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 1.0,
+        "grad_norm": 0.006062198430299759
+      },
+      {
+        "step": 254,
+        "loss": 0.00248489691875875,
+        "lm_loss": 0.00248489691875875,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 1.0,
+        "grad_norm": 0.005130570847541094
+      },
+      {
+        "step": 255,
+        "loss": 0.002568015130236745,
+        "lm_loss": 0.002568015130236745,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 1.0,
+        "grad_norm": 0.005079246126115322
+      },
+      {
+        "step": 256,
+        "loss": 0.0023773920256644487,
+        "lm_loss": 0.0023773920256644487,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 1.0,
+        "grad_norm": 0.005373741500079632
+      },
+      {
+        "step": 257,
+        "loss": 0.002304322784766555,
+        "lm_loss": 0.002304322784766555,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 1.0,
+        "grad_norm": 0.005032199434936047
+      },
+      {
+        "step": 258,
+        "loss": 0.0024296597111970186,
+        "lm_loss": 0.0024296597111970186,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 1.0,
+        "grad_norm": 0.00484943762421608
+      },
+      {
+        "step": 259,
+        "loss": 0.001936097047291696,
+        "lm_loss": 0.001936097047291696,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 1.0,
+        "grad_norm": 0.004298008047044277
+      },
+      {
+        "step": 260,
+        "loss": 0.0026037029456347227,
+        "lm_loss": 0.0026037029456347227,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 1.0,
+        "grad_norm": 0.004890258423984051
+      },
+      {
+        "step": 261,
+        "loss": 0.002059216843917966,
+        "lm_loss": 0.002059216843917966,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 1.0,
+        "grad_norm": 0.004178756847977638
+      },
+      {
+        "step": 262,
+        "loss": 0.002311508171260357,
+        "lm_loss": 0.002311508171260357,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 1.0,
+        "grad_norm": 0.004483893513679504
+      },
+      {
+        "step": 263,
+        "loss": 0.002115201437845826,
+        "lm_loss": 0.002115201437845826,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 1.0,
+        "grad_norm": 0.0042676497250795364
+      },
+      {
+        "step": 264,
+        "loss": 0.0021038968116045,
+        "lm_loss": 0.0021038968116045,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 1.0,
+        "grad_norm": 0.0042212288826704025
+      },
+      {
+        "step": 265,
+        "loss": 0.0020045610144734383,
+        "lm_loss": 0.0020045610144734383,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 1.0,
+        "grad_norm": 0.0037904754281044006
+      },
+      {
+        "step": 266,
+        "loss": 0.002065649488940835,
+        "lm_loss": 0.002065649488940835,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 1.0,
+        "grad_norm": 0.00396666070446372
+      },
+      {
+        "step": 267,
+        "loss": 0.0020488970912992954,
+        "lm_loss": 0.0020488970912992954,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 1.0,
+        "grad_norm": 0.003935651853680611
+      },
+      {
+        "step": 268,
+        "loss": 0.0018924316391348839,
+        "lm_loss": 0.0018924316391348839,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 1.0,
+        "grad_norm": 0.003930878825485706
+      },
+      {
+        "step": 269,
+        "loss": 0.0017809137934818864,
+        "lm_loss": 0.0017809137934818864,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 1.0,
+        "grad_norm": 0.0036017452366650105
+      },
+      {
+        "step": 270,
+        "loss": 0.002031567506492138,
+        "lm_loss": 0.002031567506492138,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 1.0,
+        "grad_norm": 0.0037594849709421396
+      },
+      {
+        "step": 271,
+        "loss": 0.0019778141286224127,
+        "lm_loss": 0.0019778141286224127,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 1.0,
+        "grad_norm": 0.0035437713377177715
+      },
+      {
+        "step": 272,
+        "loss": 0.0017246468923985958,
+        "lm_loss": 0.0017246468923985958,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 1.0,
+        "grad_norm": 0.0034086944069713354
+      },
+      {
+        "step": 273,
+        "loss": 0.0015470534563064575,
+        "lm_loss": 0.0015470534563064575,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 1.0,
+        "grad_norm": 0.003072744933888316
+      },
+      {
+        "step": 274,
+        "loss": 0.002045566216111183,
+        "lm_loss": 0.002045566216111183,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 1.0,
+        "grad_norm": 0.00345098995603621
+      },
+      {
+        "step": 275,
+        "loss": 0.001690478646196425,
+        "lm_loss": 0.001690478646196425,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 1.0,
+        "grad_norm": 0.00317586911842227
+      },
+      {
+        "step": 276,
+        "loss": 0.0018076334381476045,
+        "lm_loss": 0.0018076334381476045,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 1.0,
+        "grad_norm": 0.0033146871719509363
+      },
+      {
+        "step": 277,
+        "loss": 0.0017357494216412306,
+        "lm_loss": 0.0017357494216412306,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 1.0,
+        "grad_norm": 0.003268426051363349
+      },
+      {
+        "step": 278,
+        "loss": 0.0016715615056455135,
+        "lm_loss": 0.0016715615056455135,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 1.0,
+        "grad_norm": 0.003150366712361574
+      },
+      {
+        "step": 279,
+        "loss": 0.001520655583590269,
+        "lm_loss": 0.001520655583590269,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 1.0,
+        "grad_norm": 0.002935118041932583
+      },
+      {
+        "step": 280,
+        "loss": 0.0017988021718338132,
+        "lm_loss": 0.0017988021718338132,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 1.0,
+        "grad_norm": 0.0030590661335736513
+      },
+      {
+        "step": 281,
+        "loss": 0.0017346900422126055,
+        "lm_loss": 0.0017346900422126055,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 1.0,
+        "grad_norm": 0.0030019234400242567
+      },
+      {
+        "step": 282,
+        "loss": 0.001506809494458139,
+        "lm_loss": 0.001506809494458139,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 1.0,
+        "grad_norm": 0.0027820176910609007
+      },
+      {
+        "step": 283,
+        "loss": 0.001484511885792017,
+        "lm_loss": 0.001484511885792017,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 1.0,
+        "grad_norm": 0.002798113040626049
+      },
+      {
+        "step": 284,
+        "loss": 0.0016777407145127654,
+        "lm_loss": 0.0016777407145127654,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 1.0,
+        "grad_norm": 0.0029510685708373785
+      },
+      {
+        "step": 285,
+        "loss": 0.0016538853524252772,
+        "lm_loss": 0.0016538853524252772,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 1.0,
+        "grad_norm": 0.002844172064214945
+      },
+      {
+        "step": 286,
+        "loss": 0.0014372477307915688,
+        "lm_loss": 0.0014372477307915688,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 1.0,
+        "grad_norm": 0.0026336456649005413
+      },
+      {
+        "step": 287,
+        "loss": 0.0016560493968427181,
+        "lm_loss": 0.0016560493968427181,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 1.0,
+        "grad_norm": 0.0027794355992227793
+      },
+      {
+        "step": 288,
+        "loss": 0.001366733806207776,
+        "lm_loss": 0.001366733806207776,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 1.0,
+        "grad_norm": 0.0025933149736374617
+      },
+      {
+        "step": 289,
+        "loss": 0.001568339765071869,
+        "lm_loss": 0.001568339765071869,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 1.0,
+        "grad_norm": 0.0028016287833452225
+      },
+      {
+        "step": 290,
+        "loss": 0.0013874662108719349,
+        "lm_loss": 0.0013874662108719349,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 1.0,
+        "grad_norm": 0.002573357429355383
+      },
+      {
+        "step": 291,
+        "loss": 0.0012167543172836304,
+        "lm_loss": 0.0012167543172836304,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 1.0,
+        "grad_norm": 0.0023388040717691183
+      },
+      {
+        "step": 292,
+        "loss": 0.0016743403393775225,
+        "lm_loss": 0.0016743403393775225,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 1.0,
+        "grad_norm": 0.0028047626838088036
+      },
+      {
+        "step": 293,
+        "loss": 0.001471397583372891,
+        "lm_loss": 0.001471397583372891,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 1.0,
+        "grad_norm": 0.00259996484965086
+      },
+      {
+        "step": 294,
+        "loss": 0.0013606917345896363,
+        "lm_loss": 0.0013606917345896363,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 1.0,
+        "grad_norm": 0.0025169821456074715
+      },
+      {
+        "step": 295,
+        "loss": 0.0015485376352444291,
+        "lm_loss": 0.0015485376352444291,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 1.0,
+        "grad_norm": 0.0027065903414040804
+      },
+      {
+        "step": 296,
+        "loss": 0.0012285261182114482,
+        "lm_loss": 0.0012285261182114482,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 1.0,
+        "grad_norm": 0.0024489392526447773
+      },
+      {
+        "step": 297,
+        "loss": 0.0014125334564596415,
+        "lm_loss": 0.0014125334564596415,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 1.0,
+        "grad_norm": 0.0024934031534940004
+      },
+      {
+        "step": 298,
+        "loss": 0.0013073653681203723,
+        "lm_loss": 0.0013073653681203723,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 1.0,
+        "grad_norm": 0.002423672005534172
+      },
+      {
+        "step": 299,
+        "loss": 0.0013624167768284678,
+        "lm_loss": 0.0013624167768284678,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 1.0,
+        "grad_norm": 0.002493427600711584
+      },
+      {
+        "step": 300,
+        "loss": 0.0013059721095487475,
+        "lm_loss": 0.0013059721095487475,
+        "load_balance_loss": 0.0,
+        "router_z_loss": 0.0,
+        "token_accuracy": 1.0,
+        "grad_norm": 0.00241861748509109
+      }
+    ]
+  },
+  "loss_reduction_fraction": 0.9998768388794297,
+  "gate": {
+    "max_ending_lm_loss": 0.01,
+    "min_ending_token_accuracy": 0.99,
+    "min_loss_reduction_fraction": 0.95,
+    "require_no_nonfinite_event": true,
+    "require_final_parameters_finite": true
+  },
+  "gate_passed": true
+}

@@ -1,3 +1,6 @@
+import hashlib
+import json
+
 import yaml
 
 REQUIRED_FIELDS = {
@@ -70,3 +73,22 @@ def test_phase_0_entries_do_not_fabricate_tokenizer_or_dataset(repo_root):
         assert entry["tokenizer_id"] in HONEST_NOT_YET_CREATED_VALUES, entry["experiment_id"]
         assert entry["dataset_id"] in HONEST_NOT_YET_CREATED_VALUES, entry["experiment_id"]
         assert entry["starting_checkpoint"] in HONEST_NOT_YET_CREATED_VALUES, entry["experiment_id"]
+
+
+def test_sol_review_result_artifacts_are_clean_canonical_and_registry_linked(repo_root):
+    entries = {entry["experiment_id"]: entry for entry in _load_registry(repo_root)}
+    result_paths = sorted((repo_root / "docs/experiments/results").glob("exp-00*-sol-*.json"))
+    assert len(result_paths) == 6
+    for path in result_paths:
+        result = json.loads(path.read_text())
+        experiment_id = result["result_identity"]
+        assert result["git_worktree_clean"] is True
+        assert result["canonical_result"] is True
+        assert result["git_status_porcelain"] == []
+        assert result["gate_passed"] is True
+        assert entries[experiment_id]["git_commit"] == result["git_commit"]
+        assert path.name in entries[experiment_id]["artifact_locations"]
+        for config_identity in result["architecture_configs"]:
+            config_path = repo_root / config_identity["config_path"]
+            actual_hash = hashlib.sha256(config_path.read_bytes()).hexdigest()
+            assert actual_hash == config_identity["config_sha256"]

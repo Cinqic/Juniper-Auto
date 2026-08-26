@@ -7,6 +7,19 @@ generated_by: scripts/hash_manifest.py
 sha256:
   docs/adr/0008-moe-auxiliary-loss-semantics.md: 04174ad37f1946dc61095636979a5e67df40c031ac0062663f66081e23e2cfb9
   docs/architecture/reference-model-implementation.md: 3f7c329d816a8f634b2d37e15c3d1fedac6da07ba3db6bf71817755cb6323412
+  docs/experiments/results/exp-0003-param-verification.json: 341f02df37c16e16baf562d7f390e824786960a3e5fcd1bb2d949e1ab3b8563d
+  docs/experiments/results/exp-0004-dense-tiny-overfit.json: 472b4389179ca5382d43bf2b0ed06f518514357295e90f6936a6d99085d717c8
+  docs/experiments/results/exp-0005-sparse-tiny-overfit.json: 8d7ae7a7c4fa17b9d6c1a8e681ab1329492f3e87fa6bb293422aa309da2a424d
+  docs/experiments/results/exp-0006-checkpoint-resume-equivalence.json: df3aeb367070b2f4b7e9917d808e3ad02214c6eacc9bdbb5a2f06f2b2b646b7d
+  docs/experiments/results/exp-0007-flowbox-dense-profile.json: 1aeafa7a071de26719360b25a15ff1fd78f1b308db647d6ea463607f3c49a37e
+  docs/experiments/results/exp-0008-flowbox-sparse-profile.json: d115328d808eec23819903ec46496b4d1efc8746d572a69643294d25e23f8451
+  docs/experiments/results/exp-0009-sol-param-verification.json: 2062fa8e01edfa44b2e8f39b22361786686a7167efa966fde16ed70aa04a0fc7
+  docs/experiments/results/exp-0010-sol-dense-tiny-overfit.json: 0894f186a0636c96022024a033e3dcf6b4c03891255e6d333aa31e9e00f79908
+  docs/experiments/results/exp-0011-sol-sparse-tiny-overfit.json: cf6bd112c8cff305da92a612b0955f35ccaac8be4148be39197c76b93f401b06
+  docs/experiments/results/exp-0012-sol-resume-equivalence.json: 9015ff54397fc43ca21207cdd000782dc6b5d2ab22d113cc9f271ed7e1a4124f
+  docs/experiments/results/exp-0013-sol-flowbox-dense-profile.json: 9ca0c07b6c3b4ef61ef867f39d3dde0581987796919109db1f91041496239d70
+  docs/experiments/results/exp-0014-sol-flowbox-sparse-profile.json: 32b45b584608463567beb076bcd63736f868cb45a37473d311670819403a878b
+  experiments/registry.yaml: d3a363e1565b14e9b22a24cce8c302c00c11f43413ed1eddeacf246777f924b1
   juniper_auto/model/__init__.py: c09234cdbb1d7812c077e20c5489a5034cccd793b177bc02ad1d7bf389211319
   juniper_auto/model/attention.py: 5471ea9609456ab12adc09d29329935c90be6ca2ceec87b0d39f6caf2cad21e1
   juniper_auto/model/block.py: d2bca236c76a2c15acab10ccc92427acbe355dbb56316e2617141ced5d248e51
