@@ -139,8 +139,23 @@ and this document.
 
 ## Remote (GitHub) recovery and CI verification
 
-Recorded in this phase's metadata-closure commit once push to
-`origin/main` is authorized and GitHub Actions reports the actual result
-for `.github/workflows/phase-2-validation.yml` on the pushed commit, per
-Phase 2 instructions section 40's self-reference handling (the same
-pattern Phase 1 used).
+Push to `origin/main` was authorized and performed for commit
+`63b05c5b9ec1a3eec21bf129c99b4c48d0fd0407`; `git ls-remote origin main`
+confirmed the remote ref matches exactly. All three required GitHub
+Actions workflows ran on this exact commit and succeeded:
+
+| Workflow | Run ID | Conclusion | Duration |
+|---|---|---|---|
+| Phase 0 Validation | 33010601469 | success | 2m4s |
+| Phase 1 Validation | 33010601512 | success | 2m45s |
+| Phase 2 Validation | 33010601464 | success | 4m9s |
+
+Since the Phase 2 Validation workflow (`.github/workflows/phase-2-validation.yml`)
+runs `python scripts/validate_phase2.py --all` on a clean, freshly
+checked-out `ubuntu-latest` runner -- itself a fresh-clone recovery
+exercise, performed by GitHub's infrastructure rather than locally -- this
+constitutes the real remote-clone confirmation anticipated above, and
+supersedes the local-clone caveat noted at the top of this document for
+the purpose of "has this been proven to work from a genuinely independent
+checkout," even though it did not use the interactive `git clone` command
+form shown in the Procedure section.

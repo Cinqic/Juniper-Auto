@@ -20,11 +20,22 @@ tag `phase-1-architecture`).
 
 ## Final commit
 
-`CANDIDATE - PENDING INDEPENDENT REVIEW` -- see the metadata-closure commit
-recorded after this report's initial commit for the exact final Sonnet
-candidate hash and CI evidence (the self-reference problem described in
-the Phase 2 instructions section 40 applies here exactly as it did for
-Phase 1).
+The Sonnet substantive candidate is `63b05c5b9ec1a3eec21bf129c99b4c48d0fd0407`,
+pushed to `origin/main` and confirmed present remotely
+(`git ls-remote origin main` matched exactly). All three required GitHub
+Actions workflows ran on this exact commit and succeeded:
+
+| Workflow | Run ID | Conclusion | Duration |
+|---|---|---|---|
+| Phase 0 Validation | [33010601469](https://github.com/Cinqic/Juniper-Auto/actions/runs/33010601469) | success | 2m4s |
+| Phase 1 Validation | [33010601512](https://github.com/Cinqic/Juniper-Auto/actions/runs/33010601512) | success | 2m45s |
+| Phase 2 Validation | [33010601464](https://github.com/Cinqic/Juniper-Auto/actions/runs/33010601464) | success | 4m9s |
+
+This report's own metadata-closure commit (recording the table above) is,
+by construction, a commit whose hash could not have been known when it was
+written -- resolved by the annotated `phase-2-moe` tag once GPT-5.6 Sol
+performs independent review and approves, per the Phase 2 instructions
+section 40/41 (Sonnet does not create that tag).
 
 ## Implementation summary
 
@@ -137,9 +148,9 @@ reproduces exactly, and does not leak into a subsequent normal call).
 
 ## CI workflow / run
 
-`.github/workflows/phase-2-validation.yml`, run ID and conclusion recorded
-in the metadata-closure commit (see "Final commit" above) once GitHub
-Actions reports the actual result for the pushed candidate.
+`.github/workflows/phase-2-validation.yml`, run `33010601464`, conclusion
+`success`, on commit `63b05c5b9ec1a3eec21bf129c99b4c48d0fd0407` -- see
+"Final commit" above for all three required workflows' results.
 
 ## Recovery status
 

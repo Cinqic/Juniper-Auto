@@ -254,19 +254,25 @@ the same claim in two places that could drift apart.
 
 ## Remote CI
 
-Not yet run against the final candidate at self-review time -- recorded in
-the metadata-closure commit once pushed and GitHub Actions reports a
-result, per the instructions' section 40 self-reference handling.
+Pushed candidate `63b05c5b9ec1a3eec21bf129c99b4c48d0fd0407` to
+`origin/main` (confirmed present remotely via `git ls-remote`). All three
+required workflows succeeded on this exact commit: Phase 0 Validation (run
+33010601469, success, 2m4s), Phase 1 Validation (run 33010601512, success,
+2m45s), Phase 2 Validation (run 33010601464, success, 4m9s).
 
 ## Recovery result
 
-See `docs/recovery/phase-2.md`.
+See `docs/recovery/phase-2.md`: two fresh-clone recovery attempts, the
+first of which caught and led to fixing a real stale-manifest gap, the
+second of which passed cleanly.
 
 ## Final Sonnet candidate identity
 
-Recorded in the metadata-closure commit, once the substantive candidate
-above is pushed and its exact commit hash is knowable without
-self-reference.
+Substantive candidate: `63b05c5b9ec1a3eec21bf129c99b4c48d0fd0407`. This
+self-review document's own metadata-closure commit necessarily has a
+different, not-yet-knowable hash at the time this sentence was written --
+resolved by the annotated `phase-2-moe` tag once GPT-5.6 Sol's independent
+review approves it (Sonnet does not create that tag).
 
 ---
 

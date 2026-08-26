@@ -15,11 +15,11 @@ sha256:
   docs/experiments/results/exp-0019-ablation-validation.json: 15ce10c98a775c3adb656225dc97cd805453066c13728c24f60140060a1d76ed
   docs/experiments/results/exp-0020-reproducibility.json: 0706d96547bc5ac1a8c44453734eb81585b23d4773ebf5bf6abfec33f9a5ae0d
   docs/experiments/results/exp-0021-flowbox-moe-dispatch-profile.json: 7538fc23076ef8f00e9438aff272977c4142a8e10c48d872508a04ef3740f8c8
-  docs/phases/phase-2-moe.md: 335a01e28fa265f5ab9624ef6701b69b1f2c4ffd01e15eb8215fdda19e065679
+  docs/phases/phase-2-moe.md: 265ac1fc4057e7bc8df470482d7f51ea16c36525052b0fc5c84e39d9155c50ad
   docs/phases/phase-2-requirements-traceability.md: 42cb4e44893a453239b0e4de29dc37d074e857ce17aa326036d5a7973121be08
-  docs/phases/phase-2-sonnet-self-review.md: 852abfc0a485589095a60d47b70e7dfcfd77a132ce42a8f1981a61b3a7e58b54
-  docs/recovery/phase-2.md: 4263d185b9eba4f54c4500537f9534c159597af2e97b818c4b0f2941f80d956b
-  docs/time/phase-hours.csv: b4bf2a53ba3802581629a3cb846fd6aac1f95811f10656cb070a3e13691381ca
+  docs/phases/phase-2-sonnet-self-review.md: 03a053253440e36f01251ba3aae12319c7205cc49df1c705851d8824e671a71b
+  docs/recovery/phase-2.md: cb80a5d9286e6d8b5ce7f2f6b91e3488d4df13d8971f9a2d97d619babd978b2f
+  docs/time/phase-hours.csv: 5df616776fea518a594d927cdc772faa0d1b3c314dfa784655664e3c36777c66
   experiments/registry.yaml: ec602f52476a20f468a415d11ac0bdf1b7b0d3c916e1602f3acc95732c48db47
   juniper_auto/analysis/__init__.py: 5fd507c88c9ecbfa7a03e05a8386f881422021bc3fb377da334999e82b61f8a3
   juniper_auto/analysis/context_sensitivity.py: 2f2215d959604215415fee8267604b7223b37a7e20d77bc468fbd777fe8cb4ee
