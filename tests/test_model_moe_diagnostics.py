@@ -12,6 +12,8 @@ import torch
 from juniper_auto.model.moe import MoELayer
 from juniper_auto.model.moe_diagnostics import (
     RoutingWindowAccumulator,
+    RoutingHealthThresholds,
+    collect_layer_expert_gradient_norms,
     compute_contribution_norms,
     compute_entropy,
     compute_expert_pair_coactivation,
@@ -24,6 +26,7 @@ from juniper_auto.model.moe_diagnostics import (
     detect_routing_collapse,
     detect_routing_oscillation,
     detect_starved_experts,
+    is_pathological_routing_oscillation,
 )
 from tests.model_fixtures import make_tiny_sparse_config
 
@@ -112,6 +115,53 @@ def test_contribution_norms_handle_zero_valid_tokens():
     stats = compute_contribution_norms(shared, routed, valid)
     for v in stats.values():
         assert v.item() == 0.0
+
+
+def test_weighted_auxiliary_diagnostics_are_explicit_and_apply_coefficients_once():
+    cfg = make_tiny_sparse_config(
+        n_routed_experts=4, top_k=2, d_model=8, expert_ffn_dim=8,
+        n_query_heads=1, n_kv_heads=1, head_dim=8,
+    )
+    layer = MoELayer(cfg)
+    x = torch.randn(1, 5, cfg.core.d_model)
+    _, _, _, diag = layer(x, return_diagnostics=True)
+    torch.testing.assert_close(
+        diag.load_balance_loss_weighted,
+        cfg.moe.load_balance_loss_coefficient * diag.load_balance_loss_raw,
+    )
+    torch.testing.assert_close(
+        diag.router_z_loss_weighted,
+        cfg.moe.router_z_loss_coefficient * diag.router_z_loss_raw,
+    )
+
+
+def test_post_backward_gradient_collector_distinguishes_unselected_experts():
+    cfg = make_tiny_sparse_config(
+        n_routed_experts=4, top_k=2, d_model=4, expert_ffn_dim=4,
+        n_query_heads=1, n_kv_heads=1, head_dim=4,
+    )
+    layer = MoELayer(cfg)
+    with torch.no_grad():
+        layer.router.weight.copy_(
+            torch.tensor(
+                [
+                    [4.0, 4.0, 4.0, 4.0],
+                    [3.0, 3.0, 3.0, 3.0],
+                    [2.0, 2.0, 2.0, 2.0],
+                    [1.0, 1.0, 1.0, 1.0],
+                ]
+            )
+        )
+    x = torch.ones(1, 3, cfg.core.d_model, requires_grad=True)
+    out, lb, z, diag = layer(x, return_diagnostics=True)
+    assert set(diag.topk_idx.reshape(-1).tolist()) == {0, 1}
+    (out.square().mean() + lb + z).backward()
+    norms = collect_layer_expert_gradient_norms(layer, layer_index=7)
+    assert norms.layer_index == 7
+    assert norms.router is not None and math.isfinite(norms.router)
+    assert norms.shared_expert is not None and math.isfinite(norms.shared_expert)
+    assert all(value is not None and math.isfinite(value) for value in norms.routed_experts[:2])
+    assert norms.routed_experts[2:] == (None, None)
 
 
 # --------------------------------------------------------------------------
@@ -249,3 +299,14 @@ def test_routing_oscillation_detector_measures_top1_change_rate():
     assert detect_routing_oscillation(a, b_all_changed) == 1.0
     b_one_changed = torch.tensor([[9, 1], [2, 3], [0, 2]])
     assert abs(detect_routing_oscillation(a, b_one_changed) - (1 / 3)) < 1e-6
+    assert not is_pathological_routing_oscillation(1 / 3)
+    assert is_pathological_routing_oscillation(1.0)
+
+
+def test_routing_health_thresholds_are_caller_configurable():
+    shares = torch.tensor([0.8, 0.07, 0.07, 0.06])
+    assert detect_dominant_experts(shares) == [0]
+    relaxed = RoutingHealthThresholds(dominant_expert_uniform_share_ratio=4.0)
+    assert detect_dominant_experts(shares, relaxed) == []
+    strict_oscillation = RoutingHealthThresholds(oscillation_top1_change_rate=0.1)
+    assert is_pathological_routing_oscillation(0.2, strict_oscillation)

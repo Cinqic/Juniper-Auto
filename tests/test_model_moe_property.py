@@ -91,6 +91,7 @@ def test_dropless_invariants_hold_across_randomized_configurations(seed, batch, 
     # Shapes and finiteness.
     assert out.shape == (batch, seq_len, cfg.core.d_model)
     assert torch.isfinite(out).all()
+    assert torch.equal(out[~valid_mask], torch.zeros_like(out[~valid_mask]))
     assert torch.isfinite(lb).all() and torch.isfinite(z).all()
 
     # Expert-pair coactivation: total pairs counted == n_valid * C(top_k, 2),

@@ -44,9 +44,16 @@ def test_single_layer_trace_records_correct_positions_experts_and_weights():
         assert record.flat_token_index == flat_idx
         assert record.expert_1 == diag.topk_idx[flat_idx, 0].item()
         assert record.expert_2 == diag.topk_idx[flat_idx, 1].item()
+        assert record.executed_expert_1 == (record.expert_1 if record.is_valid else -1)
+        assert record.executed_expert_2 == (record.expert_2 if record.is_valid else -1)
         assert record.weight_1 == pytest.approx(diag.topk_weights[flat_idx, 0].item())
         assert record.weight_2 == pytest.approx(diag.topk_weights[flat_idx, 1].item())
         assert record.is_valid == bool(valid[record.batch_index, record.seq_position].item())
+        assert record.routed_assignment_count == (2 if record.is_valid else 0)
+        assert record.weights_sum == pytest.approx(record.weight_1 + record.weight_2)
+        assert record.weights_normalized
+        assert record.shared_expert_activated == record.is_valid
+        assert record.reconstruction_position == flat_idx
 
 
 def test_trace_covers_every_token_no_lost_records():
@@ -81,7 +88,7 @@ def test_full_model_trace_assigns_correct_layer_index_and_skips_dense_layers():
     input_ids = torch.randint(0, cfg.embeddings.vocab_size, (2, 6))
     out = model(input_ids, return_diagnostics=True)
 
-    full_trace = assemble_full_trace(model.layer_kinds, out.diagnostics)
+    full_trace = assemble_full_trace(model.layer_kinds, out.diagnostics, token_ids=input_ids)
     # only MoE layers (positions 2,3,4,5) contribute; each contributes
     # batch*seq_len = 12 records since return_trace defaults to False on the
     # model-level call -- so this should be empty until trace is requested.
@@ -99,7 +106,7 @@ def test_full_model_trace_with_explicit_trace_collection():
     attention_mask = torch.ones(2, 6, dtype=torch.bool)
 
     out = model(input_ids, attention_mask=attention_mask, return_diagnostics=True, return_trace=True)
-    full_trace = assemble_full_trace(model.layer_kinds, out.diagnostics)
+    full_trace = assemble_full_trace(model.layer_kinds, out.diagnostics, token_ids=input_ids)
     assert len(full_trace) == 4 * 2 * 6  # 4 MoE layers * batch(2) * seq_len(6)
     assert {r.layer_index for r in full_trace} == {2, 3, 4, 5}
 
@@ -112,5 +119,22 @@ def test_full_model_trace_with_explicit_trace_collection():
         assert loaded[0]["layer_index"] in {2, 3, 4, 5}
         assert set(loaded[0].keys()) == {
             "layer_index", "batch_index", "seq_position", "flat_token_index",
-            "is_valid", "expert_1", "expert_2", "weight_1", "weight_2",
+            "is_valid", "expert_1", "expert_2", "executed_expert_1", "executed_expert_2",
+            "weight_1", "weight_2",
+            "routed_assignment_count", "weights_sum", "weights_normalized",
+            "shared_expert_activated", "reconstruction_position", "token_id", "token_text",
         }
+        assert loaded[0]["token_id"] == input_ids[0, 0].item()
+
+
+def test_full_trace_rejects_mismatched_token_id_shape():
+    cfg = make_tiny_sparse_config(
+        n_layers=2, dense_layers=[1], moe_layers=[2], d_model=4,
+        n_routed_experts=4, top_k=2, expert_ffn_dim=4,
+        n_query_heads=1, n_kv_heads=1, head_dim=4,
+    )
+    model = build_model(cfg, seed=0)
+    input_ids = torch.randint(0, cfg.embeddings.vocab_size, (1, 4))
+    out = model(input_ids, return_diagnostics=True, return_trace=True)
+    with pytest.raises(ValueError, match="token_ids"):
+        assemble_full_trace(model.layer_kinds, out.diagnostics, token_ids=torch.zeros(2, 4, dtype=torch.long))

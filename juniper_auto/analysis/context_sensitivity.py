@@ -41,6 +41,110 @@ from juniper_auto.model.moe_diagnostics import compute_entropy
 from juniper_auto.model.routing import compute_router_logits_and_probs, select_topk
 
 
+@dataclass(frozen=True)
+class TextContextVariant:
+    label: str
+    text: str
+
+
+@dataclass(frozen=True)
+class TextContextProbeTemplate:
+    """Tokenizer-independent methodology for a later semantic probe.
+
+    Phase 2 has no tokenizer, so these text templates are not executed as
+    language evidence. They freeze the controlled categories and lexical
+    identity that Phase 3+ can tokenize into ``ProbeCase`` instances without
+    redesigning the measurement after seeing results.
+    """
+
+    category: str
+    probe_text: str
+    variants: tuple[TextContextVariant, ...]
+
+
+CANONICAL_CONTEXT_PROBE_TEMPLATES: tuple[TextContextProbeTemplate, ...] = (
+    TextContextProbeTemplate(
+        category="semantic_ambiguity",
+        probe_text="bank",
+        variants=(
+            TextContextVariant("financial-institution", "The bank approved the business loan."),
+            TextContextVariant("river-edge", "The canoe rested beside the river bank."),
+        ),
+    ),
+    TextContextProbeTemplate(
+        category="same_syntax_different_domains",
+        probe_text="class",
+        variants=(
+            TextContextVariant("ordinary-prose", "The class discussed history after lunch."),
+            TextContextVariant("python-code", "class Vehicle: pass"),
+        ),
+    ),
+    TextContextProbeTemplate(
+        category="code_prose_lexical_overlap",
+        probe_text="return",
+        variants=(
+            TextContextVariant("ordinary-prose", "Please return the borrowed book tomorrow."),
+            TextContextVariant("source-code", "def identity(x): return x"),
+        ),
+    ),
+    TextContextProbeTemplate(
+        category="mathematical_symbol_reuse",
+        probe_text="*",
+        variants=(
+            TextContextVariant("multiplication", "The area is width * height."),
+            TextContextVariant("wildcard", "Match every file with *.json."),
+            TextContextVariant("pointer-like-syntax", "Read the value through *pointer."),
+        ),
+    ),
+    TextContextProbeTemplate(
+        category="syntax_reuse_across_formats",
+        probe_text=":",
+        variants=(
+            TextContextVariant("prose", "Note: the result is provisional."),
+            TextContextVariant("python", "if ready: launch()"),
+            TextContextVariant("json", '{"ready": true}'),
+            TextContextVariant("mathematics", "f: A to B"),
+        ),
+    ),
+    TextContextProbeTemplate(
+        category="positional_control",
+        probe_text="anchor",
+        variants=(
+            TextContextVariant("early-position", "anchor alpha beta gamma delta"),
+            TextContextVariant("late-position", "alpha beta gamma delta anchor"),
+        ),
+    ),
+)
+
+
+def validate_context_probe_templates(
+    templates: tuple[TextContextProbeTemplate, ...] = CANONICAL_CONTEXT_PROBE_TEMPLATES,
+) -> None:
+    """Fail if the frozen methodology loses identity or category controls."""
+    required_categories = {
+        "semantic_ambiguity",
+        "same_syntax_different_domains",
+        "code_prose_lexical_overlap",
+        "mathematical_symbol_reuse",
+        "syntax_reuse_across_formats",
+        "positional_control",
+    }
+    categories = {template.category for template in templates}
+    missing = required_categories - categories
+    if missing:
+        raise ValueError(f"context probe methodology is missing categories: {sorted(missing)}")
+    if len(categories) != len(templates):
+        raise ValueError("context probe template categories must be unique")
+    for template in templates:
+        if len(template.variants) < 2:
+            raise ValueError(f"{template.category} needs at least two context variants")
+        for variant in template.variants:
+            if template.probe_text not in variant.text:
+                raise ValueError(
+                    f"{template.category}/{variant.label} does not contain exact probe text {template.probe_text!r}"
+                )
+
+
 def _js_divergence(p: torch.Tensor, q: torch.Tensor, eps: float = 1e-12) -> float:
     """Jensen-Shannon divergence (nats) between two categorical
     distributions over experts. Symmetric, bounded in [0, log(2)]."""

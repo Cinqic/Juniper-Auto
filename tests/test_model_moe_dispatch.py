@@ -19,9 +19,21 @@ from tests.model_fixtures import make_tiny_sparse_config
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 PHASE_1_TAG = "phase-1-architecture"
+PHASE_1_APPROVED_COMMIT = "073acf46e04241ed35d00bc4b4c29ac463ee744d"
 
 
 def _load_phase1_golden_moe_module():
+    resolved = subprocess.run(
+        ["git", "rev-list", "-n", "1", PHASE_1_TAG],
+        cwd=REPO_ROOT,
+        capture_output=True,
+        text=True,
+    )
+    if resolved.returncode != 0 or resolved.stdout.strip() != PHASE_1_APPROVED_COMMIT:
+        raise RuntimeError(
+            f"required golden tag {PHASE_1_TAG!r} must resolve to {PHASE_1_APPROVED_COMMIT}, "
+            f"got {resolved.stdout.strip() or resolved.stderr.strip() or 'unavailable'}"
+        )
     result = subprocess.run(
         ["git", "show", f"{PHASE_1_TAG}:juniper_auto/model/moe.py"],
         cwd=REPO_ROOT,
@@ -29,7 +41,10 @@ def _load_phase1_golden_moe_module():
         text=True,
     )
     if result.returncode != 0:
-        pytest.skip(f"cannot read {PHASE_1_TAG}:juniper_auto/model/moe.py from git: {result.stderr}")
+        raise RuntimeError(
+            f"required golden evidence is unavailable: cannot read "
+            f"{PHASE_1_TAG}:juniper_auto/model/moe.py from git: {result.stderr}"
+        )
     source = result.stdout
     spec = importlib.util.spec_from_loader("_phase1_golden_moe", loader=None)
     module = importlib.util.module_from_spec(spec)
@@ -88,7 +103,18 @@ def test_refactored_reference_dispatch_matches_phase1_golden_bit_for_bit(
     out_new, lb_new, z_new, diag_new = new_layer(x, valid_mask=valid, return_diagnostics=True)
     out_gold, lb_gold, z_gold, diag_gold = golden_layer(x, valid_mask=valid, return_diagnostics=True)
 
-    assert torch.equal(out_new, out_gold)
+    # Phase 2 independent review tightened padding semantics: valid-token
+    # behavior remains the Phase 1 golden oracle, while padding positions no
+    # longer execute experts and therefore have a zero MoE contribution.
+    flat_valid = valid.unsqueeze(-1).expand_as(out_new)
+    if valid.all():
+        assert torch.equal(out_new, out_gold)
+    else:
+        # Compacting valid rows changes GEMM batching and can change the last
+        # few floating-point bits without changing valid-token semantics.
+        torch.testing.assert_close(out_new[flat_valid], out_gold[flat_valid], atol=1e-6, rtol=1e-6)
+    if not valid.all():
+        assert torch.equal(out_new[~flat_valid], torch.zeros_like(out_new[~flat_valid]))
     assert torch.equal(lb_new, lb_gold)
     assert torch.equal(z_new, z_gold)
     assert torch.equal(diag_new.router_logits, diag_gold.router_logits)
@@ -111,16 +137,21 @@ def test_refactored_reference_dispatch_matches_phase1_golden_under_gradients(pha
     x_gold = x.clone().requires_grad_(True)
 
     out_new, lb_new, z_new, _ = new_layer(x_new, valid_mask=valid)
-    (out_new.sum() + lb_new + z_new).backward()
+    (out_new[valid].sum() + lb_new + z_new).backward()
 
     out_gold, lb_gold, z_gold, _ = golden_layer(x_gold, valid_mask=valid)
-    (out_gold.sum() + lb_gold + z_gold).backward()
+    (out_gold[valid].sum() + lb_gold + z_gold).backward()
 
-    assert torch.equal(out_new, out_gold)
-    assert torch.equal(x_new.grad, x_gold.grad)
-    assert torch.equal(new_layer.router.weight.grad, golden_layer.router.weight.grad)
+    flat_valid = valid.unsqueeze(-1).expand_as(out_new)
+    torch.testing.assert_close(out_new[flat_valid], out_gold[flat_valid], atol=1e-6, rtol=1e-6)
+    grad_valid = valid.unsqueeze(-1).expand_as(x_new.grad)
+    torch.testing.assert_close(x_new.grad[grad_valid], x_gold.grad[grad_valid], atol=1e-6, rtol=1e-6)
+    assert torch.equal(x_new.grad[~grad_valid], torch.zeros_like(x_new.grad[~grad_valid]))
+    torch.testing.assert_close(
+        new_layer.router.weight.grad, golden_layer.router.weight.grad, atol=1e-6, rtol=1e-6
+    )
     for p_new, p_gold in zip(new_layer.shared_expert.parameters(), golden_layer.shared_expert.parameters()):
-        assert torch.equal(p_new.grad, p_gold.grad)
+        torch.testing.assert_close(p_new.grad, p_gold.grad, atol=1e-6, rtol=1e-6)
 
 
 # --------------------------------------------------------------------------

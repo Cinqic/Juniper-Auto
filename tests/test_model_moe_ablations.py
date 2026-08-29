@@ -8,6 +8,7 @@ random-routing reproducibility and that no ablation leaks into a normal
 from __future__ import annotations
 
 import torch
+import pytest
 
 from juniper_auto.model.moe import MoELayer
 from juniper_auto.model.moe_ablations import MoEAblationConfig
@@ -20,6 +21,7 @@ def _stub_layer(n_routed=4, top_k=2, d_model=4):
         n_query_heads=1, n_kv_heads=1, head_dim=d_model,
     )
     layer = MoELayer(cfg)
+    layer.eval()
     layer.shared_expert.forward = lambda x: torch.full((x.shape[0], d_model), 100.0)
     for i, expert in enumerate(layer.routed_experts):
         expert.forward = (lambda v: lambda x: torch.full((x.shape[0], d_model), v))(float(i + 1))
@@ -49,6 +51,7 @@ def test_disable_routed_expert_zeros_its_term_without_renormalizing():
     x = torch.randn(8, cfg.core.d_model)
     ablation = MoEAblationConfig(mode="disable_routed_expert", expert_id=2)
     out, _, _, diag = _call(layer, x, ablation=ablation)
+    assert diag.ablation_mode == "disable_routed_expert"
     for t in range(8):
         e0, e1 = diag.topk_idx[t].tolist()
         w0, w1 = diag.topk_weights[t].tolist()
@@ -56,6 +59,24 @@ def test_disable_routed_expert_zeros_its_term_without_renormalizing():
         contrib1 = 0.0 if e1 == 2 else w1 * (e1 + 1)
         expected = 100.0 + contrib0 + contrib1
         torch.testing.assert_close(out[t], torch.full((cfg.core.d_model,), expected), atol=1e-4, rtol=1e-4)
+
+
+def test_ablation_trace_distinguishes_selected_from_executed_experts():
+    layer, cfg = _stub_layer(n_routed=4, top_k=2, d_model=4)
+    x = torch.randn(1, 12, cfg.core.d_model)
+    valid = torch.ones(1, 12, dtype=torch.bool)
+    ablation = MoEAblationConfig(mode="replace_routed_expert", expert_id=0, replacement_expert_id=3)
+    _, _, _, diag = layer(
+        x,
+        valid_mask=valid,
+        ablation=ablation,
+        return_diagnostics=True,
+        return_trace=True,
+    )
+    assert diag.ablation_mode == "replace_routed_expert"
+    for record in diag.token_trace:
+        assert record.executed_expert_1 == (3 if record.expert_1 == 0 else record.expert_1)
+        assert record.executed_expert_2 == (3 if record.expert_2 == 0 else record.expert_2)
 
 
 def test_zero_expert_output_generalizes_disable_to_a_set():
@@ -216,3 +237,41 @@ def test_ablation_state_does_not_persist_across_calls():
         layer(x, valid_mask=valid, ablation=ablation)
     out_after, _, _, _ = layer(x, valid_mask=valid)
     assert torch.equal(out_before, out_after)
+
+
+def test_ablation_is_rejected_while_layer_is_in_training_mode():
+    layer, cfg = _stub_layer()
+    layer.train()
+    x = torch.randn(1, 3, cfg.core.d_model)
+    with pytest.raises(RuntimeError, match="evaluation-only"):
+        layer(x, ablation=MoEAblationConfig(mode="disable_shared_expert"))
+
+
+@pytest.mark.parametrize(
+    "kwargs",
+    [
+        {"mode": "not-a-mode"},
+        {"mode": "disable_routed_expert", "expert_id": -1},
+        {"mode": "disable_shared_expert", "expert_id": 0},
+        {"mode": "replace_routed_expert", "expert_id": 1, "replacement_expert_id": 1},
+        {"mode": "zero_expert_output", "expert_ids": (1, 1)},
+        {"mode": "random_router"},
+    ],
+)
+def test_malformed_ablation_configuration_is_rejected(kwargs):
+    with pytest.raises(ValueError):
+        MoEAblationConfig(**kwargs)
+
+
+@pytest.mark.parametrize(
+    "ablation",
+    [
+        MoEAblationConfig(mode="disable_routed_expert", expert_id=4),
+        MoEAblationConfig(mode="replace_routed_expert", expert_id=0, replacement_expert_id=4),
+        MoEAblationConfig(mode="zero_expert_output", expert_ids=(4,)),
+    ],
+)
+def test_out_of_range_expert_ids_fail_before_dispatch(ablation):
+    layer, cfg = _stub_layer(n_routed=4)
+    with pytest.raises(ValueError, match="out of range"):
+        layer(torch.randn(1, 3, cfg.core.d_model), ablation=ablation)

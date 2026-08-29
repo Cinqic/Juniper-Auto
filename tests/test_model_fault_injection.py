@@ -464,6 +464,7 @@ def test_non_reproducible_seeded_random_routing_is_detected():
         n_routed_experts=6, top_k=2, d_model=4, expert_ffn_dim=4, n_query_heads=1, n_kv_heads=1, head_dim=4
     )
     layer = MoELayer(cfg)
+    layer.eval()
     x = torch.randn(1, 10, cfg.core.d_model)
     valid = torch.ones(1, 10, dtype=torch.bool)
 
@@ -494,6 +495,7 @@ def test_evaluation_ablation_leaking_into_normal_inference_is_detected():
         n_routed_experts=4, top_k=2, d_model=4, expert_ffn_dim=4, n_query_heads=1, n_kv_heads=1, head_dim=4
     )
     layer = MoELayer(cfg)
+    layer.eval()
     torch.manual_seed(0)
     x = torch.randn(1, 6, cfg.core.d_model)
     valid = torch.ones(1, 6, dtype=torch.bool)

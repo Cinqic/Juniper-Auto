@@ -15,6 +15,12 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+        with:
+          # The golden reference-dispatch test reads moe.py from the approved
+          # phase-1-architecture tag. A shallow, tagless checkout would make
+          # that approval-critical comparison unavailable.
+          fetch-depth: 0
+          fetch-tags: true
 
       - name: Set up Python
         uses: actions/setup-python@v7

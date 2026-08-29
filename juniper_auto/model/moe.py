@@ -5,11 +5,12 @@ ungated shared expert.
 
 with alpha_1 + alpha_2 == 1 after renormalizing the top-2 router
 probabilities. No capacity factor, no token dropping, no averaging
-divisor, no gate on the shared expert, no router/expert bias. Every token
-(including padding) is routed and produces a finite output, so the block
-output stays shape-stable; only the *statistics* used for the auxiliary
-losses (and the diagnostics in `moe_diagnostics.py`) are restricted to
-valid (non-padding) tokens, via `valid_mask`.
+divisor, no gate on the shared expert, no router/expert bias. Valid tokens
+are dispatched droplessly; padding positions are excluded from both shared
+and routed expert execution and receive a zero MoE contribution. Router
+probabilities are still available for every flattened position in deep
+diagnostics, while all aggregate statistics and losses use only valid
+tokens via `valid_mask`.
 
 This module is the MoELayer orchestrator: it owns the router/expert
 parameters and config validation, and delegates router math to
@@ -42,6 +43,7 @@ from juniper_auto.model.moe_ablations import (
     resolve_dispatch_kwargs,
     resolve_router_override,
     should_disable_shared_expert,
+    validate_ablation_for_layer,
 )
 from juniper_auto.model.moe_diagnostics import MoEDiagnostics, build_moe_diagnostics
 from juniper_auto.model.moe_dispatch import DISPATCH_BACKENDS
@@ -90,6 +92,8 @@ class MoELayer(nn.Module):
         self.n_shared_experts = moe_cfg.n_shared_experts
         self.top_k = moe_cfg.top_k
         self.renormalize = moe_cfg.renormalize_top_k_weights
+        self.load_balance_coefficient = moe_cfg.load_balance_loss_coefficient
+        self.router_z_coefficient = moe_cfg.router_z_loss_coefficient
         self.backend: DispatchBackend = backend
 
         self.router = nn.Linear(moe_cfg.router_input_dim, moe_cfg.router_output_dim, bias=moe_cfg.router_bias)
@@ -141,6 +145,11 @@ class MoELayer(nn.Module):
             )
         if return_trace and not return_diagnostics:
             raise ValueError("return_trace=True requires return_diagnostics=True")
+        if ablation is not None and self.training:
+            raise RuntimeError(
+                "MoE ablations are evaluation-only; call eval() on the layer/model before passing ablation"
+            )
+        validate_ablation_for_layer(ablation, self.n_routed_experts)
 
         flat_x = x.reshape(-1, d_model)
         n_tokens = flat_x.shape[0]
@@ -159,22 +168,49 @@ class MoELayer(nn.Module):
         else:
             topk_idx, topk_weights = select_topk(router_probs, self.top_k, self.renormalize)
 
-        shared_out = self.shared_expert(flat_x)
-        if should_disable_shared_expert(ablation):
-            shared_out = torch.zeros_like(shared_out)
-
         dispatch_fn = DISPATCH_BACKENDS[backend or self.backend]
         dispatch_kwargs = resolve_dispatch_kwargs(ablation)
-        output = dispatch_fn(
-            flat_x,
-            self.routed_experts,
-            topk_idx,
-            topk_weights,
-            self.n_routed_experts,
-            self.top_k,
-            shared_out,
-            **dispatch_kwargs,
-        )
+        disable_shared = should_disable_shared_expert(ablation)
+        all_valid = valid_mask is None or bool(flat_valid.all().item())
+        if all_valid:
+            shared_out = self.shared_expert(flat_x)
+            if disable_shared:
+                shared_out = torch.zeros_like(shared_out)
+            output = dispatch_fn(
+                flat_x,
+                self.routed_experts,
+                topk_idx,
+                topk_weights,
+                self.n_routed_experts,
+                self.top_k,
+                shared_out,
+                **dispatch_kwargs,
+            )
+        else:
+            # Padding must not consume meaningful expert compute or produce
+            # an expert contribution. Dispatch only the compact valid-token
+            # view, then scatter back to the original flattened positions.
+            # This also handles an all-padding mask without calling experts.
+            valid_positions = flat_valid.nonzero(as_tuple=True)[0]
+            shared_out = torch.zeros_like(flat_x)
+            output = torch.zeros_like(flat_x)
+            if valid_positions.numel() > 0:
+                valid_x = flat_x[valid_positions]
+                valid_shared = self.shared_expert(valid_x)
+                if disable_shared:
+                    valid_shared = torch.zeros_like(valid_shared)
+                valid_output = dispatch_fn(
+                    valid_x,
+                    self.routed_experts,
+                    topk_idx[flat_valid],
+                    topk_weights[flat_valid],
+                    self.n_routed_experts,
+                    self.top_k,
+                    valid_shared,
+                    **dispatch_kwargs,
+                )
+                shared_out = shared_out.index_copy(0, valid_positions, valid_shared.to(shared_out.dtype))
+                output = output.index_copy(0, valid_positions, valid_output.to(output.dtype))
 
         load_balance_raw = compute_load_balance_loss_raw(
             router_probs, topk_idx, flat_valid, self.n_routed_experts, self.top_k
@@ -201,6 +237,11 @@ class MoELayer(nn.Module):
                 routed_only_output=routed_only_output,
                 load_balance_loss_raw=load_balance_raw,
                 router_z_loss_raw=router_z_raw,
+                load_balance_loss_weighted=self.load_balance_coefficient * load_balance_raw,
+                router_z_loss_weighted=self.router_z_coefficient * router_z_raw,
+                shared_expert_activated=not disable_shared,
+                ablation_mode=ablation.mode if ablation is not None else None,
+                **dispatch_kwargs,
                 return_trace=return_trace,
                 batch=batch,
                 seq_len=seq_len,

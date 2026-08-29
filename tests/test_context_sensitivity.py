@@ -10,12 +10,14 @@ from __future__ import annotations
 import torch
 
 from juniper_auto.analysis.context_sensitivity import (
+    CANONICAL_CONTEXT_PROBE_TEMPLATES,
     ProbeCase,
     ProbeVariant,
     compare_routing_across_variants,
     compute_router_decisions,
     run_probe_case,
     run_untrained_official_model_probe,
+    validate_context_probe_templates,
 )
 from juniper_auto.model import build_model
 from tests.model_fixtures import make_tiny_sparse_config
@@ -36,6 +38,22 @@ def test_identical_hidden_states_are_context_independent():
     assert metrics["exact_topk_change_rate"] == 0.0
     assert metrics["mean_js_divergence"] == 0.0
     assert metrics["mean_entropy_difference"] == 0.0
+
+
+def test_canonical_text_methodology_covers_every_required_context_category():
+    validate_context_probe_templates()
+    categories = {template.category for template in CANONICAL_CONTEXT_PROBE_TEMPLATES}
+    assert categories == {
+        "semantic_ambiguity",
+        "same_syntax_different_domains",
+        "code_prose_lexical_overlap",
+        "mathematical_symbol_reuse",
+        "syntax_reuse_across_formats",
+        "positional_control",
+    }
+    for template in CANONICAL_CONTEXT_PROBE_TEMPLATES:
+        assert len(template.variants) >= 2
+        assert all(template.probe_text in variant.text for variant in template.variants)
 
 
 def test_large_orthogonal_perturbations_are_strongly_context_dependent():

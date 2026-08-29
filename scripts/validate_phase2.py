@@ -106,6 +106,18 @@ def gate_reference_backend_available() -> None:
     from tests.model_fixtures import make_tiny_sparse_config
 
     cfg = make_tiny_sparse_config(n_routed_experts=4, top_k=2, d_model=8, expert_ffn_dim=8, n_query_heads=1, n_kv_heads=1, head_dim=8)
+    expected_phase1_commit = "073acf46e04241ed35d00bc4b4c29ac463ee744d"
+    resolved = subprocess.run(
+        ["git", "rev-list", "-n", "1", "phase-1-architecture"],
+        cwd=REPO_ROOT,
+        capture_output=True,
+        text=True,
+    )
+    if resolved.returncode != 0 or resolved.stdout.strip() != expected_phase1_commit:
+        raise GateFailure(
+            "required phase-1-architecture golden tag is missing or moved: "
+            f"expected {expected_phase1_commit}, got {resolved.stdout.strip() or resolved.stderr.strip() or 'unavailable'}"
+        )
     layer = MoELayer(cfg)
     if layer.backend != "reference":
         raise GateFailure(f"MoELayer default backend changed from 'reference' to {layer.backend!r} without a superseding ADR")
@@ -174,17 +186,27 @@ def gate_diagnostics_and_ablations_smoke() -> None:
     from juniper_auto.config import load_architecture_config
     from juniper_auto.model import build_model
     from juniper_auto.model.moe_ablations import MoEAblationConfig
-    from juniper_auto.model.moe_diagnostics import assemble_full_trace
+    from juniper_auto.model.moe_diagnostics import assemble_full_trace, collect_model_expert_gradient_norms
 
     cfg = load_architecture_config(REPO_ROOT / "configs/architecture/ja150m-v0.1.yaml")
     model = build_model(cfg, seed=0, device="cpu")
+    model.eval()
     input_ids = torch.randint(0, cfg.embeddings.vocab_size, (1, 8))
 
     out = model(input_ids, return_diagnostics=True, return_trace=True)
-    trace = assemble_full_trace(model.layer_kinds, out.diagnostics)
+    trace = assemble_full_trace(model.layer_kinds, out.diagnostics, token_ids=input_ids)
     n_moe_layers = sum(1 for k in model.layer_kinds if k == "moe")
     if len(trace) != n_moe_layers * 8:
         raise GateFailure(f"full-model trace record count mismatch: expected {n_moe_layers * 8}, got {len(trace)}")
+    if not all(
+        record.weights_normalized
+        and record.routed_assignment_count == 2
+        and record.shared_expert_activated
+        and record.reconstruction_position == record.flat_token_index
+        and record.token_id is not None
+        for record in trace
+    ):
+        raise GateFailure("full-model trace is missing a required routing/normalization/reconstruction field")
 
     out_normal = model(input_ids)
     out_ablated = model(input_ids, ablation=MoEAblationConfig(mode="disable_shared_expert"))
@@ -193,7 +215,20 @@ def gate_diagnostics_and_ablations_smoke() -> None:
     out_normal_again = model(input_ids)
     if not torch.equal(out_normal.logits, out_normal_again.logits):
         raise GateFailure("ablation state leaked into a subsequent ablation=None model-level call")
-    print(f"diagnostics/trace/ablation smoke OK: {len(trace)} trace records, ablation applied and did not leak")
+
+    model.train()
+    model.zero_grad(set_to_none=True)
+    train_out = model(input_ids, labels=input_ids)
+    train_out.loss.backward()
+    gradient_records = collect_model_expert_gradient_norms(model)
+    if len(gradient_records) != n_moe_layers:
+        raise GateFailure("expert-gradient telemetry did not return one record per MoE layer")
+    if any(record.router is None or record.shared_expert is None for record in gradient_records):
+        raise GateFailure("router/shared expert gradient telemetry is missing after backward")
+    print(
+        f"diagnostics/trace/ablation/gradient smoke OK: {len(trace)} trace records, "
+        f"{len(gradient_records)} gradient records, ablation isolated to eval"
+    )
 
 
 def gate_context_sensitivity_infrastructure() -> None:
@@ -201,10 +236,12 @@ def gate_context_sensitivity_infrastructure() -> None:
     import torch
 
     from juniper_auto.analysis.context_sensitivity import run_untrained_official_model_probe
+    from juniper_auto.analysis.context_sensitivity import validate_context_probe_templates
     from juniper_auto.config import load_architecture_config
     from juniper_auto.model import build_model
 
     cfg = load_architecture_config(REPO_ROOT / "configs/architecture/ja150m-v0.1.yaml")
+    validate_context_probe_templates()
     model = build_model(cfg, seed=0, device="cpu")
     torch.manual_seed(0)
     probe_token = 100

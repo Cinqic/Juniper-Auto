@@ -93,9 +93,11 @@ def test_padding_excluded_from_dispatch_statistics_but_still_finite_output():
     x_mutated[3:] = torch.randn_like(x_mutated[3:]) * 50.0
     out_b, lb_b, z_b, diag_b = _call(layer, x_mutated, valid_mask, return_diagnostics=True)
 
-    # Padding tokens are still routed (MoE has no cross-token mixing, so
-    # this cannot corrupt valid tokens' outputs) but must not move the
-    # aux-loss statistics computed only over valid tokens.
+    assert torch.equal(out_a[~valid_mask], torch.zeros_like(out_a[~valid_mask]))
+    assert torch.equal(out_b[~valid_mask], torch.zeros_like(out_b[~valid_mask]))
+
+    # Padding positions receive no expert contribution and must not move
+    # the auxiliary-loss statistics computed only over valid tokens.
     torch.testing.assert_close(lb_a, lb_b)
     torch.testing.assert_close(z_a, z_b)
     assert torch.equal(diag_a.assignment_counts_per_expert, diag_b.assignment_counts_per_expert)

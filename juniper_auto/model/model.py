@@ -151,6 +151,10 @@ class JuniperAutoModel(nn.Module):
 
         if return_trace and not return_diagnostics:
             raise ValueError("return_trace=True requires return_diagnostics=True")
+        if ablation is not None and self.training:
+            raise RuntimeError(
+                "MoE ablations are evaluation-only; call model.eval() before passing ablation"
+            )
 
         use_checkpointing = self.gradient_checkpointing and self.training
         if use_checkpointing and return_diagnostics:

@@ -72,6 +72,16 @@ AblationMode = Literal[
 ]
 
 _ROUTER_OVERRIDE_MODES = frozenset({"uniform_router", "random_router"})
+_ABLATION_MODES = frozenset(
+    {
+        "disable_routed_expert",
+        "disable_shared_expert",
+        "replace_routed_expert",
+        "uniform_router",
+        "random_router",
+        "zero_expert_output",
+    }
+)
 
 
 @dataclass(frozen=True)
@@ -83,16 +93,81 @@ class MoEAblationConfig:
     seed: int | None = None
 
     def __post_init__(self) -> None:
-        if self.mode == "disable_routed_expert" and self.expert_id is None:
-            raise ValueError("disable_routed_expert requires expert_id")
-        if self.mode == "replace_routed_expert" and (
-            self.expert_id is None or self.replacement_expert_id is None
-        ):
-            raise ValueError("replace_routed_expert requires expert_id and replacement_expert_id")
-        if self.mode == "zero_expert_output" and not self.expert_ids:
-            raise ValueError("zero_expert_output requires a non-empty expert_ids")
-        if self.mode == "random_router" and self.seed is None:
-            raise ValueError("random_router requires an explicit seed for reproducibility")
+        if self.mode not in _ABLATION_MODES:
+            raise ValueError(f"unsupported ablation mode: {self.mode!r}")
+
+        provided = {
+            "expert_id": self.expert_id is not None,
+            "replacement_expert_id": self.replacement_expert_id is not None,
+            "expert_ids": bool(self.expert_ids),
+            "seed": self.seed is not None,
+        }
+        allowed_by_mode = {
+            "disable_routed_expert": {"expert_id"},
+            "disable_shared_expert": set(),
+            "replace_routed_expert": {"expert_id", "replacement_expert_id"},
+            "uniform_router": set(),
+            "random_router": {"seed"},
+            "zero_expert_output": {"expert_ids"},
+        }
+        unexpected = sorted(name for name, is_set in provided.items() if is_set and name not in allowed_by_mode[self.mode])
+        if unexpected:
+            raise ValueError(f"{self.mode} does not accept: {', '.join(unexpected)}")
+
+        if self.mode == "disable_routed_expert":
+            _validate_nonnegative_int("expert_id", self.expert_id)
+        elif self.mode == "replace_routed_expert":
+            _validate_nonnegative_int("expert_id", self.expert_id)
+            _validate_nonnegative_int("replacement_expert_id", self.replacement_expert_id)
+            if self.expert_id == self.replacement_expert_id:
+                raise ValueError("replace_routed_expert requires two distinct expert ids")
+        elif self.mode == "zero_expert_output":
+            if not self.expert_ids:
+                raise ValueError("zero_expert_output requires a non-empty expert_ids")
+            for expert_id in self.expert_ids:
+                _validate_nonnegative_int("expert_ids entry", expert_id)
+            if len(set(self.expert_ids)) != len(self.expert_ids):
+                raise ValueError("zero_expert_output expert_ids must be unique")
+        elif self.mode == "random_router":
+            _validate_int("seed", self.seed)
+
+
+def _validate_int(name: str, value: int | None) -> None:
+    if not isinstance(value, int) or isinstance(value, bool):
+        raise ValueError(f"{name} must be an integer")
+
+
+def _validate_nonnegative_int(name: str, value: int | None) -> None:
+    _validate_int(name, value)
+    if value < 0:
+        raise ValueError(f"{name} must be >= 0")
+
+
+def validate_ablation_for_layer(ablation: MoEAblationConfig | None, n_experts: int) -> None:
+    """Validate expert ids against the concrete layer before execution.
+
+    The frozen dataclass can reject malformed values by itself, but the
+    upper bound is a property of the layer receiving the request. Keeping
+    this check at the public MoE boundary prevents an invalid disable from
+    silently becoming a no-op and an invalid replacement from failing much
+    later with an opaque ModuleList index error.
+    """
+    if ablation is None:
+        return
+    ids: tuple[int, ...]
+    if ablation.mode == "disable_routed_expert":
+        ids = (ablation.expert_id,)
+    elif ablation.mode == "replace_routed_expert":
+        ids = (ablation.expert_id, ablation.replacement_expert_id)
+    elif ablation.mode == "zero_expert_output":
+        ids = ablation.expert_ids
+    else:
+        ids = ()
+    invalid = [expert_id for expert_id in ids if expert_id >= n_experts]
+    if invalid:
+        raise ValueError(
+            f"ablation expert ids {invalid} are out of range for a layer with {n_experts} routed experts"
+        )
 
 
 def is_router_override(ablation: MoEAblationConfig | None) -> bool:
