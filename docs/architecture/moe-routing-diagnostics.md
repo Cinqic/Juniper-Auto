@@ -80,8 +80,7 @@ default remains `backend="reference"`; `optimized` is fully available via
 
 ## Diagnostics
 
-`MoEDiagnostics` (extended from the Phase 1 dataclass; all Phase 1 fields
-unchanged) adds, computed only when `return_diagnostics=True` and always
+`MoEDiagnostics` adds, computed only when `return_diagnostics=True` and always
 restricted to valid (non-padding) tokens for aggregate statistics:
 
 - `entropy` / `normalized_entropy` -- full router-distribution entropy per
@@ -92,12 +91,23 @@ restricted to valid (non-padding) tokens for aggregate statistics:
   upper-triangular (no double counting).
 - `shared_contribution_norm_mean` / `_rms`, `routed_contribution_norm_mean`
   / `_rms`, `routed_shared_norm_ratio`.
-- `load_balance_loss_raw`, `router_z_loss_raw` -- carried through for
-  convenience.
+- `load_balance_loss_raw`, `router_z_loss_raw`, plus the separately named
+  coefficient-weighted values -- carried through without conflation.
+- `ablation_mode` -- `None` on the production path, otherwise the explicit
+  evaluation-only override label.
 - `token_trace` -- only when `return_trace=True`; a bounded (default
   `max_trace_tokens=4096`, override or pass `None` to disable the bound)
-  list of `TokenRoutingTraceRecord` (layer, batch/seq position, flattened
-  index, validity, both selected experts and weights).
+  list of `TokenRoutingTraceRecord` (layer, batch/seq/flat/reconstruction
+  position, validity, token ID when supplied, selected and actually executed
+  experts, weights and their sum/normalization result, routed assignment
+  count, and shared-expert activation). Padding records explicitly show no
+  executed experts or shared activation.
+
+Expert gradients do not exist during forward diagnostic construction.
+After `backward()`, `collect_layer_expert_gradient_norms` and
+`collect_model_expert_gradient_norms` expose router, shared-expert, and each
+routed expert's L2 norm per MoE layer. `None` distinguishes a module that
+received no gradient from a participating module whose norm is exactly zero.
 
 `RoutingWindowAccumulator` aggregates many `MoEDiagnostics` instances
 (multiple batches) into window-level load shares and mean entropy/margin/
@@ -109,7 +119,9 @@ applied to, not a single batch. Detector thresholds
 `SATURATION_LOGIT_ABS_MEAN_THRESHOLD`, `SATURATION_TOP1_MARGIN_THRESHOLD`,
 `OSCILLATION_TOP1_CHANGE_RATE_THRESHOLD`) live in `moe_diagnostics.py`,
 not in the frozen architecture config, since they are analysis/evaluation
-configuration rather than an architectural property. Each has a
+configuration rather than an architectural property. Callers override them
+through validated `RoutingHealthThresholds`; module constants are retained
+as documented default aliases, not immutable research truths. Each has a
 synthetic-case validation test in `tests/test_model_moe_diagnostics.py`
 and a canonical validation run in experiment `exp-0018`.
 
@@ -119,7 +131,10 @@ Evaluation-only, applied via `MoELayer.forward(..., ablation=MoEAblationConfig(.
 or `JuniperAutoModel.forward(..., ablation=...)` (applies identically to
 every MoE layer). `ablation=None` (the default) takes the pre-Phase-2
 dispatch path exactly -- no ablation state can leak into a normal call, and
-this is tested directly (`tests/test_model_moe_ablations.py::test_ablation_state_does_not_persist_across_calls`,
+passing an ablation while the model/layer is in training mode raises rather
+than silently altering training. Unknown modes, irrelevant fields, duplicate,
+negative, or out-of-range expert IDs also fail before dispatch. This is tested
+directly (`tests/test_model_moe_ablations.py::test_ablation_state_does_not_persist_across_calls`,
 experiment `exp-0019`). Exact per-mode semantics (frozen, documented in
 full in `juniper_auto/model/moe_ablations.py`'s module docstring):
 `disable_routed_expert`, `zero_expert_output`, `disable_shared_expert`,
@@ -147,6 +162,24 @@ feed real tokenizer-backed semantic probe sets into unchanged.
 around the official untrained architecture, used for `exp-0017`; its
 docstring and every result it produces are explicit that this is an
 engineering/proxy smoke test, not specialization evidence.
+
+The tokenizer-independent `CANONICAL_CONTEXT_PROBE_TEMPLATES` catalog freezes
+the required later tokenizer-backed methodology before results exist:
+semantic ambiguity, same syntax across domains, code/prose lexical overlap,
+mathematical-symbol reuse, syntax reuse across prose/code/JSON/math, and
+positional control. `validate_context_probe_templates` ensures every category
+retains at least two contexts containing the exact same probe text.
+
+## Padding execution contract
+
+Router probabilities may be computed for all flattened positions so a deep
+trace can show padding explicitly, but expert execution is compacted to the
+valid mask. Each valid token executes exactly two routed experts plus the
+shared expert. Padding executes neither branch, contributes zero expert load
+and zero MoE output, and is scattered back as a zero contribution at its
+original position. Unpadded calls retain the Phase 1 operation order exactly;
+compacted padded calls may differ from the old valid-token result only at
+last-bit FP32 GEMM accumulation (`1e-6` regression bound).
 
 ## What this is not
 

@@ -1,5 +1,6 @@
 import hashlib
 import json
+from pathlib import Path
 
 import yaml
 
@@ -76,19 +77,32 @@ def test_phase_0_entries_do_not_fabricate_tokenizer_or_dataset(repo_root):
 
 
 def test_sol_review_result_artifacts_are_clean_canonical_and_registry_linked(repo_root):
-    entries = {entry["experiment_id"]: entry for entry in _load_registry(repo_root)}
-    result_paths = sorted((repo_root / "docs/experiments/results").glob("exp-00*-sol-*.json"))
-    assert len(result_paths) == 6
+    entries = _load_registry(repo_root)
+    artifact_entries = {
+        Path(location.strip()).name: entry
+        for entry in entries
+        for location in entry["artifact_locations"].split(",")
+    }
+    result_paths = sorted(
+        path
+        for path in (repo_root / "docs/experiments/results").glob("exp-00*-sol-*.json")
+        if not path.name.endswith(".trace.json")
+    )
+    assert result_paths, "at least one independent-review result artifact must exist"
     for path in result_paths:
         result = json.loads(path.read_text())
-        experiment_id = result["result_identity"]
         assert result["git_worktree_clean"] is True
         assert result["canonical_result"] is True
         assert result["git_status_porcelain"] == []
         assert result["gate_passed"] is True
-        assert entries[experiment_id]["git_commit"] == result["git_commit"]
-        assert path.name in entries[experiment_id]["artifact_locations"]
+        assert path.name in artifact_entries
+        assert artifact_entries[path.name]["git_commit"] == result["git_commit"]
         for config_identity in result["architecture_configs"]:
             config_path = repo_root / config_identity["config_path"]
             actual_hash = hashlib.sha256(config_path.read_bytes()).hexdigest()
             assert actual_hash == config_identity["config_sha256"]
+
+    trace_paths = sorted((repo_root / "docs/experiments/results").glob("exp-00*-sol-*.trace.json"))
+    for path in trace_paths:
+        assert path.name in artifact_entries
+        assert isinstance(json.loads(path.read_text()), list)

@@ -5,8 +5,10 @@
 algorithm: sha256
 generated_by: scripts/hash_manifest.py
 sha256:
+  .github/workflows/phase-2-validation.yml: c5e4b3c334a950d91d1f6b255f1ab83ba94d65aa97cf8787e89657782135b198
+  README.md: e1b7a5a8a7d085b0f359f48d741cc116c70f81c10d4de6d8d2412fb4bacd9600
   docs/adr/0009-moe-dispatch-backend-selection.md: 275c9e66efeb6e37622306f3cca016af615c3209f04c685007f230b05c25dd36
-  docs/architecture/moe-routing-diagnostics.md: d083fe7237f50fd108dea88bc3adc44e54441243222e1e205c2af0ddd500927b
+  docs/architecture/moe-routing-diagnostics.md: 8a1ee1fc406d4390db8de59c25ea2dc3196cc85ced3688b00342d16350f9eebf
   docs/experiments/results/exp-0015-moe-reference-optimized-equivalence.json: a8d6d71bbebb02b7f24a0f2e45841bbcb83d7dfd39b5eb58ade26759c0744e3b
   docs/experiments/results/exp-0016-official-model-routing-trace.json: 030594db5f7e89f516b1c64a761624e87b48689bdb402dd2dd9250b9ff6511d7
   docs/experiments/results/exp-0016-official-model-routing-trace.trace.json: 269e453ff70dd5171b8fc720f151ce1e3411001972d92371f673ae9bf7d0df04
@@ -15,22 +17,26 @@ sha256:
   docs/experiments/results/exp-0019-ablation-validation.json: 15ce10c98a775c3adb656225dc97cd805453066c13728c24f60140060a1d76ed
   docs/experiments/results/exp-0020-reproducibility.json: 0706d96547bc5ac1a8c44453734eb81585b23d4773ebf5bf6abfec33f9a5ae0d
   docs/experiments/results/exp-0021-flowbox-moe-dispatch-profile.json: 7538fc23076ef8f00e9438aff272977c4142a8e10c48d872508a04ef3740f8c8
-  docs/phases/phase-2-moe.md: 265ac1fc4057e7bc8df470482d7f51ea16c36525052b0fc5c84e39d9155c50ad
-  docs/phases/phase-2-requirements-traceability.md: 42cb4e44893a453239b0e4de29dc37d074e857ce17aa326036d5a7973121be08
+  docs/experiments/results/exp-0022-sol-reference-optimized-equivalence.json: 80bd63f23f2a2ba100deecc7838a26ad5b0e0566f7c251542a5df678ea1e0187
+  docs/experiments/results/exp-0023-sol-independent-diagnostic-demonstration.json: 6a2d9be031c58dce501587b27fcb08ac8851d7b80eb7832eb9cff5dfb513a553
+  docs/experiments/results/exp-0023-sol-independent-diagnostic-demonstration.trace.json: df9e0afee09b266fb5b6b7921fd991d31e10191acc2138879158ad899bb95ecd
+  docs/phases/phase-2-moe.md: fab508c64d218561bccdceab11712a8a945c550865feb10a6bf9bfc7321bbbb2
+  docs/phases/phase-2-requirements-traceability.md: bf42e8261ce0b59093b5a96ca9d1fff80c4c9680cbc76d5e9c71bee5e3c4a03e
+  docs/phases/phase-2-sol-independent-review.md: 8f6fc1c35a4752eea3a67479638a398be7eec822bd8aaf31362607bb0cc7698a
   docs/phases/phase-2-sonnet-self-review.md: 03a053253440e36f01251ba3aae12319c7205cc49df1c705851d8824e671a71b
   docs/recovery/phase-2.md: cb80a5d9286e6d8b5ce7f2f6b91e3488d4df13d8971f9a2d97d619babd978b2f
-  docs/time/phase-hours.csv: 5df616776fea518a594d927cdc772faa0d1b3c314dfa784655664e3c36777c66
-  experiments/registry.yaml: ec602f52476a20f468a415d11ac0bdf1b7b0d3c916e1602f3acc95732c48db47
+  docs/time/phase-hours.csv: 95103d7ff3215a92da88952612b97f4a5c8d2f189b0893ce39ea2aeecb9543f2
+  experiments/registry.yaml: 491c29a5b281ecba4a52ddae6fec00ae8a51c31f994aaea91612e50c790f4fe5
   juniper_auto/analysis/__init__.py: 5fd507c88c9ecbfa7a03e05a8386f881422021bc3fb377da334999e82b61f8a3
-  juniper_auto/analysis/context_sensitivity.py: 2f2215d959604215415fee8267604b7223b37a7e20d77bc468fbd777fe8cb4ee
+  juniper_auto/analysis/context_sensitivity.py: a83ec06750dc28be80ba866e198c1940446ed0349ea5c310ff4c955aeaef84cf
   juniper_auto/model/block.py: ead73c9f07b364d9320423fe0ea54618fcb85ca567188780c09f65c453ca5813
-  juniper_auto/model/model.py: d62dbc0fd92f512a1e2e4e08b5031c0c315d61a332301da991810a6e71facdd7
-  juniper_auto/model/moe.py: 5760a7e2053dede196813d93f8b4153329b4cea46fe94a49155fa53d56d07d46
-  juniper_auto/model/moe_ablations.py: ae0a9949156169bf84dffdc961a70d0d26b63bac90a4f8942ac011693e0be125
-  juniper_auto/model/moe_diagnostics.py: 59371655c398c3f8e470ed6dc25dfbc5102d42f59e05dba88c6bbd79720ac1ec
+  juniper_auto/model/model.py: b01b8d92eaa18141744e96eda588ac01fbafafe88cd82d465fb7758cfb2727dd
+  juniper_auto/model/moe.py: beeaefb4acf107420062332bf49288414e1d7788ed777bb8d2d0a74afcf02e90
+  juniper_auto/model/moe_ablations.py: f5883e235d4c3d9987a1b1a4c55f6f00ca789ecbbafca6a0aea0791ff816b471
+  juniper_auto/model/moe_diagnostics.py: 9e6c25ec0c599e56864ae6171b3de41fc47102e3b6a8b9f8de7d8786de93b466
   juniper_auto/model/moe_dispatch.py: 4fc2e0a70e37956ce59e446dc54862ad8aa70fcfa100dde4134b28d45f3fd873
   juniper_auto/model/routing.py: 76cdb35dda6ea943f48ab6542d45bec5a81cf4c383ca0f360d7e352c12f1aaf3
-  manifests/phase-2-test-manifest.yaml: 3821079016858182b150eeaba8f3cc18676c0acb274576513e210288dfd8865a
+  manifests/phase-2-test-manifest.yaml: fb2f78b67903da8860dbecfdfa82167de44caa2b82a99e96c5b6fd7d6eed8544
   scripts/generate_phase2_test_manifest.py: c27754e26aa90c6c03869b1a85a96613c7228d2e3b440f0a16c8c5116b476bae
-  scripts/run_phase2_experiment.py: 16282137d2c2a1d04276928e1efae7086c4e07a1398f79e39e310da8ab6a757d
-  scripts/validate_phase2.py: fac69c1f9f05e575ca3266f49e31924d9d387f976c3b574ab7858b7bcb94a4cf
+  scripts/run_phase2_experiment.py: ae9b77f02233fd09b5819b7bb41deb4017e65f9809cdd6dc288cc9f42213718d
+  scripts/validate_phase2.py: ccac5cd51247af98e07d7a2a5aed55781d11d7ec2c863001b110f7c29f6063fb

@@ -37,6 +37,14 @@ written -- resolved by the annotated `phase-2-moe` tag once GPT-5.6 Sol
 performs independent review and approves, per the Phase 2 instructions
 section 40/41 (Sonnet does not create that tag).
 
+GPT-5.6 Sol independently reviewed this candidate on 2026-08-28, found and
+repaired approval-blocking CI, padding, ablation, traceability, gradient-
+telemetry, context-methodology, and evidence gaps. The substantive repair
+commit is `2d5a34f85c996bf0beededcb47629b567685b907`; the exact final approved
+metadata commit and final CI identities are resolved by the annotated
+`phase-2-moe` tag. Full findings and evidence are in
+[`phase-2-sol-independent-review.md`](phase-2-sol-independent-review.md).
+
 ## Implementation summary
 
 - [`juniper_auto/model/routing.py`](../../juniper_auto/model/routing.py) --
@@ -56,7 +64,7 @@ section 40/41 (Sonnet does not create that tag).
 - [`juniper_auto/model/moe.py`](../../juniper_auto/model/moe.py) --
   refactored into the orchestrator that wires the above together; existing
   Phase 1 tests (`tests/test_model_moe.py`, `tests/test_model_fault_injection.py`)
-  pass unmodified.
+  pass with explicit padding-contract regression updates.
 - [`juniper_auto/model/block.py`](../../juniper_auto/model/block.py),
   [`juniper_auto/model/model.py`](../../juniper_auto/model/model.py) --
   `return_trace`, `max_trace_tokens`, and `ablation` threaded through
@@ -148,9 +156,12 @@ reproduces exactly, and does not leak into a subsequent normal call).
 
 ## CI workflow / run
 
-`.github/workflows/phase-2-validation.yml`, run `33010601464`, conclusion
-`success`, on commit `63b05c5b9ec1a3eec21bf129c99b4c48d0fd0407` -- see
-"Final commit" above for all three required workflows' results.
+The original candidate's runs are recorded above. Independent review found
+that its Phase 2 workflow used a shallow checkout, so the advertised Phase 1
+golden comparison skipped when the tag was unavailable. The repaired workflow
+fetches complete history and tags, and a missing or moved golden tag now fails
+closed. Exact final Phase 0/1/2 workflow identities are recorded in the
+annotated `phase-2-moe` tag after they pass on the final metadata commit.
 
 ## Recovery status
 
@@ -164,26 +175,35 @@ self-review and independent-review rows recorded as those passes complete).
 
 ## Independent review hours
 
-`0` / pending -- independent review has not yet occurred. GPT-5.6 Sol has
-not reviewed this candidate.
+Recorded separately in `docs/time/phase-hours.csv`; GPT-5.6 Sol's independent
+review includes repository audit, adversarial tests, repairs, canonical
+experiments, fresh-clone recovery, and CI verification.
 
 ## GPU hours
 
-`docs/time/phase-hours.csv`, `phase-2` engineering row (~0.02h so far,
-covering the real CUDA FP16 equivalence test and exp-0021's FLOWBOX
-profiling run; updated as further passes run GPU work).
+`docs/time/phase-hours.csv`, Phase 2 rows. The independent pass includes real
+RTX 2060 CUDA validation in addition to the original profiling evidence.
 
 ## CPU / data-processing hours
 
-`docs/time/phase-hours.csv`, `phase-2` engineering row (~0.03h so far).
+`docs/time/phase-hours.csv`, Phase 2 rows; the independent entry includes full
+validators, test suites, experiment generation, and fresh-environment work.
 
 ## Project elapsed days
 
-2 days (initial commit `a991db7`, 2026-08-25, to this report, 2026-08-26).
+4 calendar days (initial commit `a991db7`, 2026-08-25, through independent
+approval work on 2026-08-28).
 
 ## Known failures
 
-None outstanding. The `run_phase2_experiment.py`'s `_write` provenance
+None outstanding. Independent review found and repaired the CI/golden-tag,
+padding execution, ablation boundary/validation, trace, gradient telemetry,
+context-methodology, configurable-health-threshold, and experiment-evidence
+gaps documented in `phase-2-sol-independent-review.md`. The one known test
+warning is PyTorch's truthful notice that memory-efficient attention backward
+is nondeterministic on CUDA; Phase 2 does not broaden its determinism claim.
+
+The `run_phase2_experiment.py`'s `_write` provenance
 guard initially rejected writing consecutive canonical experiment
 artifacts directly into `docs/experiments/results/` in one shell loop
 (each new artifact file made the tree "dirty" for the next `_write` call)
@@ -195,9 +215,12 @@ need to be used for a multi-experiment batch.
 
 ## Negative results
 
-None with `status: failed` this phase. `exp-0021` is a neutral/positive
-profiling result (optimized dispatch faster at every shape); no negative
-result requiring a documented dead end was produced.
+The original candidate's green Phase 2 CI did not execute the golden
+comparison because the approved Phase 1 tag was absent in its shallow clone;
+that negative result is preserved and fixed. The original padding path also
+executed experts for masked positions, now repaired with compact valid-token
+dispatch. `exp-0021` showed optimized dispatch faster at every measured shape,
+but the optimized path remains opt-in pending a deliberate backend decision.
 
 ## Accepted limitations
 
@@ -242,14 +265,15 @@ python scripts/validate_phase2.py --all
 
 See `docs/recovery/phase-2.md` for the actual executed run and its output.
 To reproduce a specific Phase 2 experiment:
-`python scripts/run_phase2_experiment.py <equivalence|routing-trace|context-sensitivity-baseline|detector-validation|ablation-validation|reproducibility|flowbox-moe-profile> --output <path>`.
+`python scripts/run_phase2_experiment.py <equivalence|routing-trace|context-sensitivity-baseline|detector-validation|ablation-validation|reproducibility|flowbox-moe-profile|independent-review-demonstration> --output <path>`.
 
 ## Reviewer identity
 
 Self-review (implementer): Sonnet (Claude Sonnet 5), see
-`docs/phases/phase-2-sonnet-self-review.md`. Independent review: pending
-(GPT-5.6 Sol, not yet performed).
+`docs/phases/phase-2-sonnet-self-review.md`. Independent reviewer and sole
+approval authority: GPT-5.6 Sol, see
+`docs/phases/phase-2-sol-independent-review.md`.
 
 ## Approval status
 
-`CANDIDATE - PENDING INDEPENDENT REVIEW`
+`APPROVED`

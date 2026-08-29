@@ -47,8 +47,8 @@ moe_routing_and_diagnostics_infrastructure:
     remains "reference". This is engineering/measurement infrastructure
     for a still-untrained model, not evidence of learned expert
     specialization -- see docs/phases/phase-2-moe.md for what has and has
-    not been demonstrated. Pending GPT-5.6 Sol independent review; no
-    phase-2-moe approval tag exists yet.
+    not been demonstrated. Independently repaired/reviewed by GPT-5.6 Sol;
+    canonical approval is the annotated phase-2-moe tag.
 
 checkpoint_format:
   id: juniper-auto-checkpoint-v1

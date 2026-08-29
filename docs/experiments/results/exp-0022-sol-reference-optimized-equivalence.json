@@ -1,0 +1,440 @@
+{
+  "result_identity": "exp-0022-sol-reference-optimized-equivalence",
+  "git_commit": "2d5a34f85c996bf0beededcb47629b567685b907",
+  "git_worktree_clean": true,
+  "canonical_result": true,
+  "git_status_porcelain": [],
+  "architecture_configs": [
+    {
+      "architecture_id": "ja150m-v0.1",
+      "config_path": "configs/architecture/ja150m-v0.1.yaml",
+      "config_sha256": "2fd81b5a602e08d28bf3510911d02e9fa43f09af81ba2b9dbe6f9ff9285558e3"
+    }
+  ],
+  "environment": {
+    "python_version": "3.12.3",
+    "platform": "Linux-7.0.0-30-generic",
+    "torch_version": "2.13.0+cu130",
+    "cuda_available": true,
+    "cuda_device_name": "NVIDIA GeForce RTX 2060",
+    "cuda_driver_version": "13.0"
+  },
+  "command": "scripts/run_phase2_experiment.py equivalence --output /tmp/tmp.CC7nP3NzEs/exp-0022-sol-reference-optimized-equivalence.json --n-cases 20",
+  "seed": 0,
+  "experiment": "reference-vs-optimized-moe-equivalence",
+  "architecture_id": "ja150m-v0.1",
+  "device": "cpu",
+  "dtype": "torch.float32",
+  "n_cases": 20,
+  "tested_seeds": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15,
+    16,
+    17,
+    18,
+    19
+  ],
+  "tested_shapes": [
+    {
+      "batch": 1,
+      "seq_len": 1
+    },
+    {
+      "batch": 1,
+      "seq_len": 17
+    },
+    {
+      "batch": 2,
+      "seq_len": 32
+    },
+    {
+      "batch": 3,
+      "seq_len": 11
+    },
+    {
+      "batch": 2,
+      "seq_len": 64
+    }
+  ],
+  "tested_padding_layouts": [
+    "none",
+    "trailing",
+    "scattered",
+    "almost-all-padding",
+    "all-padding"
+  ],
+  "cases": [
+    {
+      "seed": 0,
+      "batch": 1,
+      "seq_len": 1,
+      "padding_layout": "none",
+      "valid_token_count": 1,
+      "routing_assignment_agreement": 1.0,
+      "routing_identical": true,
+      "max_abs_routing_weight_diff": 0.0,
+      "max_abs_output_diff": 0.0,
+      "mean_abs_output_diff": 0.0,
+      "load_balance_loss_identical": true,
+      "router_z_loss_identical": true
+    },
+    {
+      "seed": 1,
+      "batch": 1,
+      "seq_len": 17,
+      "padding_layout": "trailing",
+      "valid_token_count": 8,
+      "routing_assignment_agreement": 1.0,
+      "routing_identical": true,
+      "max_abs_routing_weight_diff": 0.0,
+      "max_abs_output_diff": 4.6566128730773926e-09,
+      "mean_abs_output_diff": 1.7370847815723067e-10,
+      "load_balance_loss_identical": true,
+      "router_z_loss_identical": true
+    },
+    {
+      "seed": 2,
+      "batch": 2,
+      "seq_len": 32,
+      "padding_layout": "scattered",
+      "valid_token_count": 43,
+      "routing_assignment_agreement": 1.0,
+      "routing_identical": true,
+      "max_abs_routing_weight_diff": 0.0,
+      "max_abs_output_diff": 1.30385160446167e-08,
+      "mean_abs_output_diff": 6.127869323080404e-10,
+      "load_balance_loss_identical": true,
+      "router_z_loss_identical": true
+    },
+    {
+      "seed": 3,
+      "batch": 3,
+      "seq_len": 11,
+      "padding_layout": "almost-all-padding",
+      "valid_token_count": 1,
+      "routing_assignment_agreement": 1.0,
+      "routing_identical": true,
+      "max_abs_routing_weight_diff": 0.0,
+      "max_abs_output_diff": 0.0,
+      "mean_abs_output_diff": 0.0,
+      "load_balance_loss_identical": true,
+      "router_z_loss_identical": true
+    },
+    {
+      "seed": 4,
+      "batch": 2,
+      "seq_len": 64,
+      "padding_layout": "all-padding",
+      "valid_token_count": 0,
+      "routing_assignment_agreement": 1.0,
+      "routing_identical": true,
+      "max_abs_routing_weight_diff": 0.0,
+      "max_abs_output_diff": 0.0,
+      "mean_abs_output_diff": 0.0,
+      "load_balance_loss_identical": true,
+      "router_z_loss_identical": true
+    },
+    {
+      "seed": 5,
+      "batch": 1,
+      "seq_len": 1,
+      "padding_layout": "none",
+      "valid_token_count": 1,
+      "routing_assignment_agreement": 1.0,
+      "routing_identical": true,
+      "max_abs_routing_weight_diff": 0.0,
+      "max_abs_output_diff": 0.0,
+      "mean_abs_output_diff": 0.0,
+      "load_balance_loss_identical": true,
+      "router_z_loss_identical": true
+    },
+    {
+      "seed": 6,
+      "batch": 1,
+      "seq_len": 17,
+      "padding_layout": "trailing",
+      "valid_token_count": 8,
+      "routing_assignment_agreement": 1.0,
+      "routing_identical": true,
+      "max_abs_routing_weight_diff": 0.0,
+      "max_abs_output_diff": 8.381903171539307e-09,
+      "mean_abs_output_diff": 4.700215217035009e-10,
+      "load_balance_loss_identical": true,
+      "router_z_loss_identical": true
+    },
+    {
+      "seed": 7,
+      "batch": 2,
+      "seq_len": 32,
+      "padding_layout": "scattered",
+      "valid_token_count": 43,
+      "routing_assignment_agreement": 1.0,
+      "routing_identical": true,
+      "max_abs_routing_weight_diff": 0.0,
+      "max_abs_output_diff": 1.4901161193847656e-08,
+      "mean_abs_output_diff": 3.8847713934586636e-10,
+      "load_balance_loss_identical": true,
+      "router_z_loss_identical": true
+    },
+    {
+      "seed": 8,
+      "batch": 3,
+      "seq_len": 11,
+      "padding_layout": "almost-all-padding",
+      "valid_token_count": 1,
+      "routing_assignment_agreement": 1.0,
+      "routing_identical": true,
+      "max_abs_routing_weight_diff": 0.0,
+      "max_abs_output_diff": 0.0,
+      "mean_abs_output_diff": 0.0,
+      "load_balance_loss_identical": true,
+      "router_z_loss_identical": true
+    },
+    {
+      "seed": 9,
+      "batch": 2,
+      "seq_len": 64,
+      "padding_layout": "all-padding",
+      "valid_token_count": 0,
+      "routing_assignment_agreement": 1.0,
+      "routing_identical": true,
+      "max_abs_routing_weight_diff": 0.0,
+      "max_abs_output_diff": 0.0,
+      "mean_abs_output_diff": 0.0,
+      "load_balance_loss_identical": true,
+      "router_z_loss_identical": true
+    },
+    {
+      "seed": 10,
+      "batch": 1,
+      "seq_len": 1,
+      "padding_layout": "none",
+      "valid_token_count": 1,
+      "routing_assignment_agreement": 1.0,
+      "routing_identical": true,
+      "max_abs_routing_weight_diff": 0.0,
+      "max_abs_output_diff": 0.0,
+      "mean_abs_output_diff": 0.0,
+      "load_balance_loss_identical": true,
+      "router_z_loss_identical": true
+    },
+    {
+      "seed": 11,
+      "batch": 1,
+      "seq_len": 17,
+      "padding_layout": "trailing",
+      "valid_token_count": 8,
+      "routing_assignment_agreement": 1.0,
+      "routing_identical": true,
+      "max_abs_routing_weight_diff": 0.0,
+      "max_abs_output_diff": 7.450580596923828e-09,
+      "mean_abs_output_diff": 4.2467551697455974e-10,
+      "load_balance_loss_identical": true,
+      "router_z_loss_identical": true
+    },
+    {
+      "seed": 12,
+      "batch": 2,
+      "seq_len": 32,
+      "padding_layout": "scattered",
+      "valid_token_count": 43,
+      "routing_assignment_agreement": 1.0,
+      "routing_identical": true,
+      "max_abs_routing_weight_diff": 0.0,
+      "max_abs_output_diff": 1.30385160446167e-08,
+      "mean_abs_output_diff": 6.051634748871493e-10,
+      "load_balance_loss_identical": true,
+      "router_z_loss_identical": true
+    },
+    {
+      "seed": 13,
+      "batch": 3,
+      "seq_len": 11,
+      "padding_layout": "almost-all-padding",
+      "valid_token_count": 1,
+      "routing_assignment_agreement": 1.0,
+      "routing_identical": true,
+      "max_abs_routing_weight_diff": 0.0,
+      "max_abs_output_diff": 0.0,
+      "mean_abs_output_diff": 0.0,
+      "load_balance_loss_identical": true,
+      "router_z_loss_identical": true
+    },
+    {
+      "seed": 14,
+      "batch": 2,
+      "seq_len": 64,
+      "padding_layout": "all-padding",
+      "valid_token_count": 0,
+      "routing_assignment_agreement": 1.0,
+      "routing_identical": true,
+      "max_abs_routing_weight_diff": 0.0,
+      "max_abs_output_diff": 0.0,
+      "mean_abs_output_diff": 0.0,
+      "load_balance_loss_identical": true,
+      "router_z_loss_identical": true
+    },
+    {
+      "seed": 15,
+      "batch": 1,
+      "seq_len": 1,
+      "padding_layout": "none",
+      "valid_token_count": 1,
+      "routing_assignment_agreement": 1.0,
+      "routing_identical": true,
+      "max_abs_routing_weight_diff": 0.0,
+      "max_abs_output_diff": 0.0,
+      "mean_abs_output_diff": 0.0,
+      "load_balance_loss_identical": true,
+      "router_z_loss_identical": true
+    },
+    {
+      "seed": 16,
+      "batch": 1,
+      "seq_len": 17,
+      "padding_layout": "trailing",
+      "valid_token_count": 8,
+      "routing_assignment_agreement": 1.0,
+      "routing_identical": true,
+      "max_abs_routing_weight_diff": 0.0,
+      "max_abs_output_diff": 5.587935447692871e-09,
+      "mean_abs_output_diff": 3.525462144438052e-10,
+      "load_balance_loss_identical": true,
+      "router_z_loss_identical": true
+    },
+    {
+      "seed": 17,
+      "batch": 2,
+      "seq_len": 32,
+      "padding_layout": "scattered",
+      "valid_token_count": 43,
+      "routing_assignment_agreement": 1.0,
+      "routing_identical": true,
+      "max_abs_routing_weight_diff": 0.0,
+      "max_abs_output_diff": 1.1641532182693481e-08,
+      "mean_abs_output_diff": 7.181619743334977e-10,
+      "load_balance_loss_identical": true,
+      "router_z_loss_identical": true
+    },
+    {
+      "seed": 18,
+      "batch": 3,
+      "seq_len": 11,
+      "padding_layout": "almost-all-padding",
+      "valid_token_count": 1,
+      "routing_assignment_agreement": 1.0,
+      "routing_identical": true,
+      "max_abs_routing_weight_diff": 0.0,
+      "max_abs_output_diff": 0.0,
+      "mean_abs_output_diff": 0.0,
+      "load_balance_loss_identical": true,
+      "router_z_loss_identical": true
+    },
+    {
+      "seed": 19,
+      "batch": 2,
+      "seq_len": 64,
+      "padding_layout": "all-padding",
+      "valid_token_count": 0,
+      "routing_assignment_agreement": 1.0,
+      "routing_identical": true,
+      "max_abs_routing_weight_diff": 0.0,
+      "max_abs_output_diff": 0.0,
+      "mean_abs_output_diff": 0.0,
+      "load_balance_loss_identical": true,
+      "router_z_loss_identical": true
+    }
+  ],
+  "max_abs_output_diff_across_all_cases": 1.4901161193847656e-08,
+  "mean_abs_output_diff_across_all_elements": 1.779114286163173e-10,
+  "routing_assignment_agreement": 1.0,
+  "max_abs_routing_weight_diff": 0.0,
+  "gradient_comparison": [
+    {
+      "seed": 0,
+      "batch": 1,
+      "seq_len": 1,
+      "max_abs_input_gradient_diff": 0.0,
+      "max_abs_router_gradient_diff": 0.0
+    },
+    {
+      "seed": 1,
+      "batch": 1,
+      "seq_len": 17,
+      "max_abs_input_gradient_diff": 2.3283064365386963e-10,
+      "max_abs_router_gradient_diff": 0.0
+    },
+    {
+      "seed": 2,
+      "batch": 2,
+      "seq_len": 32,
+      "max_abs_input_gradient_diff": 5.820766091346741e-11,
+      "max_abs_router_gradient_diff": 0.0
+    }
+  ],
+  "max_abs_gradient_diff": 2.3283064365386963e-10,
+  "performance_and_memory_evidence": {
+    "artifact": "docs/experiments/results/exp-0021-flowbox-moe-dispatch-profile.json",
+    "device": "cuda",
+    "device_name": "NVIDIA GeForce RTX 2060",
+    "profiles": [
+      {
+        "batch": 1,
+        "seq_len": 128,
+        "optimized_speedup": 2.644040041851013,
+        "peak_memory_difference_bytes": 81408
+      },
+      {
+        "batch": 1,
+        "seq_len": 512,
+        "optimized_speedup": 2.603951296579166,
+        "peak_memory_difference_bytes": 268288
+      },
+      {
+        "batch": 1,
+        "seq_len": 1024,
+        "optimized_speedup": 2.4536914351308536,
+        "peak_memory_difference_bytes": 582144
+      },
+      {
+        "batch": 1,
+        "seq_len": 4096,
+        "optimized_speedup": 1.5103600006577254,
+        "peak_memory_difference_bytes": 517120
+      },
+      {
+        "batch": 4,
+        "seq_len": 256,
+        "optimized_speedup": 2.3471937763794903,
+        "peak_memory_difference_bytes": 606720
+      }
+    ]
+  },
+  "accepted_tolerances": {
+    "output_atol_rtol": 1e-05,
+    "gradient_atol_rtol": 1e-05,
+    "justification": "FP32 paths differ only in expert grouping and index_add summation order; 1e-5 bounds observed last-bit accumulation differences while remaining strict enough to detect semantic drift."
+  },
+  "gate": {
+    "routing_must_be_identical": true,
+    "auxiliary_losses_must_be_identical": true,
+    "max_abs_output_diff_tolerance": 1e-05,
+    "max_abs_gradient_diff_tolerance": 1e-05
+  },
+  "gate_passed": true,
+  "conclusion": "reference and optimized dispatch are semantically equivalent"
+}

@@ -1,13 +1,12 @@
 # Juniper Auto
 
-**Status: Phase 0 approved; Phase 1 approved; Phase 2 candidate complete,
-pending independent review.** See the annotated tags `phase-0-foundation`
-and `phase-1-architecture`, the GPT-5.6 Sol
+**Status: Phase 0 approved; Phase 1 approved; Phase 2 independently
+approved.** See the annotated tags `phase-0-foundation`,
+`phase-1-architecture`, and `phase-2-moe`, the GPT-5.6 Sol
 [independent Phase 1 review](docs/phases/phase-1-sol-independent-review.md),
-and the Phase 2 candidate report at
-[docs/phases/phase-2-moe.md](docs/phases/phase-2-moe.md) (approval status:
-`CANDIDATE - PENDING INDEPENDENT REVIEW` -- no `phase-2-moe` tag exists
-yet; that tag is reserved for GPT-5.6 Sol's independent approval). **No
+the [independent Phase 2 review](docs/phases/phase-2-sol-independent-review.md),
+and the consolidated Phase 2 report at
+[docs/phases/phase-2-moe.md](docs/phases/phase-2-moe.md). **No
 model has been trained on real data, no base or instruction-tuned
 checkpoint exists, no tokenizer or real pretraining corpus exists, and no
 expert specialization has been demonstrated.**
@@ -53,9 +52,9 @@ is the final intended license for trained model weights/datasets is an
 open governance item, not yet decided -- see the charter's License status
 section.
 
-## What exists right now (approved Phase 0 + Phase 1, Phase 2 candidate)
+## What exists right now (approved Phases 0, 1, and 2)
 
-### Phase 2 (candidate, pending independent review)
+### Phase 2 (independently approved)
 
 Phase 2 validates the sparse MoE routing/dispatch machinery itself:
 correctness, droplessness, reproducibility, per-token inspectability,
@@ -87,12 +86,19 @@ evidence:
   synthetic healthy and pathological cases.
 - Six evaluation-only ablation modes (disable/replace/zero expert,
   uniform/seeded-random router override), each proven exactly against
-  hand-computed expected outputs and proven not to leak into normal
-  inference.
+  hand-computed expected outputs, fail-closed during training, range-
+  validated, and proven not to leak into normal inference.
 - A context-sensitivity probe harness, validated on synthetic hidden
-  states with known context-independent/partial/strong regimes.
+  states with known context-independent/partial/strong regimes, plus a
+  tokenizer-independent controlled catalog covering all required lexical,
+  domain, syntax, mathematical, and positional probe categories.
 - 23 deliberate fault-injection tests proving the test suite is
   load-bearing (would fail on the specific broken behavior each targets).
+- Independent repairs now exclude padding from physical expert execution,
+  make every required route/reconstruction/shared-activation field explicit
+  in traces, expose per-layer expert gradient norms and raw/weighted router
+  losses, and ensure remote CI cannot silently skip the Phase 1 golden
+  comparison.
 
 **What Phase 2 explicitly does not claim:** no expert specialization,
 semantic routing, or context-aware routing has been demonstrated (no

@@ -121,6 +121,8 @@ PHASE_1_TEST_FILES: list[str] = [
 # `phase-1-architecture` git tag rather than from this hash manifest, and so
 # is unaffected by Phase 1's manifest being regenerated).
 PHASE_2_HASHED_ARTIFACTS: list[str] = [
+    ".github/workflows/phase-2-validation.yml",
+    "README.md",
     "juniper_auto/model/routing.py",
     "juniper_auto/model/moe_dispatch.py",
     "juniper_auto/model/moe_ablations.py",
@@ -135,6 +137,7 @@ PHASE_2_HASHED_ARTIFACTS: list[str] = [
     "docs/phases/phase-2-moe.md",
     "docs/phases/phase-2-requirements-traceability.md",
     "docs/phases/phase-2-sonnet-self-review.md",
+    "docs/phases/phase-2-sol-independent-review.md",
     "docs/recovery/phase-2.md",
     "docs/time/phase-hours.csv",
     "scripts/validate_phase2.py",
@@ -149,6 +152,9 @@ PHASE_2_HASHED_ARTIFACTS: list[str] = [
     "docs/experiments/results/exp-0019-ablation-validation.json",
     "docs/experiments/results/exp-0020-reproducibility.json",
     "docs/experiments/results/exp-0021-flowbox-moe-dispatch-profile.json",
+    "docs/experiments/results/exp-0022-sol-reference-optimized-equivalence.json",
+    "docs/experiments/results/exp-0023-sol-independent-diagnostic-demonstration.json",
+    "docs/experiments/results/exp-0023-sol-independent-diagnostic-demonstration.trace.json",
     "manifests/phase-2-test-manifest.yaml",
 ]
 
@@ -164,6 +170,8 @@ PHASE_2_TEST_FILES: list[str] = [
     "tests/test_model_moe_trace.py",
     "tests/test_context_sensitivity.py",
     "tests/test_model_fault_injection.py",
+    "tests/test_phase_report_structure.py",
+    "tests/test_experiment_registry.py",
 ]
 
 

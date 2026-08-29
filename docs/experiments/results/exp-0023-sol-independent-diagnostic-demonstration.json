@@ -1,0 +1,346 @@
+{
+  "result_identity": "exp-0023-sol-independent-diagnostic-demonstration",
+  "git_commit": "2d5a34f85c996bf0beededcb47629b567685b907",
+  "git_worktree_clean": true,
+  "canonical_result": true,
+  "git_status_porcelain": [],
+  "architecture_configs": [
+    {
+      "architecture_id": "ja150m-v0.1",
+      "config_path": "configs/architecture/ja150m-v0.1.yaml",
+      "config_sha256": "2fd81b5a602e08d28bf3510911d02e9fa43f09af81ba2b9dbe6f9ff9285558e3"
+    }
+  ],
+  "environment": {
+    "python_version": "3.12.3",
+    "platform": "Linux-7.0.0-30-generic",
+    "torch_version": "2.13.0+cu130",
+    "cuda_available": true,
+    "cuda_device_name": "NVIDIA GeForce RTX 2060",
+    "cuda_driver_version": "13.0"
+  },
+  "command": "scripts/run_phase2_experiment.py independent-review-demonstration --output /tmp/tmp.CC7nP3NzEs/exp-0023-sol-independent-diagnostic-demonstration.json",
+  "seed": 0,
+  "experiment": "gpt-5.6-sol-phase2-independent-diagnostic-demonstration",
+  "architecture_id": "ja150m-v0.1",
+  "device": "cpu",
+  "input_ids": [
+    [
+      101,
+      202,
+      303,
+      0
+    ]
+  ],
+  "attention_mask": [
+    [
+      true,
+      true,
+      true,
+      false
+    ]
+  ],
+  "n_moe_layers": 15,
+  "trace_records": 60,
+  "valid_trace_records": 45,
+  "padding_trace_records": 15,
+  "representative_valid_trace_record": {
+    "layer_index": 2,
+    "batch_index": 0,
+    "seq_position": 0,
+    "flat_token_index": 0,
+    "is_valid": true,
+    "expert_1": 6,
+    "expert_2": 4,
+    "executed_expert_1": 6,
+    "executed_expert_2": 4,
+    "weight_1": 0.5949598550796509,
+    "weight_2": 0.4050401747226715,
+    "routed_assignment_count": 2,
+    "weights_sum": 1.0000000298023224,
+    "weights_normalized": true,
+    "shared_expert_activated": true,
+    "reconstruction_position": 0,
+    "token_id": 101,
+    "token_text": null
+  },
+  "representative_padding_trace_record": {
+    "layer_index": 2,
+    "batch_index": 0,
+    "seq_position": 3,
+    "flat_token_index": 3,
+    "is_valid": false,
+    "expert_1": 3,
+    "expert_2": 4,
+    "executed_expert_1": -1,
+    "executed_expert_2": -1,
+    "weight_1": 0.5131922364234924,
+    "weight_2": 0.48680779337882996,
+    "routed_assignment_count": 0,
+    "weights_sum": 1.0000000298023224,
+    "weights_normalized": true,
+    "shared_expert_activated": false,
+    "reconstruction_position": 3,
+    "token_id": 0,
+    "token_text": null
+  },
+  "trace_artifact": "docs/experiments/results/exp-0023-sol-independent-diagnostic-demonstration.trace.json",
+  "expert_gradient_norms_by_layer": [
+    {
+      "layer_index": 2,
+      "router": 0.1877126693725586,
+      "shared_expert": 17.247861862182617,
+      "routed_experts": [
+        null,
+        null,
+        null,
+        null,
+        7.476469039916992,
+        0.006547278258949518,
+        10.318851470947266,
+        2.908229112625122
+      ]
+    },
+    {
+      "layer_index": 3,
+      "router": 0.17254485189914703,
+      "shared_expert": 18.16318130493164,
+      "routed_experts": [
+        2.3081610202789307,
+        null,
+        6.590911865234375,
+        4.291102409362793,
+        8.147645950317383,
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "layer_index": 4,
+      "router": 0.34355428814888,
+      "shared_expert": 15.655715942382812,
+      "routed_experts": [
+        null,
+        null,
+        4.66532039642334,
+        null,
+        2.6880435943603516,
+        null,
+        8.98787784576416,
+        null
+      ]
+    },
+    {
+      "layer_index": 6,
+      "router": 0.5673242211341858,
+      "shared_expert": 10.755163192749023,
+      "routed_experts": [
+        null,
+        5.6369757652282715,
+        null,
+        null,
+        2.0911214351654053,
+        null,
+        0.002534379716962576,
+        4.731308937072754
+      ]
+    },
+    {
+      "layer_index": 7,
+      "router": 0.07644762843847275,
+      "shared_expert": 11.989005088806152,
+      "routed_experts": [
+        null,
+        4.256381034851074,
+        3.11942982673645,
+        null,
+        2.4499645233154297,
+        null,
+        3.366999864578247,
+        null
+      ]
+    },
+    {
+      "layer_index": 8,
+      "router": 0.5027252435684204,
+      "shared_expert": 10.611210823059082,
+      "routed_experts": [
+        null,
+        null,
+        null,
+        null,
+        5.413027763366699,
+        null,
+        5.196718215942383,
+        null
+      ]
+    },
+    {
+      "layer_index": 9,
+      "router": 0.353288471698761,
+      "shared_expert": 9.801238059997559,
+      "routed_experts": [
+        4.687098979949951,
+        null,
+        null,
+        2.2048721313476562,
+        4.76625394821167,
+        null,
+        0.002227382268756628,
+        null
+      ]
+    },
+    {
+      "layer_index": 11,
+      "router": 0.21579737961292267,
+      "shared_expert": 8.915144920349121,
+      "routed_experts": [
+        null,
+        4.642714023590088,
+        null,
+        2.590101718902588,
+        null,
+        null,
+        1.613898754119873,
+        null
+      ]
+    },
+    {
+      "layer_index": 12,
+      "router": 0.29951316118240356,
+      "shared_expert": 8.535430908203125,
+      "routed_experts": [
+        null,
+        null,
+        null,
+        0.0013568280264735222,
+        null,
+        null,
+        4.690547466278076,
+        3.2194113731384277
+      ]
+    },
+    {
+      "layer_index": 13,
+      "router": 0.2897210717201233,
+      "shared_expert": 6.924689292907715,
+      "routed_experts": [
+        null,
+        3.72662091255188,
+        null,
+        null,
+        2.1487748622894287,
+        null,
+        null,
+        3.1470141410827637
+      ]
+    },
+    {
+      "layer_index": 14,
+      "router": 0.10093212872743607,
+      "shared_expert": 6.616352081298828,
+      "routed_experts": [
+        0.0013214820064604282,
+        3.4686782360076904,
+        null,
+        null,
+        null,
+        1.8502305746078491,
+        3.0130107402801514,
+        null
+      ]
+    },
+    {
+      "layer_index": 16,
+      "router": 0.4734860360622406,
+      "shared_expert": 7.147898197174072,
+      "routed_experts": [
+        null,
+        2.2503979206085205,
+        null,
+        3.5093581676483154,
+        1.7862627506256104,
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "layer_index": 17,
+      "router": 0.16558490693569183,
+      "shared_expert": 6.283466815948486,
+      "routed_experts": [
+        null,
+        2.602510690689087,
+        1.9984854459762573,
+        2.6791515350341797,
+        null,
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "layer_index": 18,
+      "router": 0.05370347201824188,
+      "shared_expert": 5.914834499359131,
+      "routed_experts": [
+        2.6398074626922607,
+        0.0008564358577132225,
+        null,
+        null,
+        null,
+        null,
+        3.8164026737213135,
+        null
+      ]
+    },
+    {
+      "layer_index": 19,
+      "router": 0.08227794617414474,
+      "shared_expert": 5.970489025115967,
+      "routed_experts": [
+        3.467970848083496,
+        0.0,
+        null,
+        null,
+        null,
+        null,
+        null,
+        2.6501710414886475
+      ]
+    }
+  ],
+  "pathology_detection": {
+    "healthy": {
+      "dead": [],
+      "dominant": [],
+      "starved": [],
+      "collapse": false,
+      "saturation": false
+    },
+    "synthetic_pathological": {
+      "dead": [
+        0
+      ],
+      "dominant": [
+        1
+      ],
+      "low_entropy": 0.05,
+      "collapse": true,
+      "large_mean_abs_logit": 50.0,
+      "saturation": true,
+      "oscillation_change_rate": 1.0,
+      "oscillation_pathological": true
+    }
+  },
+  "parameter_count": 150031360,
+  "gates": {
+    "trace": true,
+    "gradient_telemetry": true,
+    "pathology_detection": true,
+    "parameter_count": true
+  },
+  "gate_passed": true
+}

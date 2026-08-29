@@ -637,3 +637,63 @@
     decision. Callers that want the measured speedup select
     backend="optimized" explicitly.
   artifact_locations: docs/experiments/results/exp-0021-flowbox-moe-dispatch-profile.json
+
+- experiment_id: exp-0022
+  date: "2026-08-28"
+  phase: phase-2
+  hypothesis: >
+    After independent-review repairs, the optimized dispatch remains
+    equivalent to the correctness-first reference across diverse shapes,
+    padding layouts, all-padding and almost-all-padding edges, and gradients,
+    under strict documented tolerances.
+  git_commit: 2d5a34f85c996bf0beededcb47629b567685b907
+  architecture_id: ja150m-v0.1
+  tokenizer_id: not-yet-created
+  dataset_id: synthetic deterministic hidden states
+  sampler_id: not-applicable
+  starting_checkpoint: not-applicable
+  configuration: 20 seeds; 5 shapes; 5 padding layouts; CPU FP32; official first MoE layer
+  seed: 0-19
+  environment: FLOWBOX CPU path; exact environment in artifact
+  token_budget: not-applicable
+  status: completed
+  result: >
+    Gate passed. Assignment agreement 1.0; routing-weight max difference
+    0.0; maximum/mean output differences 1.4901161193847656e-08 and
+    1.779114286163173e-10; maximum input/router gradient difference
+    2.3283064365386963e-10. Raw auxiliary losses were identical. All are
+    inside the documented 1e-5 output/gradient tolerance. The artifact also
+    links the existing real-RTX-2060 performance/memory evidence.
+  conclusion: The optimized backend remains semantically equivalent after the independent padding repair.
+  artifact_locations: docs/experiments/results/exp-0022-sol-reference-optimized-equivalence.json
+
+- experiment_id: exp-0023
+  date: "2026-08-28"
+  phase: phase-2
+  hypothesis: >
+    One compact deterministic official-model run can prove, across every
+    MoE layer, the required token-level routing/reconstruction/shared-
+    activation contract, post-backward expert-gradient telemetry, parameter
+    count, and controlled pathology detector response.
+  git_commit: 2d5a34f85c996bf0beededcb47629b567685b907
+  architecture_id: ja150m-v0.1
+  tokenizer_id: not-yet-created
+  dataset_id: fixed synthetic token IDs [101, 202, 303, 0]
+  sampler_id: not-applicable
+  starting_checkpoint: not-applicable
+  configuration: batch=1, seq_len=4, last position padding, all 15 MoE layers, seed=0, CPU
+  seed: 0
+  environment: FLOWBOX CPU path; exact environment in artifact
+  token_budget: not-applicable
+  status: completed
+  result: >
+    All gates passed. 60/60 trace records were emitted: 45 valid records
+    each show two executed experts, normalized weights, shared activation,
+    and identity reconstruction; 15 padding records show zero executed
+    experts/shared activation. Router/shared gradient norms were present for
+    all 15 layers with per-routed-expert presence/norm detail. Healthy
+    synthetic statistics triggered nothing; dead, dominant, skewed,
+    low-entropy, collapsed, large-logit, saturated, and oscillating cases
+    triggered the intended detectors. Parameter count was 150,031,360.
+  conclusion: The repaired diagnostics answer exactly which experts processed each valid token and expose the required failure signals.
+  artifact_locations: docs/experiments/results/exp-0023-sol-independent-diagnostic-demonstration.json, docs/experiments/results/exp-0023-sol-independent-diagnostic-demonstration.trace.json

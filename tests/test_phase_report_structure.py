@@ -100,3 +100,25 @@ def test_phase_1_approval_has_independent_evidence_and_concrete_identity(repo_ro
     )
     assert "HEAD (this commit" not in records
     assert "final handoff message" not in records
+
+
+def test_phase_2_report_exists_and_has_required_sections(repo_root):
+    path = repo_root / "docs" / "phases" / "phase-2-moe.md"
+    assert path.is_file(), "docs/phases/phase-2-moe.md must exist"
+    text = path.read_text()
+    missing = [section for section in REQUIRED_SECTIONS if section not in text]
+    assert not missing, f"phase-2-moe.md missing sections: {missing}"
+
+
+def test_phase_2_approval_has_independent_evidence_and_concrete_identity(repo_root):
+    report = repo_root / "docs" / "phases" / "phase-2-sol-independent-review.md"
+    assert report.is_file(), "independent Phase 2 review must be repository-contained"
+    text = report.read_text()
+    assert "**APPROVED.**" in text
+    assert "GPT-5.6 Sol" in text
+    assert "2d5a34f85c996bf0beededcb47629b567685b907" in text
+    assert "phase-2-moe" in text
+
+    phase_report = (repo_root / "docs" / "phases" / "phase-2-moe.md").read_text()
+    assert "## Approval status\n\n`APPROVED`" in phase_report
+    assert "resolved by the annotated `phase-2-moe` tag" in phase_report
