@@ -24,7 +24,7 @@ sha256:
   docs/phases/phase-1-sol-independent-review.md: e5f4c81e60c9ba006d91ed8873654dca414be6aa4bb2e9d5530182d15973f199
   docs/phases/phase-1-sonnet-self-review.md: 2508bbdcb6584528c3e41bfb0f94316adfe09df0ede555a52a7f87db29bef48b
   docs/recovery/phase-1.md: 5ffcfb6502d7e12945cec78c8be9633c51279b21ae617635b16c3adaeae76f16
-  docs/time/phase-hours.csv: 95103d7ff3215a92da88952612b97f4a5c8d2f189b0893ce39ea2aeecb9543f2
+  docs/time/phase-hours.csv: af8cff92d5fd971f8b522d3a55c8f39c1c83981ec706d1476c91a6fddc1f9131
   experiments/registry.yaml: 491c29a5b281ecba4a52ddae6fec00ae8a51c31f994aaea91612e50c790f4fe5
   juniper_auto/model/__init__.py: c09234cdbb1d7812c077e20c5489a5034cccd793b177bc02ad1d7bf389211319
   juniper_auto/model/attention.py: 5471ea9609456ab12adc09d29329935c90be6ca2ceec87b0d39f6caf2cad21e1

@@ -150,12 +150,40 @@ Actions workflows ran on this exact commit and succeeded:
 | Phase 1 Validation | 33010601512 | success | 2m45s |
 | Phase 2 Validation | 33010601464 | success | 4m9s |
 
-Since the Phase 2 Validation workflow (`.github/workflows/phase-2-validation.yml`)
-runs `python scripts/validate_phase2.py --all` on a clean, freshly
-checked-out `ubuntu-latest` runner -- itself a fresh-clone recovery
-exercise, performed by GitHub's infrastructure rather than locally -- this
-constitutes the real remote-clone confirmation anticipated above, and
-supersedes the local-clone caveat noted at the top of this document for
-the purpose of "has this been proven to work from a genuinely independent
-checkout," even though it did not use the interactive `git clone` command
-form shown in the Procedure section.
+Independent review found that this historical Phase 2 workflow used the
+checkout action's shallow, tagless default. Consequently the Phase 1 golden
+comparison silently skipped even though the run was green. These run IDs are
+retained as historical evidence, but they are not accepted as proof of the
+advertised golden comparison. The repaired workflow fetches complete history
+and tags, and both the validator and golden test now fail if the approved tag
+is missing or moved.
+
+## Independent-review recovery: PASSED
+
+Commit tested: `af633d4aa5bfa18cff71393ce54445e544b5beb2`, containing the
+substantive repair commit plus the independent report and canonical exp-0022/
+exp-0023 artifacts.
+
+On 2026-08-28 GPT-5.6 Sol created `/tmp/juniper-phase2-recovery-EuUDnn`
+with `mktemp`, cloned the committed repository using `git clone --no-local`,
+checked out the exact commit above in detached-HEAD state, created a new Python
+3.12 virtual environment, installed all 46 locked distributions solely from
+`requirements-lock.txt`, and installed Juniper Auto editable with `--no-deps`.
+
+- `python scripts/validate_repo.py --all`: all 11 gates passed; 654 tests.
+- `python scripts/validate_phase1.py --all`: all 9 gates passed; exact
+  parameter counts, forward/backward, checkpoint, hashes, and 654 tests.
+- `python scripts/validate_phase2.py --all`: all 13 gates passed; golden-tag
+  enforcement, exact counts, reference/optimized equivalence, dropless
+  invariants, all-layer trace/gradient telemetry, context probe, reproducibility,
+  hashes, registry/time evidence, and 654 tests.
+- Five-case `equivalence` and the full `independent-review-demonstration`
+  experiment commands both completed and wrote their requested scratch
+  results.
+
+CUDA was available and the real GPU-gated tests ran. The sole warning was the
+already-accepted PyTorch notice that memory-efficient-attention backward is
+nondeterministic; Phase 2 does not claim otherwise. The recovery clone remained
+separate from the working repository, so uncommitted state could not influence
+the result. Final GitHub workflow identities on the eventual approval commit
+are carried by the annotated `phase-2-moe` tag.

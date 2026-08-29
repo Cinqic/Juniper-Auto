@@ -24,8 +24,8 @@ sha256:
   docs/phases/phase-2-requirements-traceability.md: bf42e8261ce0b59093b5a96ca9d1fff80c4c9680cbc76d5e9c71bee5e3c4a03e
   docs/phases/phase-2-sol-independent-review.md: 8f6fc1c35a4752eea3a67479638a398be7eec822bd8aaf31362607bb0cc7698a
   docs/phases/phase-2-sonnet-self-review.md: 03a053253440e36f01251ba3aae12319c7205cc49df1c705851d8824e671a71b
-  docs/recovery/phase-2.md: cb80a5d9286e6d8b5ce7f2f6b91e3488d4df13d8971f9a2d97d619babd978b2f
-  docs/time/phase-hours.csv: 95103d7ff3215a92da88952612b97f4a5c8d2f189b0893ce39ea2aeecb9543f2
+  docs/recovery/phase-2.md: 92d818119e9540f168d4d42985780d50037727cfee21190847c3d42206ee2451
+  docs/time/phase-hours.csv: af8cff92d5fd971f8b522d3a55c8f39c1c83981ec706d1476c91a6fddc1f9131
   experiments/registry.yaml: 491c29a5b281ecba4a52ddae6fec00ae8a51c31f994aaea91612e50c790f4fe5
   juniper_auto/analysis/__init__.py: 5fd507c88c9ecbfa7a03e05a8386f881422021bc3fb377da334999e82b61f8a3
   juniper_auto/analysis/context_sensitivity.py: a83ec06750dc28be80ba866e198c1940446ed0349ea5c310ff4c955aeaef84cf
