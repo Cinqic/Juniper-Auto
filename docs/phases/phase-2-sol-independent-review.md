@@ -164,7 +164,7 @@ input-sensitivity tests, not evidence of learned semantic specialization.
 - Exact sparse parameters: **150,031,360**
 - Exact sparse standard-active convention: **79,252,480**
 - Exact dense control parameters: **79,191,040**
-- Full local suite after repair: **654 passed** on FLOWBOX, including live
+- Full local suite after repair: **655 passed** on FLOWBOX, including live
   CUDA tests; one known PyTorch warning states memory-efficient attention
   backward is nondeterministic.
 - Phase 0, Phase 1, and Phase 2 canonical validators: pass.
