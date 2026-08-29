@@ -58,7 +58,7 @@ verified remote CI before tagging approval.
 
 | Finding | Severity | Repair and evidence |
 |---|---|---|
-| Phase 2 CI used a shallow checkout while the Phase 1 golden test silently skipped when its tag was absent | Approval-blocking | CI now fetches full history/tags; missing or moved `phase-1-architecture` is a hard failure in both the validator and golden test. |
+| CI workflows used shallow checkout while the Phase 1 golden test silently skipped when its tag was absent | Approval-blocking | All Phase 0/1/2 workflows now fetch full history/tags; missing or moved `phase-1-architecture` is a hard failure in both the validator and golden test. The first repaired push exposed the same inherited checkout flaw in the Phase 0/1 workflows, which was then fixed and regression-tested. |
 | “Evaluation-only” ablations executed while modules were in training mode | Approval-blocking | `JuniperAutoModel` and `MoELayer` now fail closed unless `eval()` is active; regression tests cover the boundary. |
 | Invalid/unknown ablation modes and expert IDs could be ignored or fail later with an opaque index error | High | Strict mode-specific dataclass validation, range checks at the concrete layer, uniqueness checks, and tests. |
 | Padding positions still executed shared and routed experts and produced expert contributions | High | Dispatch now compacts valid tokens, executes only those tokens, scatters back by original position, and returns zero MoE contribution for padding. Valid-token Phase 1 behavior remains equivalent; unpadded calls remain bit-exact. |

@@ -157,10 +157,10 @@ reproduces exactly, and does not leak into a subsequent normal call).
 ## CI workflow / run
 
 The original candidate's runs are recorded above. Independent review found
-that its Phase 2 workflow used a shallow checkout, so the advertised Phase 1
-golden comparison skipped when the tag was unavailable. The repaired workflow
-fetches complete history and tags, and a missing or moved golden tag now fails
-closed. Exact final Phase 0/1/2 workflow identities are recorded in the
+that its workflows used shallow checkout, so the advertised Phase 1 golden
+comparison skipped when the tag was unavailable. All repaired workflows fetch
+complete history and tags, and a missing or moved golden tag now fails closed.
+Exact final Phase 0/1/2 workflow identities are recorded in the
 annotated `phase-2-moe` tag after they pass on the final metadata commit.
 
 ## Recovery status

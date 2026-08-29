@@ -150,13 +150,17 @@ Actions workflows ran on this exact commit and succeeded:
 | Phase 1 Validation | 33010601512 | success | 2m45s |
 | Phase 2 Validation | 33010601464 | success | 4m9s |
 
-Independent review found that this historical Phase 2 workflow used the
-checkout action's shallow, tagless default. Consequently the Phase 1 golden
+Independent review found that the historical workflows used the checkout
+action's shallow, tagless default. Consequently the Phase 1 golden
 comparison silently skipped even though the run was green. These run IDs are
 retained as historical evidence, but they are not accepted as proof of the
 advertised golden comparison. The repaired workflow fetches complete history
 and tags, and both the validator and golden test now fail if the approved tag
-is missing or moved.
+is missing or moved. The first independent-review push proved why this must
+apply to every workflow: Phase 0 run `33232007878` and Phase 1 run
+`33232007877` failed closed because those inherited baseline workflows still
+lacked the tag, while Phase 2 run `33232007902` used the repaired checkout.
+All three workflow files were then aligned and protected by a regression test.
 
 ## Independent-review recovery: PASSED
 

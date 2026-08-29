@@ -122,6 +122,8 @@ PHASE_1_TEST_FILES: list[str] = [
 # is unaffected by Phase 1's manifest being regenerated).
 PHASE_2_HASHED_ARTIFACTS: list[str] = [
     ".github/workflows/phase-2-validation.yml",
+    ".github/workflows/phase-0-validation.yml",
+    ".github/workflows/phase-1-validation.yml",
     "README.md",
     "juniper_auto/model/routing.py",
     "juniper_auto/model/moe_dispatch.py",

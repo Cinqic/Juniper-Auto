@@ -5,6 +5,8 @@
 algorithm: sha256
 generated_by: scripts/hash_manifest.py
 sha256:
+  .github/workflows/phase-0-validation.yml: 730995642fd1509905dfa5213a84617e321bacf29b181170373c60d52a7dd560
+  .github/workflows/phase-1-validation.yml: 72f464ab51431ff26e33ffc2e54860bf4a6028834fd64dba05adf73a926ec8b4
   .github/workflows/phase-2-validation.yml: c5e4b3c334a950d91d1f6b255f1ab83ba94d65aa97cf8787e89657782135b198
   README.md: e1b7a5a8a7d085b0f359f48d741cc116c70f81c10d4de6d8d2412fb4bacd9600
   docs/adr/0009-moe-dispatch-backend-selection.md: 275c9e66efeb6e37622306f3cca016af615c3209f04c685007f230b05c25dd36
@@ -20,11 +22,11 @@ sha256:
   docs/experiments/results/exp-0022-sol-reference-optimized-equivalence.json: 80bd63f23f2a2ba100deecc7838a26ad5b0e0566f7c251542a5df678ea1e0187
   docs/experiments/results/exp-0023-sol-independent-diagnostic-demonstration.json: 6a2d9be031c58dce501587b27fcb08ac8851d7b80eb7832eb9cff5dfb513a553
   docs/experiments/results/exp-0023-sol-independent-diagnostic-demonstration.trace.json: df9e0afee09b266fb5b6b7921fd991d31e10191acc2138879158ad899bb95ecd
-  docs/phases/phase-2-moe.md: fab508c64d218561bccdceab11712a8a945c550865feb10a6bf9bfc7321bbbb2
+  docs/phases/phase-2-moe.md: 1317226a3b0050cdb7e8dfedcb52c7d0c5e3df05974e17de3aa146c86c64f8d4
   docs/phases/phase-2-requirements-traceability.md: bf42e8261ce0b59093b5a96ca9d1fff80c4c9680cbc76d5e9c71bee5e3c4a03e
-  docs/phases/phase-2-sol-independent-review.md: 8f6fc1c35a4752eea3a67479638a398be7eec822bd8aaf31362607bb0cc7698a
+  docs/phases/phase-2-sol-independent-review.md: 50965da5cfaf471042ad2755f8663a3712c9f31b4ee2a002829e59b576be47aa
   docs/phases/phase-2-sonnet-self-review.md: 03a053253440e36f01251ba3aae12319c7205cc49df1c705851d8824e671a71b
-  docs/recovery/phase-2.md: 92d818119e9540f168d4d42985780d50037727cfee21190847c3d42206ee2451
+  docs/recovery/phase-2.md: 223edd97470f17a7344d05b5b4fadbb185d4c1b4da49067bb76748d8c2e1632f
   docs/time/phase-hours.csv: af8cff92d5fd971f8b522d3a55c8f39c1c83981ec706d1476c91a6fddc1f9131
   experiments/registry.yaml: 491c29a5b281ecba4a52ddae6fec00ae8a51c31f994aaea91612e50c790f4fe5
   juniper_auto/analysis/__init__.py: 5fd507c88c9ecbfa7a03e05a8386f881422021bc3fb377da334999e82b61f8a3
@@ -36,7 +38,7 @@ sha256:
   juniper_auto/model/moe_diagnostics.py: 9e6c25ec0c599e56864ae6171b3de41fc47102e3b6a8b9f8de7d8786de93b466
   juniper_auto/model/moe_dispatch.py: 4fc2e0a70e37956ce59e446dc54862ad8aa70fcfa100dde4134b28d45f3fd873
   juniper_auto/model/routing.py: 76cdb35dda6ea943f48ab6542d45bec5a81cf4c383ca0f360d7e352c12f1aaf3
-  manifests/phase-2-test-manifest.yaml: fb2f78b67903da8860dbecfdfa82167de44caa2b82a99e96c5b6fd7d6eed8544
+  manifests/phase-2-test-manifest.yaml: 27b2d61a28b2ecee5820ba5a87cd320ff9c56fac84281da4e86dd86e778f4ae7
   scripts/generate_phase2_test_manifest.py: c27754e26aa90c6c03869b1a85a96613c7228d2e3b440f0a16c8c5116b476bae
   scripts/run_phase2_experiment.py: ae9b77f02233fd09b5819b7bb41deb4017e65f9809cdd6dc288cc9f42213718d
   scripts/validate_phase2.py: ccac5cd51247af98e07d7a2a5aed55781d11d7ec2c863001b110f7c29f6063fb

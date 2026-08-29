@@ -13,6 +13,7 @@ from pathlib import Path
 
 import pytest
 import torch
+import yaml
 
 from juniper_auto.model.moe import MoELayer
 from tests.model_fixtures import make_tiny_sparse_config
@@ -59,6 +60,24 @@ def _load_phase1_golden_moe_module():
 @pytest.fixture(scope="module")
 def phase1_golden_moe():
     return _load_phase1_golden_moe_module()
+
+
+def test_every_required_ci_workflow_fetches_the_golden_phase1_tag(repo_root):
+    for name in ("phase-0-validation.yml", "phase-1-validation.yml", "phase-2-validation.yml"):
+        workflow = yaml.load(
+            (repo_root / ".github" / "workflows" / name).read_text(),
+            Loader=yaml.BaseLoader,
+        )
+        checkout_steps = [
+            step
+            for job in workflow["jobs"].values()
+            for step in job["steps"]
+            if step.get("uses", "").startswith("actions/checkout@")
+        ]
+        assert len(checkout_steps) == 1, f"{name}: expected exactly one checkout step"
+        checkout = checkout_steps[0]
+        assert checkout.get("with", {}).get("fetch-depth") == "0", name
+        assert checkout.get("with", {}).get("fetch-tags") == "true", name
 
 
 def _paired_layers(phase1_golden_moe, **cfg_overrides):
