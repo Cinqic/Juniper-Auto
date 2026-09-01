@@ -26,12 +26,19 @@ warning).
 
 ## Final commit
 
-`CANDIDATE - PENDING INDEPENDENT REVIEW`. The Sonnet substantive candidate,
-the commit the seven Phase 3 experiments were executed against, the
-metadata-closure commit, and the exact remote CI run identities are resolved
-by the annotated `phase-3-tokenizer` approval tag **after** GPT-5.6 Sol's
-independent review — see the Sonnet→Sol handoff. `phase-3-tokenizer` has
-**not** been created.
+`CANDIDATE - PENDING INDEPENDENT REVIEW`.
+
+- Sonnet substantive candidate (implementation + tests + docs, experiments
+  executed against it): `6a6ef177328d187670f2fe3e4f2ccb11ccb3660d`
+- Sonnet closure candidate (experiments, validator, CI, manifests,
+  frozen-artifact registry): `5e4dfd5d6a32a7ee95d21171c83aac9feb9e6879` —
+  all four CI workflows green (see CI section).
+- Sonnet metadata-closure HEAD (this section, CI/recovery evidence): a later
+  commit, necessarily.
+
+The final approved commit and its immutable CI identity are resolved by the
+annotated `phase-3-tokenizer` approval tag **after** GPT-5.6 Sol's
+independent review. `phase-3-tokenizer` has **not** been created.
 
 ## Implementation summary
 
@@ -152,10 +159,11 @@ exact round-trip on 15+ domains, randomized valid-UTF-8 property round-trip
 non-interference, save/reload/cross-process/full-rebuild determinism,
 control-token safety, malformed-artifact fail-closed behaviour, and
 deliberate fault injection proving each gate is load-bearing. Full suite
-(`python -m pytest tests/ -q`): all pass locally — see the Sonnet→Sol
-handoff for the exact count and the CI run. The one pre-existing warning
-(CUDA memory-efficient-attention non-determinism in
-`tests/test_training_checkpoint.py`) is unchanged from the Phase 2 baseline.
+(`python -m pytest tests/ -q`): **766 passed, 1 warning** locally, in CI on
+`5e4dfd5` (all four workflows), and in the fresh-clone recovery run. The one
+warning (CUDA memory-efficient-attention non-determinism in
+`tests/test_training_checkpoint.py`) is unchanged from the Phase 2 baseline
+and unrelated to Phase 3.
 
 ## Evaluations
 
@@ -188,21 +196,37 @@ registry ablation.
 
 ## CI workflow / run
 
-`.github/workflows/phase-3-validation.yml` (name: **Phase 3 Validation**).
-Exact run ID / conclusion / commit tested are recorded in the metadata-closure
-commit and the Sonnet→Sol handoff; the immutable resolution is the
-`phase-3-tokenizer` tag after independent review. Phase 0/1/2 workflows
-continue to run and pass.
+All four workflows ran on the Sonnet substantive+closure candidate
+`5e4dfd5d6a32a7ee95d21171c83aac9feb9e6879` and concluded **success**:
+
+| Workflow | Run ID | Conclusion | Commit tested |
+|---|---|---|---|
+| Phase 0 Validation | 33481751022 | success | `5e4dfd5` |
+| Phase 1 Validation | 33481751004 | success | `5e4dfd5` |
+| Phase 2 Validation | 33481750894 | success | `5e4dfd5` |
+| Phase 3 Validation | 33481750910 | success | `5e4dfd5` |
+
+`.github/workflows/phase-3-validation.yml` (name: **Phase 3 Validation**)
+uses `fetch-depth: 0` + `fetch-tags: true`. The metadata-closure commit adds
+its own CI evidence; the immutable resolution of the final approved commit
+and CI identity is the `phase-3-tokenizer` tag after GPT-5.6 Sol's
+independent review.
 
 ## Recovery status
 
-Fresh-clone recovery exercise performed — see
-[docs/recovery/phase-3.md](../recovery/phase-3.md) for the exact commands
-and results (including any first-attempt failure and its repair).
+Performed and **passed on the first attempt**. A fresh `git clone` of
+`5e4dfd5` on a machine with no prior project state, its own new virtualenv,
+locked-dependency install: the tokenizer loads offline, round-trips, its
+control-token safety holds, a full retrain reproduces every artifact
+SHA-256, no machine-specific path is present in any committed file, and
+`python scripts/validate_phase3.py --all` passes (766 pytest passed). Exact
+commands and output: [docs/recovery/phase-3.md](../recovery/phase-3.md).
 
 ## Engineering hours
 
-See `docs/time/phase-hours.csv`, `phase-3` rows.
+`docs/time/phase-hours.csv` `phase-3` rows: ~3.9 h AI-assisted engineering +
+~0.8 h self-review/closure. `active_human_hours` is `PENDING` (not
+observable by the implementer — the human reviewer fills it in).
 
 ## Independent review hours
 
@@ -210,19 +234,20 @@ See `docs/time/phase-hours.csv`, `phase-3` rows.
 
 ## GPU hours
 
-`0`. Byte-level BPE tokenizer engineering is CPU-only; no GPU work occurred.
+`0`. Byte-level BPE tokenizer engineering is CPU-only; no GPU work occurred
+in any Phase 3 activity, and `exp-0029` records `gpu_hours: 0.0`.
 
 ## CPU / data-processing hours
 
-See `docs/time/phase-hours.csv`, `phase-3` rows (corpus assembly, repeated
-tokenizer training/rebuild, evaluation, the full pytest/validator suite, and
-the fresh-clone recovery install).
+`docs/time/phase-hours.csv` `phase-3` rows: ~0.9 h total — corpus assembly,
+repeated full tokenizer training/rebuild, the cross-domain evaluation +
+GPT-2 comparator fetch, four-deep nested validator/pytest invocations, and
+the fresh-clone recovery install + validation.
 
 ## Project elapsed days
 
-Computed at review time from the project's initial commit date to the Phase
-3 candidate date (2026-09-01). Recorded precisely in the metadata-closure
-commit.
+Initial commit `a991db7` 2026-08-25; Phase 3 closure candidate `5e4dfd5`
+2026-09-01 → **7 calendar days** of project elapsed time (Phases 0–3).
 
 ## Known failures
 

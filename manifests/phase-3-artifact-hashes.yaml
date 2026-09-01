@@ -28,9 +28,9 @@ sha256:
   docs/experiments/results/exp-0030-tokenizer-difficult-examples.json: 86aa1ee4af379a85efa6d44c6b0f171f22540af6965e8147f526578eb88e1639
   docs/phases/phase-3-requirements-traceability.md: fb832a78c1c6513fcdae48269bdcc1f7972282fb07385090b53ef015b4c296b9
   docs/phases/phase-3-sonnet-self-review.md: 7a488132a1c939540ad95f8a209a6e736fbdab8f8cefbbbbac5bb89900ab12da
-  docs/phases/phase-3-tokenizer.md: c0967d962d5caddabde1b5ddae8f4f2c0c286ac3d6fa74bc98231abdb77c9a64
-  docs/recovery/phase-3.md: 240c18acf8d4c520a95e35e204ca6657aef67a9b32f6cc181bb96535a50cc3eb
-  docs/time/phase-hours.csv: 93efc3ff1d00feaf6c83c5ade04a7e015b7248631cf1c3217a92989f5075ffe9
+  docs/phases/phase-3-tokenizer.md: d7c86d9f37ba1ee0559012752cfab4cfbe63c08870dfdfd7db71672b38eb9ba7
+  docs/recovery/phase-3.md: 31fc20ee36ab21160b428911bfd0a2342c1f1c55c6bbe6c1ef5d473e1469a473
+  docs/time/phase-hours.csv: 745b48e32285bb4019374b45ed36da11fcd4b2f8e7f512c43abac184ff6c3082
   experiments/registry.yaml: 99dc5f0398f33a5bdd4d01170702f10c44146478bd58b56d2a7277f38cee4f2c
   juniper_auto/tokenizer/__init__.py: 3b8dd934d267fbef17a4697ae2619a098e7f5ba24a73d9d6743ce1b0ec81e957
   juniper_auto/tokenizer/artifacts.py: a59fbe5d751eafdd381d92c99feb307e8b35eed1f961807411af439afaac06be
