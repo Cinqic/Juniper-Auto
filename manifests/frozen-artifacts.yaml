@@ -60,13 +60,38 @@ checkpoint_format:
     any checkpoint this project writes; not itself a trained checkpoint.
 
 tokenizer:
-  status: not-yet-created
-  target_vocab_size: 36864
-  notes: Tokenizer training is Phase 3 scope, not Phase 0.
+  id: ja-tokenizer-v0.1
+  status: frozen
+  vocab_size: 36864
+  algorithm: utf8-byte-level-bpe
+  location: data/tokenizer/ja-tokenizer-v0.1/
+  config: configs/tokenizer/ja-tokenizer-v0.1.yaml
+  hash_manifest: data/tokenizer/ja-tokenizer-v0.1/hashes.json
+  notes: >
+    Phase 3 CANDIDATE frozen artifact -- one unified UTF-8 byte-level BPE
+    tokenizer for the single Juniper Auto model. Exactly 36,864 ids (256
+    byte + 15 core control + 241 reserved future-control + 36,352 learned
+    merges), lossless UTF-8 round-trip, identity normalization, byte
+    fallback (no <unk>). Trained deterministically from the committed
+    corpus under data/tokenizer/corpus/. Hash-tracked via
+    manifests/phase-3-artifact-hashes.yaml. See
+    docs/phases/phase-3-tokenizer.md and docs/architecture/tokenizer-design.md.
+    Phase 3 is a candidate pending GPT-5.6 Sol independent review; the
+    canonical approval is the (not-yet-created) annotated phase-3-tokenizer
+    tag. This is a tokenizer only -- no model has been trained.
 
 special_token_map:
-  status: not-yet-created
-  notes: Depends on the tokenizer (Phase 3).
+  id: ja-tokenizer-v0.1-special-tokens
+  status: frozen
+  location: data/tokenizer/ja-tokenizer-v0.1/special_tokens.json
+  core_control_ids: "[256, 270]"
+  reserved_control_ids: "[271, 511]"
+  notes: >
+    15 frozen core control tokens (<|bos|>..<|final|>) with fixed
+    spelling/id/semantics, plus a contiguous 241-id reserved
+    future-control range. Frozen alongside ja-tokenizer-v0.1; a future
+    protocol version activates reserved ids without retraining the
+    tokenizer. See docs/adr/0011-tokenizer-special-token-and-reserved-id-layout.md.
 
 runtime_protocol:
   status: not-yet-created

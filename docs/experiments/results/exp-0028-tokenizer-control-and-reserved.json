@@ -1,0 +1,72 @@
+{
+  "result_identity": "exp-0028-tokenizer-control-and-reserved",
+  "git_commit": "6a6ef177328d187670f2fe3e4f2ccb11ccb3660d",
+  "git_worktree_clean": true,
+  "canonical_result": true,
+  "git_status_porcelain": [],
+  "tokenizer_id": "ja-tokenizer-v0.1",
+  "tokenizer_artifact_sha256": {
+    "tokenizer.json": "26b49727e15ebd1754ad4544cb4e66a89c32bb0da46a3593a532fa51d919835a",
+    "vocab.json": "d84243f070bb808d99f4e9bcb32b03d5e0714b8f7492a40a2889ad6bfb862285",
+    "merges.txt": "64b34f50e33b5dae1e3a54e24e0b1ff867fe460c223cf7ca8fcb9fcf30ed95d9",
+    "special_tokens.json": "7a870b42edc2843694dc83e64b42ba2169f2fadfa22038cfbc845fb4d36644c6",
+    "tokenizer_config.json": "0098eda74cdcd43eee6a7dfb5f1d1176094c41c562cec275f4e6838d06629c60"
+  },
+  "eval_fixture_sha256": "e9a134d51941a7af8183ca4f5bf6eaa56adf44a94c864ed6cab60e3a26a55051",
+  "architecture_configs": [
+    {
+      "architecture_id": "ja150m-v0.1",
+      "config_path": "configs/architecture/ja150m-v0.1.yaml",
+      "config_sha256": "2fd81b5a602e08d28bf3510911d02e9fa43f09af81ba2b9dbe6f9ff9285558e3"
+    },
+    {
+      "architecture_id": "ja150m-v0.1-dense",
+      "config_path": "configs/architecture/ja150m-v0.1-dense.yaml",
+      "config_sha256": "4b356cf9c7022fbfea60879a9b8b5fd28c14325565d2e6e908c5b5a79cb95370"
+    }
+  ],
+  "environment": {
+    "python_version": "3.12.3",
+    "platform": "Linux-7.0.0-30-generic",
+    "torch_version": "2.13.0+cu130",
+    "cuda_available": true,
+    "cuda_device_name": "NVIDIA GeForce RTX 2060",
+    "cuda_driver_version": "13.0"
+  },
+  "command": "scripts/run_phase3_experiment.py control-reserved --output docs/experiments/results/exp-0028-tokenizer-control-and-reserved.json --result-id exp-0028-tokenizer-control-and-reserved",
+  "seed": null,
+  "experiment": "tokenizer-control-and-reserved",
+  "core_control_ids": {
+    "<|bos|>": 256,
+    "<|eos|>": 257,
+    "<|pad|>": 258,
+    "<|system|>": 259,
+    "<|user|>": 260,
+    "<|assistant|>": 261,
+    "<|objective|>": 262,
+    "<|state|>": 263,
+    "<|memory|>": 264,
+    "<|tool_call|>": 265,
+    "<|tool_result|>": 266,
+    "<|tool_error|>": 267,
+    "<|observation|>": 268,
+    "<|action|>": 269,
+    "<|final|>": 270
+  },
+  "core_ids_unique": true,
+  "literal_control_string_leak": false,
+  "reserved_ids_produced_by_normal_tokenization": [],
+  "reserved_range": [
+    271,
+    511
+  ],
+  "explicit_sequence_roundtrip": "<|system|>safety first<|user|>hi<|eos|>",
+  "explicit_sequence_skip_special": "safety firsthi",
+  "gate": {
+    "require_stable_core_ids": true,
+    "require_no_literal_control_leak": true,
+    "require_no_reserved_ids_from_text": true,
+    "require_explicit_insertion_roundtrip": true
+  },
+  "gate_passed": true
+}

@@ -195,18 +195,40 @@ def gate_frozen_artifact_manifest() -> None:
         raise GateFailure("architecture.sparse status must be 'frozen'")
     if manifest["architecture"]["sparse"]["id"] != "ja150m-v0.1":
         raise GateFailure("architecture.sparse id must be 'ja150m-v0.1'")
-    required_not_created = {
+    # Every future-artifact category must still be PRESENT and carry an honest
+    # status. Categories a later approved/candidate phase legitimately
+    # advances are listed in `phase_advanced` with the status they are
+    # allowed to hold; everything else must still be `not-yet-created`.
+    # Phase 3 (unified tokenizer) freezes `tokenizer` and `special_token_map`
+    # -- see docs/phases/phase-3-tokenizer.md and
+    # docs/adr/0011-tokenizer-special-token-and-reserved-id-layout.md. This
+    # is a deliberate cross-phase update to a Phase 0 check, not a defect
+    # repair; the approved Phase 0 state remains pinned by the
+    # `phase-0-foundation` tag.
+    future_artifact_categories = {
         "tokenizer", "special_token_map", "runtime_protocol", "tool_schemas",
         "memory_schema", "state_schema", "permission_policy", "pretraining_dataset",
         "post_training_dataset", "evaluation_suite", "base_checkpoint",
         "instruction_checkpoint", "autonomous_system_release",
     }
-    missing = required_not_created - set(manifest)
+    phase_advanced = {
+        "tokenizer": {"frozen"},
+        "special_token_map": {"frozen"},
+    }
+    missing = future_artifact_categories - set(manifest)
     if missing:
         raise GateFailure(f"frozen-artifact categories missing: {sorted(missing)}")
-    dishonest = sorted(key for key in required_not_created if manifest[key].get("status") != "not-yet-created")
+    valid_statuses = {"frozen", "planned", "not-yet-created", "superseded"}
+    dishonest = []
+    for key in sorted(future_artifact_categories):
+        status = manifest[key].get("status")
+        allowed = phase_advanced.get(key, {"not-yet-created"})
+        if status not in valid_statuses or status not in allowed:
+            dishonest.append(f"{key}={status!r}")
     if dishonest:
-        raise GateFailure(f"Phase 0 future artifacts must be not-yet-created: {dishonest}")
+        raise GateFailure(f"future-artifact categories have a disallowed status: {dishonest}")
+    if manifest["tokenizer"].get("status") == "frozen" and manifest["tokenizer"].get("id") != "ja-tokenizer-v0.1":
+        raise GateFailure("frozen tokenizer must record id 'ja-tokenizer-v0.1'")
     precision = manifest.get("training_precision_policy", {})
     if precision.get("status") != "frozen" or precision.get("location") != "docs/architecture/precision-policy.md":
         raise GateFailure("training precision policy must be a versioned frozen artifact")

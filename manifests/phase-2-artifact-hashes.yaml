@@ -8,7 +8,7 @@ sha256:
   .github/workflows/phase-0-validation.yml: 730995642fd1509905dfa5213a84617e321bacf29b181170373c60d52a7dd560
   .github/workflows/phase-1-validation.yml: 72f464ab51431ff26e33ffc2e54860bf4a6028834fd64dba05adf73a926ec8b4
   .github/workflows/phase-2-validation.yml: c5e4b3c334a950d91d1f6b255f1ab83ba94d65aa97cf8787e89657782135b198
-  README.md: e1b7a5a8a7d085b0f359f48d741cc116c70f81c10d4de6d8d2412fb4bacd9600
+  README.md: 1bb1b97da5900e4a6e5a05bc5544d5192387ae554cddc544c6078fc243ae59bd
   docs/adr/0009-moe-dispatch-backend-selection.md: 275c9e66efeb6e37622306f3cca016af615c3209f04c685007f230b05c25dd36
   docs/architecture/moe-routing-diagnostics.md: 8a1ee1fc406d4390db8de59c25ea2dc3196cc85ced3688b00342d16350f9eebf
   docs/experiments/results/exp-0015-moe-reference-optimized-equivalence.json: a8d6d71bbebb02b7f24a0f2e45841bbcb83d7dfd39b5eb58ade26759c0744e3b
@@ -27,8 +27,8 @@ sha256:
   docs/phases/phase-2-sol-independent-review.md: 2ee0447557e6afba01e7237204074e61a4cab7e04c6b3905932b0e8535510b5b
   docs/phases/phase-2-sonnet-self-review.md: 03a053253440e36f01251ba3aae12319c7205cc49df1c705851d8824e671a71b
   docs/recovery/phase-2.md: 223edd97470f17a7344d05b5b4fadbb185d4c1b4da49067bb76748d8c2e1632f
-  docs/time/phase-hours.csv: af8cff92d5fd971f8b522d3a55c8f39c1c83981ec706d1476c91a6fddc1f9131
-  experiments/registry.yaml: 491c29a5b281ecba4a52ddae6fec00ae8a51c31f994aaea91612e50c790f4fe5
+  docs/time/phase-hours.csv: 93efc3ff1d00feaf6c83c5ade04a7e015b7248631cf1c3217a92989f5075ffe9
+  experiments/registry.yaml: 99dc5f0398f33a5bdd4d01170702f10c44146478bd58b56d2a7277f38cee4f2c
   juniper_auto/analysis/__init__.py: 5fd507c88c9ecbfa7a03e05a8386f881422021bc3fb377da334999e82b61f8a3
   juniper_auto/analysis/context_sensitivity.py: a83ec06750dc28be80ba866e198c1940446ed0349ea5c310ff4c955aeaef84cf
   juniper_auto/model/block.py: ead73c9f07b364d9320423fe0ea54618fcb85ca567188780c09f65c453ca5813

@@ -1,0 +1,48 @@
+name: Phase 3 Validation
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch: {}
+
+jobs:
+  validate-phase3:
+    name: Validate Phase 3 (CPU-only, clean Linux runner)
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          # Phase 3 gates (approved-tag resolution, and the Phase 2 baseline's
+          # phase-1-architecture golden moe.py comparison) need full history
+          # and tags. A shallow/tagless checkout would make them unavailable --
+          # this is the exact bug Sol found in the original Phase 2 workflow.
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      - name: Create virtual environment
+        run: python -m venv .venv
+
+      - name: Install dependencies from locked requirements
+        run: |
+          source .venv/bin/activate
+          python -m pip install --upgrade pip
+          pip install -r requirements-lock.txt
+
+      - name: Install project package (editable, no re-resolve)
+        run: |
+          source .venv/bin/activate
+          pip install -e . --no-deps
+
+      - name: Run canonical Phase 3 validation (includes the Phase 0/1/2 baselines, tokenizer config/artifact/hash checks, exact 36,864-vocab and control/reserved-id invariants, byte fallback, deterministic round-trip smoke, model/tokenizer vocab compatibility, serialization/reload, corpus manifest + per-shard hash + provenance, frozen-architecture regression, approved-tag resolution, Phase 3 documentation/experiment/time-accounting checks, artifact/test-manifest hashes, and the full pytest suite)
+        run: |
+          source .venv/bin/activate
+          python scripts/validate_phase3.py --all

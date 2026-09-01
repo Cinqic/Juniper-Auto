@@ -697,3 +697,233 @@
     triggered the intended detectors. Parameter count was 150,031,360.
   conclusion: The repaired diagnostics answer exactly which experts processed each valid token and expose the required failure signals.
   artifact_locations: docs/experiments/results/exp-0023-sol-independent-diagnostic-demonstration.json, docs/experiments/results/exp-0023-sol-independent-diagnostic-demonstration.trace.json
+
+- experiment_id: exp-0024
+  date: "2026-09-01"
+  phase: phase-3
+  hypothesis: >
+    Retraining ja-tokenizer-v0.1 from the committed corpus shards, the frozen
+    configuration, and the fixed seed reproduces every serialized artifact
+    (tokenizer.json, vocab.json, merges.txt, special_tokens.json,
+    tokenizer_config.json) byte-for-byte -- i.e. the tokenizer is
+    deterministically rebuildable, not just "loads without crashing".
+  git_commit: 6a6ef177328d187670f2fe3e4f2ccb11ccb3660d
+  architecture_id: ja150m-v0.1, ja150m-v0.1-dense
+  tokenizer_id: ja-tokenizer-v0.1
+  dataset_id: ja-tokenizer-v0.1-training-corpus (data/tokenizer/corpus/, 24 committed shards, sha256 in corpus-manifest.json)
+  sampler_id: not-applicable
+  starting_checkpoint: not-applicable
+  configuration: data/tokenizer/corpus/corpus-manifest.json, configs/tokenizer/ja-tokenizer-v0.1.yaml
+  seed: 20260901
+  environment: see docs/architecture/environment-specification.md (FLOWBOX CPU; tokenizer is torch-free)
+  token_budget: not-applicable
+  status: completed
+  result: >
+    Two independent full rebuilds into fresh temporary directories each
+    produced artifact SHA-256 identical to the frozen
+    data/tokenizer/ja-tokenizer-v0.1/ artifact for all five files. 36,352
+    merges completed; every merged byte pair occurred at least twice
+    (tail_fill_used=false); 0 collisions skipped. Full result:
+    docs/experiments/results/exp-0024-tokenizer-rebuild-determinism.json.
+  conclusion: >
+    ja-tokenizer-v0.1 is deterministically reproducible from repository-
+    controlled inputs; the frozen artifact hashes are load-bearing.
+  artifact_locations: docs/experiments/results/exp-0024-tokenizer-rebuild-determinism.json
+
+- experiment_id: exp-0025
+  date: "2026-09-01"
+  phase: phase-3
+  hypothesis: >
+    ja-tokenizer-v0.1 round-trips arbitrary valid UTF-8 losslessly and its
+    byte-fallback alphabet guarantees representability without an <unk>
+    token -- across the whole training corpus, the held-out fixture, and
+    tens of thousands of random valid-UTF-8 strings.
+  git_commit: 6a6ef177328d187670f2fe3e4f2ccb11ccb3660d
+  architecture_id: ja150m-v0.1
+  tokenizer_id: ja-tokenizer-v0.1
+  dataset_id: ja-tokenizer-v0.1-training-corpus + held-out-eval-fixture v1.0.0
+  sampler_id: not-applicable
+  starting_checkpoint: not-applicable
+  configuration: data/tokenizer/ja-tokenizer-v0.1/, data/tokenizer/eval/held-out-eval-fixture.json
+  seed: 20260901
+  environment: see docs/architecture/environment-specification.md (FLOWBOX CPU)
+  token_budget: not-applicable
+  status: completed
+  result: >
+    0 round-trip failures over: ~3.68M chars of corpus windows, all held-out
+    fixture samples, and 18,518 random full-plane valid-UTF-8 property cases
+    (lone surrogates skipped). All 256 raw byte values round-trip as latin-1
+    text. Property-case byte-fallback rate ~0.999 -- expected, because
+    uniformly-random Unicode scalars are almost all rare high codepoints
+    that no learned merge covers; every fallback token is still lossless,
+    which is exactly what byte fallback is for. Full result:
+    docs/experiments/results/exp-0025-tokenizer-roundtrip-fallback.json.
+  conclusion: >
+    Losslessness and functional byte fallback hold; there is no silent
+    information loss on valid input.
+  artifact_locations: docs/experiments/results/exp-0025-tokenizer-roundtrip-fallback.json
+
+- experiment_id: exp-0026
+  date: "2026-09-01"
+  phase: phase-3
+  hypothesis: >
+    ja-tokenizer-v0.1 tokenizes acceptably across every required domain
+    (general/technical prose, Python/JS/C-C++, shell, JSON/YAML/XML-HTML,
+    math, URLs, paths, tool traces, state/memory records) on a held-out
+    fixture disjoint from the training corpus, with zero round-trip
+    corruption.
+  git_commit: 6a6ef177328d187670f2fe3e4f2ccb11ccb3660d
+  architecture_id: ja150m-v0.1
+  tokenizer_id: ja-tokenizer-v0.1
+  dataset_id: held-out-eval-fixture v1.0.0 (sha256 4bd0791325...)
+  sampler_id: not-applicable
+  starting_checkpoint: not-applicable
+  configuration: data/tokenizer/eval/held-out-eval-fixture.json, juniper_auto/tokenizer/evaluation.py
+  seed: not-applicable
+  environment: see docs/architecture/environment-specification.md (FLOWBOX CPU)
+  token_budget: not-applicable
+  status: completed
+  result: >
+    chars/token by domain: general_prose 3.95, technical_prose 4.74,
+    python 3.31, javascript 2.47, c_cpp 2.66, shell 2.61, json 2.36,
+    yaml 3.02, xml_html 2.30, math 2.25, urls 2.71, file_paths 2.50,
+    tool_traces 3.33, state_records 3.28, memory_records 2.88; overall
+    2.89. 0 round-trip failures on every domain. byte_fallback_rate
+    0.11-0.53 (all lossless). All frozen acceptance criteria met. Full
+    per-domain metrics (bytes/token, tokens/line, structural fragmentation):
+    docs/experiments/results/exp-0026-tokenizer-efficiency.json.
+  conclusion: >
+    The tokenizer performs acceptably across all core domains against the
+    predeclared acceptance criteria; efficiency is modest (small corpus) but
+    every hard gate passes.
+  artifact_locations: docs/experiments/results/exp-0026-tokenizer-efficiency.json
+
+- experiment_id: exp-0027
+  date: "2026-09-01"
+  phase: phase-3
+  hypothesis: >
+    Compared against a lossless UTF-8 byte tokenizer and against GPT-2's
+    tokenizer (a small-model tokenizer), ja-tokenizer-v0.1 is materially
+    more compact than raw bytes on every domain, and its wins/losses versus
+    GPT-2 are domain-dependent rather than universal.
+  git_commit: 6a6ef177328d187670f2fe3e4f2ccb11ccb3660d
+  architecture_id: ja150m-v0.1
+  tokenizer_id: ja-tokenizer-v0.1
+  dataset_id: held-out-eval-fixture v1.0.0
+  sampler_id: not-applicable
+  starting_checkpoint: not-applicable
+  configuration: >
+    comparators: utf8-bytes (construction); gpt2 = openai-community/gpt2
+    revision 607a30d783dfa663caf39e06633721c8d4cfcd7e, vocab.json sha256
+    196139668be63f3b5d6574427317ae82f612a97c5d1cdaf36ed2256dbf636783,
+    merges.txt sha256 1ce1664773c50f3e0cc8842619a93edc4624525b728b188a9e0be33b7726adc5;
+    GPT-2 pre-tokenizer is a re-based approximation; special tokens excluded on both sides
+  seed: not-applicable
+  environment: see docs/architecture/environment-specification.md (FLOWBOX CPU; GPT-2 vocab/merges fetched once into a gitignored comparator cache)
+  token_budget: not-applicable
+  status: completed
+  result: >
+    vs utf8-bytes: 2.3x-4.7x more compact on every domain. vs GPT-2
+    (ratio gpt2_tokens/juniper_tokens; >1 = Juniper more compact):
+    python 1.61, yaml 1.35, shell 1.28, tool_traces 1.22, state_records
+    1.14, file_paths 1.10, memory_records 1.10, c_cpp 1.06, javascript
+    1.05, math 1.03, technical_prose 1.00, xml_html 0.99, urls 0.97,
+    json 0.88, general_prose 0.77. Full result:
+    docs/experiments/results/exp-0027-tokenizer-baseline-comparison.json.
+  conclusion: >
+    ja-tokenizer-v0.1 trades English-prose and JSON efficiency (where
+    GPT-2's far larger English corpus wins) for better code, structured-
+    data, and agent-trace efficiency. No universal superiority is claimed.
+  artifact_locations: docs/experiments/results/exp-0027-tokenizer-baseline-comparison.json
+
+- experiment_id: exp-0028
+  date: "2026-09-01"
+  phase: phase-3
+  hypothesis: >
+    The 15 core control tokens have stable unique ids; ordinary text
+    containing literal control-token strings never yields a control-block
+    id; and no reserved-control id (271-511) is ever produced by normal
+    tokenization of the whole corpus.
+  git_commit: 6a6ef177328d187670f2fe3e4f2ccb11ccb3660d
+  architecture_id: ja150m-v0.1
+  tokenizer_id: ja-tokenizer-v0.1
+  dataset_id: ja-tokenizer-v0.1-training-corpus + hostile control-string probes
+  sampler_id: not-applicable
+  starting_checkpoint: not-applicable
+  configuration: juniper_auto/tokenizer/tokenizer.py (encode vs build_sequence), constants.py
+  seed: not-applicable
+  environment: see docs/architecture/environment-specification.md (FLOWBOX CPU)
+  token_budget: not-applicable
+  status: completed
+  result: >
+    Core ids 256-270 stable and unique; encode_control returns the frozen
+    id for every ControlToken. literal_control_string_leak = false over
+    hostile inputs. reserved_ids_produced_by_normal_tokenization = [] over
+    a full-corpus sweep. Explicit build_sequence inserts control ids and
+    round-trips (skip_special strips only specials). Full result:
+    docs/experiments/results/exp-0028-tokenizer-control-and-reserved.json.
+  conclusion: >
+    The control-token safety contract holds at the tokenizer layer; the
+    ordinary-text path cannot manufacture a control token. Runtime authority
+    enforcement remains Phase 4's job.
+  artifact_locations: docs/experiments/results/exp-0028-tokenizer-control-and-reserved.json
+
+- experiment_id: exp-0029
+  date: "2026-09-01"
+  phase: phase-3
+  hypothesis: >
+    Tokenizer training and use are practical on FLOWBOX-class hardware:
+    bounded training wall time and memory, small artifact, and high
+    encode/decode throughput, with zero GPU work.
+  git_commit: 6a6ef177328d187670f2fe3e4f2ccb11ccb3660d
+  architecture_id: ja150m-v0.1
+  tokenizer_id: ja-tokenizer-v0.1
+  dataset_id: ja-tokenizer-v0.1-training-corpus
+  sampler_id: not-applicable
+  starting_checkpoint: not-applicable
+  configuration: juniper_auto/tokenizer/train.py; encode/decode over ~2M chars of concatenated corpus text
+  seed: 20260901
+  environment: FLOWBOX (Ryzen 7 5700G, 16 GB RAM), Python 3.12.3, no GPU used
+  token_budget: not-applicable
+  status: completed
+  result: >
+    Training wall ~9s standalone (~44.5s under tracemalloc instrumentation
+    in this experiment); BPE merge-learning the dominant cost; peak Python
+    heap ~124 MB; final artifact ~1.17 MB. Encode ~4.3M chars/s
+    (~4.3 MB/s); decode ~10.7M tokens/s. GPU-hours 0.0. Full result:
+    docs/experiments/results/exp-0029-tokenizer-flowbox-performance.json.
+  conclusion: >
+    ja-tokenizer-v0.1 is comfortably practical to build, load, and run on
+    consumer hardware with no GPU.
+  artifact_locations: docs/experiments/results/exp-0029-tokenizer-flowbox-performance.json
+
+- experiment_id: exp-0030
+  date: "2026-09-01"
+  phase: phase-3
+  hypothesis: >
+    On deliberately difficult examples (deep code indentation, dense JSON
+    punctuation, Windows paths, URL query strings, mathematical notation,
+    emoji ZWJ sequences, combining/RTL marks, CJK, control-literal-in-text,
+    TSV logs) ja-tokenizer-v0.1 round-trips exactly and its token pieces are
+    inspectable.
+  git_commit: 6a6ef177328d187670f2fe3e4f2ccb11ccb3660d
+  architecture_id: ja150m-v0.1
+  tokenizer_id: ja-tokenizer-v0.1
+  dataset_id: project-authored difficult-example set (embedded in scripts/run_phase3_experiment.py)
+  sampler_id: not-applicable
+  starting_checkpoint: not-applicable
+  configuration: scripts/run_phase3_experiment.py difficult-examples
+  seed: not-applicable
+  environment: see docs/architecture/environment-specification.md (FLOWBOX CPU)
+  token_budget: not-applicable
+  status: completed
+  result: >
+    10/10 difficult examples round-trip exactly. Per-example token ids and
+    decoded token pieces are recorded for manual inspection, including
+    chars/token per example. Full result:
+    docs/experiments/results/exp-0030-tokenizer-difficult-examples.json.
+  conclusion: >
+    Manual inspection confirms correct handling of the hardest token shapes;
+    no round-trip failure and no absurd fragmentation observed on these
+    cases.
+  artifact_locations: docs/experiments/results/exp-0030-tokenizer-difficult-examples.json

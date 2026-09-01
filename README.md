@@ -1,15 +1,21 @@
 # Juniper Auto
 
 **Status: Phase 0 approved; Phase 1 approved; Phase 2 independently
-approved.** See the annotated tags `phase-0-foundation`,
-`phase-1-architecture`, and `phase-2-moe`, the GPT-5.6 Sol
+approved; Phase 3 is a CANDIDATE pending independent review.** See the
+annotated tags `phase-0-foundation`, `phase-1-architecture`, and
+`phase-2-moe`, the GPT-5.6 Sol
 [independent Phase 1 review](docs/phases/phase-1-sol-independent-review.md),
 the [independent Phase 2 review](docs/phases/phase-2-sol-independent-review.md),
 and the consolidated Phase 2 report at
-[docs/phases/phase-2-moe.md](docs/phases/phase-2-moe.md). **No
-model has been trained on real data, no base or instruction-tuned
-checkpoint exists, no tokenizer or real pretraining corpus exists, and no
-expert specialization has been demonstrated.**
+[docs/phases/phase-2-moe.md](docs/phases/phase-2-moe.md). Phase 3 has
+produced a candidate tokenizer (`ja-tokenizer-v0.1`) — see
+[docs/phases/phase-3-tokenizer.md](docs/phases/phase-3-tokenizer.md) and
+[docs/architecture/tokenizer-design.md](docs/architecture/tokenizer-design.md);
+it has **not** been independently reviewed or approved and the
+`phase-3-tokenizer` tag does not exist. **No model has been trained on real
+data, no base or instruction-tuned checkpoint exists, no real pretraining
+corpus exists, no autonomy runtime or tools exist, and no expert
+specialization has been demonstrated.**
 
 Juniper Auto is a research project asking: how capable, efficient,
 autonomous, persistent, adaptable, reliable, and meaningfully
@@ -52,7 +58,46 @@ is the final intended license for trained model weights/datasets is an
 open governance item, not yet decided -- see the charter's License status
 section.
 
-## What exists right now (approved Phases 0, 1, and 2)
+## What exists right now (approved Phases 0, 1, 2; Phase 3 candidate)
+
+### Phase 3 (CANDIDATE — pending independent review)
+
+Phase 3 builds and freezes **`ja-tokenizer-v0.1`**: one unified UTF-8
+byte-level BPE tokenizer for the single Juniper Auto model. It is tokenizer
+engineering only — no model is trained, no runtime is built. What the
+candidate contains, with executed evidence:
+
+- Exactly **36,864** token ids: 256 raw byte tokens `[0,255]`, 15 frozen
+  core control tokens `[256,270]` (`<|bos|>`…`<|final|>`), 241 contiguous
+  reserved future-control ids `[271,511]`, and 36,352 learned merges
+  `[512,36863]` — matching the frozen `ja150m-v0.1` embedding table exactly.
+- **Lossless** round-trip for all valid UTF-8 (0 failures across 15 domains,
+  the held-out fixture, the whole training corpus, and 20k+ random cases),
+  identity normalization (no lowercasing/stripping/collapsing/NFC/NFKC), and
+  a genuine byte-fallback path — there is no `<unk>`.
+- A **deterministic rebuild**: retraining from the committed ~8.9 MB
+  provenanced corpus reproduces every artifact SHA-256 (proven by two
+  independent rebuilds, `exp-0024`).
+- A **control-token safety contract**: ordinary `encode()` never emits a
+  control-block id even for the literal text `<|system|>`; deliberate
+  protocol tokens go through a separate `build_sequence()` API. Tokenization
+  is not claimed to be a security boundary — the Phase 4 runtime enforces
+  authority.
+- A held-out evaluation (`exp-0026`), a baseline comparison against raw
+  UTF-8 bytes and GPT-2 (`exp-0027` — Juniper is more compact on code /
+  structured data / agent traces, less compact on English prose and JSON),
+  FLOWBOX performance (`exp-0029` — train ~9 s, encode ~3.7 MB/s, 0
+  GPU-hours), and a manual difficult-example inspection (`exp-0030`).
+- A pure-Python in-project implementation with **no new dependency**
+  (ADR-0010), an adversarial test suite (10 files, 110+ cases, deliberate
+  fault injection), `scripts/validate_phase3.py`, and
+  `.github/workflows/phase-3-validation.yml`.
+
+Accepted limitations (see the phase report): the ~8.9 MB corpus is small for
+a 36,864-vocab tokenizer, so English-prose efficiency and adversarial-input
+byte-fallback rates would improve with a larger organic corpus; several
+domain corpora are project-authored synthetic; the GPT-2 comparator uses a
+`re`-based pre-tokenizer approximation.
 
 ### Phase 2 (independently approved)
 
@@ -141,8 +186,9 @@ evidence (not estimates):
   and a full 4,096-token batch-1 reference inference pass) was measured
   for both architectures and both comfortably fit the 6 GB VRAM budget.
 
-**What Phase 1 explicitly does not claim:** no tokenizer exists yet, no
-production pretraining corpus exists, no 6B-token pretraining has
+**What Phase 1 explicitly does not claim** (as of Phase 1; the Phase 3
+candidate above adds `ja-tokenizer-v0.1`): no tokenizer existed yet at Phase
+1, no production pretraining corpus exists, no 6B-token pretraining has
 occurred, no base or instruction-tuned checkpoint exists, no autonomy
 runtime exists, no expert specialization has been demonstrated (the tiny
 synthetic overfit target is far too small and repetitive to show
@@ -182,23 +228,27 @@ What Phase 0 actually builds:
   exercised end to end on a fresh clone and fresh virtual environment (see
   `docs/phases/phase-0-foundation.md`).
 
-**What does not exist yet:** a tokenizer, any real training data, any
-trained checkpoint (base or instruction-tuned), a runtime, tools, memory,
-or autonomy of any kind. Juniper Auto has **not** been trained on any real
-tokens, does not have 16K validated context, and does not have measured
-expert specialization. Phase 1 implements the model architecture and
-training plumbing as executable software; Phase 2 (above) validates the
-sparse routing subsystem specifically; production pretraining is a later
-phase.
+**What does not exist yet** (as of Phase 0; Phase 3 adds a candidate
+tokenizer, see above): any real training data, any trained checkpoint (base
+or instruction-tuned), a runtime, tools, memory, or autonomy of any kind.
+Juniper Auto has **not** been trained on any real tokens, does not have 16K
+validated context, and does not have measured expert specialization. Phase 1
+implements the model architecture and training plumbing as executable
+software; Phase 2 (above) validates the sparse routing subsystem
+specifically; Phase 3 (above) builds a candidate tokenizer; production
+pretraining is a later phase.
 
 ## Repository layout
 
 ```
 configs/architecture/   frozen ja150m-v0.1 and ja150m-v0.1-dense configs
-juniper_auto/            config, accounting, foundation probe, util (Phase 0); model, training (Phase 1); analysis (Phase 2)
+juniper_auto/            config, accounting, foundation probe, util (Phase 0); model, training (Phase 1); analysis (Phase 2); tokenizer (Phase 3)
 juniper_auto/model/       reference model implementation (RMSNorm, RoPE, GQA, blocks, losses); MoE routing/dispatch/ablations/diagnostics (Phase 2)
 juniper_auto/training/    checkpointing, tiny-overfit harness, FLOWBOX profiling
 juniper_auto/analysis/    context-sensitivity probe harness (Phase 2)
+juniper_auto/tokenizer/   ja-tokenizer-v0.1: byte-level BPE, corpus, training, evaluation, artifacts (Phase 3)
+configs/tokenizer/       frozen ja-tokenizer-v0.1 configuration (Phase 3)
+data/tokenizer/          frozen tokenizer artifact + committed training corpus + held-out eval fixture (Phase 3)
 docs/research/          charter, governance
 docs/adr/                architecture decision records
 docs/architecture/       environment specification, precision policy, reference-model implementation, MoE routing/diagnostics (Phase 2)
@@ -206,14 +256,14 @@ docs/experiments/        experiment registry documentation + results (docs/exper
 docs/time/                engineering time accounting
 docs/phases/              phase report template + phase reports
 docs/recovery/            clean-machine recovery procedure
-manifests/                frozen-artifact registry + artifact hashes (Phase 0, Phase 1, Phase 2)
-scripts/                  validate_repo.py / validate_phase1.py / validate_phase2.py (validators), hash_manifest.py, run_phase1_experiment.py, run_phase2_experiment.py
+manifests/                frozen-artifact registry + artifact hashes (Phase 0, Phase 1, Phase 2, Phase 3)
+scripts/                  validate_repo.py / validate_phase1.py / validate_phase2.py / validate_phase3.py (validators), hash_manifest.py, run_phase{1,2,3}_experiment.py, train_tokenizer.py, build_tokenizer_corpus.py
 tests/                    pytest suite for everything above
-.github/workflows/        CI (Phase 0 Validation, Phase 1 Validation, Phase 2 Validation)
+.github/workflows/        CI (Phase 0 / 1 / 2 / 3 Validation)
 ```
 
-`runtime/`, `tools/`, `data/`, `evals/` exist as reserved top-level
-locations for later phases and are intentionally close to empty right now.
+`runtime/`, `tools/`, `evals/` exist as reserved top-level locations for
+later phases and are intentionally close to empty right now.
 
 ## Getting started (development environment)
 
@@ -227,6 +277,8 @@ pip install -r requirements-lock.txt
 pip install -e . --no-deps
 python scripts/validate_repo.py --all    # Phase 0 baseline
 python scripts/validate_phase1.py --all  # Phase 1 (includes the Phase 0 baseline)
+python scripts/validate_phase2.py --all  # Phase 2 (includes the Phase 0/1 baseline)
+python scripts/validate_phase3.py --all  # Phase 3 (includes the Phase 0/1/2 baseline)
 ```
 
 See [docs/recovery/README.md](docs/recovery/README.md) for the full,

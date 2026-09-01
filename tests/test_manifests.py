@@ -59,9 +59,10 @@ def test_not_yet_created_artifacts_have_no_fabricated_status(repo_root):
 
     check(manifest)
 
-    not_yet_created = [
-        "tokenizer",
-        "special_token_map",
+    # Phase 3 freezes `tokenizer` and `special_token_map` (see
+    # docs/phases/phase-3-tokenizer.md). Every other future-artifact category
+    # must still honestly say not-yet-created.
+    still_not_yet_created = [
         "runtime_protocol",
         "tool_schemas",
         "memory_schema",
@@ -74,5 +75,8 @@ def test_not_yet_created_artifacts_have_no_fabricated_status(repo_root):
         "instruction_checkpoint",
         "autonomous_system_release",
     ]
-    for key in not_yet_created:
-        assert manifest[key]["status"] == "not-yet-created", f"{key} should be not-yet-created in Phase 0"
+    for key in still_not_yet_created:
+        assert manifest[key]["status"] == "not-yet-created", f"{key} should be not-yet-created"
+    assert manifest["tokenizer"]["status"] == "frozen"
+    assert manifest["tokenizer"]["id"] == "ja-tokenizer-v0.1"
+    assert manifest["special_token_map"]["status"] == "frozen"

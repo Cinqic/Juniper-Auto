@@ -17,9 +17,12 @@ independent review by GPT-5.6 Sol.
 
 ## Starting commit
 
-`05fc185a573504fea4901845bc114d3fb79d8567` (`main`, tag `phase-2-moe` is an
-ancestor; working tree clean; Phase 0/1/2 validators green at start — 655
-pytest passed, 1 pre-existing CUDA non-determinism warning).
+`05fc185a573504fea4901845bc114d3fb79d8567` — `main` HEAD at Phase 3 start,
+which is exactly the commit the approved `phase-2-moe` annotated tag points
+to (the tag *object* hash is `bf08fd40…`; it dereferences to this commit).
+Working tree clean; Phase 0/1/2 validators green at start (655 pytest
+passed, 1 pre-existing CUDA memory-efficient-attention non-determinism
+warning).
 
 ## Final commit
 
