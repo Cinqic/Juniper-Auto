@@ -1,0 +1,22 @@
+{
+  "tokenizer_id": "ja-tokenizer-v0.1",
+  "algorithm": "utf8-byte-level-bpe",
+  "normalization": "none",
+  "pretokenizer_pattern": "'(?:[sdmtSDMT]|ll|LL|ve|VE|re|RE)| ?\\d+| ?[^\\s\\d\\W]+| ?[^\\s\\w]+|\\s+(?!\\S)|\\s+",
+  "byte_fallback": true,
+  "unk_token": null,
+  "add_bos_by_default": false,
+  "add_eos_by_default": false,
+  "bos_token": {
+    "str": "<|bos|>",
+    "id": 256
+  },
+  "eos_token": {
+    "str": "<|eos|>",
+    "id": 257
+  },
+  "pad_token": {
+    "str": "<|pad|>",
+    "id": 258
+  }
+}

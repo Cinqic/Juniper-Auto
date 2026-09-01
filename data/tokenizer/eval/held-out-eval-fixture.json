@@ -1,0 +1,80 @@
+{
+  "fixture_id": "ja-tokenizer-v0.1-held-out-eval",
+  "version": "1.0.0",
+  "purpose": "Phase 3 tokenizer engineering evaluation only; disjoint from the training corpus.",
+  "domain_count": 15,
+  "sample_count": 41,
+  "domains": {
+    "general_prose": [
+      "The committee reconvened after lunch, though half its members were still arguing in the hallway about whether the vote had actually been binding.",
+      "She kept a list of things she meant to forget, which rather defeated the purpose, but the ritual of writing them down helped anyway.",
+      "Rain moved across the valley in visible sheets, and by the time it reached the orchard the temperature had dropped almost ten degrees."
+    ],
+    "technical_prose": [
+      "The scheduler guarantees at-least-once delivery, so every consumer must treat handlers as idempotent; deduplicate on the message id before committing side effects.",
+      "Latency regressed on the p99 tail after the cache change because eviction now happens synchronously on the request path rather than in a background sweep.",
+      "A write-ahead log makes crash recovery tractable: replay from the last checkpoint, discard partial records at the tail, and rebuild the in-memory index."
+    ],
+    "python": [
+      "class LRU:\n    def __init__(self, cap):\n        self._cap = cap\n        self._d = {}\n\n    def get(self, k, default=None):\n        if k not in self._d:\n            return default\n        v = self._d.pop(k)\n        self._d[k] = v\n        return v\n",
+      "async def gather_limited(coros, *, limit=8):\n    sem = asyncio.Semaphore(limit)\n    async def _run(c):\n        async with sem:\n            return await c\n    return await asyncio.gather(*(_run(c) for c in coros))\n",
+      "@dataclass(frozen=True)\nclass Point:\n    x: float\n    y: float\n    def __add__(self, o: 'Point') -> 'Point':\n        return Point(self.x + o.x, self.y + o.y)\n"
+    ],
+    "javascript": [
+      "const memo = new Map();\nfunction fib(n) {\n  if (n < 2) return n;\n  if (memo.has(n)) return memo.get(n);\n  const v = fib(n - 1) + fib(n - 2);\n  memo.set(n, v);\n  return v;\n}\n",
+      "app.get('/health', (req, res) => {\n  res.status(200).json({ ok: true, uptime: process.uptime() });\n});\n",
+      "const parsed = JSON.parse(body, (key, value) =>\n  typeof value === 'string' && /^\\d{4}-\\d{2}-\\d{2}/.test(value) ? new Date(value) : value\n);\n"
+    ],
+    "c_cpp": [
+      "static inline int clampi(int v, int lo, int hi) {\n    return v < lo ? lo : (v > hi ? hi : v);\n}\n",
+      "std::optional<std::string> read_all(const std::filesystem::path& p) {\n    std::ifstream in(p, std::ios::binary);\n    if (!in) return std::nullopt;\n    return std::string(std::istreambuf_iterator<char>(in), {});\n}\n",
+      "#define ARRAY_LEN(a) (sizeof(a) / sizeof((a)[0]))\nfor (size_t i = 0; i < ARRAY_LEN(table); ++i) { process(&table[i]); }\n"
+    ],
+    "shell": [
+      "$ rg -n 'TODO|FIXME' --type py | awk -F: '{print $1}' | sort -u | head\njuniper_auto/model/moe.py\ntests/test_model_moe.py\n",
+      "$ for f in *.tar.gz; do tar tzf \"$f\" | wc -l; done\n$ find . -maxdepth 2 -name '*.yaml' -newer pyproject.toml -print0 | xargs -0 ls -la\n",
+      "$ kubectl get pods -n prod --field-selector=status.phase!=Running\nNAME              READY   STATUS             RESTARTS   AGE\napi-7d9f-2xh     0/1     CrashLoopBackOff   14         52m\n"
+    ],
+    "json": [
+      "{\"trace_id\":\"9f2c\",\"spans\":[{\"name\":\"db.query\",\"start\":1725166282.44,\"dur_ms\":8.1,\"tags\":{\"table\":\"users\",\"rows\":1}},{\"name\":\"render\",\"dur_ms\":2.0}]}",
+      "{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"type\":\"object\",\"required\":[\"id\"],\"properties\":{\"id\":{\"type\":\"string\",\"pattern\":\"^[a-z0-9-]+$\"}}}"
+    ],
+    "yaml": [
+      "jobs:\n  build:\n    strategy:\n      matrix:\n        python: ['3.12']\n        os: [ubuntu-latest]\n    steps:\n      - uses: actions/checkout@v7\n        with: { fetch-depth: 0 }\n",
+      "resources:\n  requests: { cpu: 250m, memory: 128Mi }\n  limits: { cpu: '1', memory: 512Mi }\nlivenessProbe:\n  httpGet: { path: /healthz, port: 8080 }\n  initialDelaySeconds: 10\n"
+    ],
+    "xml_html": [
+      "<svg viewBox=\"0 0 24 24\"><path d=\"M4 12h16M12 4v16\" stroke=\"currentColor\" stroke-width=\"2\" fill=\"none\"/></svg>",
+      "<table>\n  <thead><tr><th scope=\"col\">Name</th><th scope=\"col\">Value</th></tr></thead>\n  <tbody><tr><td>alpha</td><td>1&nbsp;234</td></tr></tbody>\n</table>\n"
+    ],
+    "math": [
+      "For all epsilon > 0 there exists delta > 0 such that |x - a| < delta implies |f(x) - f(a)| < epsilon.",
+      "The discriminant of a x^2 + b x + c is b^2 - 4 a c; roots are x = (-b +/- sqrt(b^2 - 4 a c)) / (2 a).",
+      "sum_{k=1}^{n} k^2 = n (n + 1) (2 n + 1) / 6, and sum_{k=1}^{n} k^3 = (n (n + 1) / 2)^2.",
+      "P(A | B) = P(A and B) / P(B); if A and B independent then P(A and B) = P(A) P(B).",
+      "nabla^2 phi = partial^2 phi / partial x^2 + partial^2 phi / partial y^2 + partial^2 phi / partial z^2 = 0."
+    ],
+    "urls": [
+      "https://en.wikipedia.org/wiki/Byte_pair_encoding#Modifications",
+      "postgres://reader:s3cr3t@db-replica-3.internal:5432/analytics?sslmode=require&application_name=etl",
+      "https://storage.googleapis.com/juniper-artifacts/tokenizer/ja-tokenizer-v0.1/merges.txt#L512-L768"
+    ],
+    "file_paths": [
+      "/opt/juniper/releases/2026-09-01T05-30-00Z/bin/ja-serve --config /etc/juniper/serve.d/10-default.toml",
+      "..\\..\\build\\Release\\ja_tokenizer.lib;C:\\Program Files\\Juniper\\lib\\ja150m-v0.1\\model.safetensors",
+      "~/.cache/juniper/tokenizers/ja-tokenizer-v0.1/vocab.json"
+    ],
+    "tool_traces": [
+      "<|tool_call|> {\"name\": \"search_code\", \"arguments\": {\"query\": \"apply_merges\", \"path\": \"juniper_auto/\", \"max_results\": 20}}\n<|tool_result|> {\"matches\": [{\"file\": \"juniper_auto/tokenizer/bpe.py\", \"line\": 34}], \"truncated\": false}\n",
+      "<|tool_call|> {\"name\": \"http_get\", \"arguments\": {\"url\": \"https://api.example.com/v1/models\"}}\n<|tool_error|> {\"type\": \"timeout\", \"after_ms\": 5000, \"retryable\": true}\n"
+    ],
+    "state_records": [
+      "<|state|> {\"objective\": \"obj-19\", \"step\": 7, \"budget_steps_remaining\": 3, \"cwd\": \"/home/user/Documents/Juniper Auto\", \"open_files\": [\"juniper_auto/tokenizer/train.py\"], \"last_tool\": \"run_python\", \"last_exit_code\": 0}",
+      "<|state|> {\"phase\": \"self_review\", \"pass\": \"C\", \"findings_open\": 2, \"findings_closed\": 11, \"clean_worktree\": false}"
+    ],
+    "memory_records": [
+      "<|memory|> {\"kind\": \"fact\", \"text\": \"validate_phase2 expects phase-1-architecture to resolve to 073acf46e04241ed35d00bc4b4c29ac463ee744d\", \"confidence\": 1.0, \"source\": \"exp-0023\"}",
+      "<|memory|> {\"kind\": \"preference\", \"key\": \"commit_trailer\", \"value\": \"Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>\", \"confidence\": 0.95}"
+    ]
+  }
+}

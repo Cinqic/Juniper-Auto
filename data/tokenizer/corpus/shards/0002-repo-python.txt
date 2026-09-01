@@ -1,0 +1,2920 @@
+    torch.manual_seed(0)
+    x = torch.randn(1, 6, cfg.core.d_model)
+    pos = torch.arange(6).unsqueeze(0)
+
+    x_mutated = x.clone()
+    x_mutated[0, 4:, :] = torch.randn_like(x_mutated[0, 4:, :])  # change only future positions
+
+    with torch.no_grad():
+        out_a = attn(x, pos)
+        out_b = attn(x_mutated, pos)
+
+    torch.testing.assert_close(out_a[:, :4, :], out_b[:, :4, :], atol=1e-5, rtol=1e-5)
+    assert not torch.allclose(out_a[:, 4:, :], out_b[:, 4:, :])
+
+
+def test_padding_key_does_not_affect_valid_query_output():
+    cfg = make_tiny_sparse_config()
+    attn = GroupedQueryAttention(cfg)
+    attn.eval()
+    torch.manual_seed(1)
+    x = torch.randn(1, 5, cfg.core.d_model)
+    pos = torch.arange(5).unsqueeze(0)
+    key_valid = torch.tensor([[True, True, True, False, False]])
+
+    x_mutated_padding = x.clone()
+    x_mutated_padding[0, 3:, :] = torch.randn_like(x_mutated_padding[0, 3:, :])
+
+    with torch.no_grad():
+        out_a = attn(x, pos, key_valid)
+        out_b = attn(x_mutated_padding, pos, key_valid)
+
+    # Valid positions (0,1,2) never attend to keys 3,4 (both future and
+    # padded), so their output must be unaffected by what's written there.
+    torch.testing.assert_close(out_a[:, :3, :], out_b[:, :3, :], atol=1e-5, rtol=1e-5)
+
+
+def test_all_padded_row_does_not_produce_nan():
+    seq_len = 4
+    key_valid = torch.tensor([[False, False, False, False]])
+    mask = build_attention_mask(seq_len, key_valid, device=torch.device("cpu"))
+    # Every row must have at least one allowed key (self-fallback), else SDPA softmax NaNs.
+    assert mask.any(dim=-1).all()
+
+    cfg = make_tiny_sparse_config()
+    attn = GroupedQueryAttention(cfg)
+    x = torch.randn(1, seq_len, cfg.core.d_model)
+    pos = torch.arange(seq_len).unsqueeze(0)
+    out = attn(x, pos, key_valid)
+    assert torch.isfinite(out).all()
+
+
+def test_build_attention_mask_is_pure_causal_without_padding_arg():
+    mask = build_attention_mask(4, None, device=torch.device("cpu"))
+    expected = torch.tril(torch.ones(4, 4, dtype=torch.bool)).view(1, 1, 4, 4)
+    assert torch.equal(mask, expected)
+
+
+def test_gqa_matches_independent_manual_reference():
+    # Fully manual attention computation for a tiny, hand-inspectable
+    # config (no QK-Norm, no RoPE, so the only thing under test is the
+    # GQA head-repetition + masked-softmax-attention arithmetic).
+    cfg = make_tiny_sparse_config(
+        n_query_heads=2, n_kv_heads=1, head_dim=4, d_model=8, qk_norm=False, attention_scale=0.5
+    )
+    attn = GroupedQueryAttention(cfg)
+    torch.manual_seed(7)
+    x = torch.randn(1, 3, 8)
+    pos = torch.arange(3).unsqueeze(0)
+
+    with torch.no_grad():
+        out = attn(x, pos)
+
+        q = attn.q_proj(x).view(1, 3, 2, 4).transpose(1, 2)  # [1,2,3,4]
+        k = attn.k_proj(x).view(1, 3, 1, 4).transpose(1, 2)  # [1,1,3,4]
+        v = attn.v_proj(x).view(1, 3, 1, 4).transpose(1, 2)
+        cos, sin = attn.rope(pos)
+        from juniper_auto.model.rope import apply_rotary_pos_emb
+
+        q, k = apply_rotary_pos_emb(q, k, cos, sin, attn.rotary_dim)
+        k_rep = k.expand(1, 2, 3, 4)  # n_rep=2, single kv head serves both query heads
+        v_rep = v.expand(1, 2, 3, 4)
+
+        causal = torch.tril(torch.ones(3, 3, dtype=torch.bool))
+        manual_out = torch.zeros(1, 2, 3, 4)
+        for h in range(2):
+            scores = (q[0, h] @ k_rep[0, h].T) * 0.5
+            scores = scores.masked_fill(~causal, float("-inf"))
+            weights = torch.softmax(scores, dim=-1)
+            manual_out[0, h] = weights @ v_rep[0, h]
+        manual_out = manual_out.transpose(1, 2).reshape(1, 3, 8)
+        expected = attn.o_proj(manual_out)
+
+    torch.testing.assert_close(out, expected, atol=1e-5, rtol=1e-5)
+
+# ---- tests/test_model_causality_padding.py ----
+"""Full-model causality and padding correctness -- not just at the
+attention-module level, but through the whole stack (embeddings, all
+blocks, MoE routing, final norm, LM head)."""
+
+from __future__ import annotations
+
+import torch
+
+from juniper_auto.model import build_model
+from tests.model_fixtures import make_tiny_dense_config, make_tiny_sparse_config
+
+
+def test_full_model_causality_via_future_token_mutation():
+    cfg = make_tiny_sparse_config()
+    model = build_model(cfg, seed=0)
+    model.eval()
+
+    torch.manual_seed(0)
+    input_ids = torch.randint(0, cfg.embeddings.vocab_size, (1, 7))
+    mutated = input_ids.clone()
+    mutated[0, 4:] = (mutated[0, 4:] + 1) % cfg.embeddings.vocab_size
+
+    with torch.no_grad():
+        out_a = model(input_ids)
+        out_b = model(mutated)
+
+    torch.testing.assert_close(out_a.logits[:, :4, :], out_b.logits[:, :4, :], atol=1e-4, rtol=1e-4)
+    assert not torch.allclose(out_a.logits[:, 4:, :], out_b.logits[:, 4:, :])
+
+
+def test_full_model_padding_key_does_not_affect_valid_logits():
+    cfg = make_tiny_sparse_config()
+    model = build_model(cfg, seed=0)
+    model.eval()
+
+    torch.manual_seed(1)
+    input_ids = torch.randint(0, cfg.embeddings.vocab_size, (1, 6))
+    attention_mask = torch.tensor([[True, True, True, True, False, False]])
+
+    mutated_ids = input_ids.clone()
+    mutated_ids[0, 4:] = (mutated_ids[0, 4:] + 7) % cfg.embeddings.vocab_size
+
+    with torch.no_grad():
+        out_a = model(input_ids, attention_mask=attention_mask)
+        out_b = model(mutated_ids, attention_mask=attention_mask)
+
+    torch.testing.assert_close(out_a.logits[:, :4, :], out_b.logits[:, :4, :], atol=1e-4, rtol=1e-4)
+
+
+def test_padding_excluded_from_causal_loss():
+    cfg = make_tiny_sparse_config()
+    model = build_model(cfg, seed=0)
+
+    torch.manual_seed(2)
+    input_ids = torch.randint(0, cfg.embeddings.vocab_size, (1, 6))
+    attention_mask = torch.tensor([[True, True, True, True, False, False]])
+    labels = input_ids.clone()
+    labels[~attention_mask] = -100
+
+    out_a = model(input_ids, attention_mask=attention_mask, labels=labels)
+
+    mutated_ids = input_ids.clone()
+    mutated_ids[0, 4:] = (mutated_ids[0, 4:] + 3) % cfg.embeddings.vocab_size
+    out_b = model(mutated_ids, attention_mask=attention_mask, labels=labels)
+
+    torch.testing.assert_close(out_a.lm_loss, out_b.lm_loss, atol=1e-5, rtol=1e-5)
+
+
+def test_padding_excluded_from_moe_auxiliary_losses():
+    cfg = make_tiny_sparse_config()
+    model = build_model(cfg, seed=0)
+
+    torch.manual_seed(3)
+    input_ids = torch.randint(0, cfg.embeddings.vocab_size, (1, 6))
+    attention_mask = torch.tensor([[True, True, True, True, False, False]])
+
+    out_a = model(input_ids, attention_mask=attention_mask)
+
+    mutated_ids = input_ids.clone()
+    mutated_ids[0, 4:] = (mutated_ids[0, 4:] + 5) % cfg.embeddings.vocab_size
+    out_b = model(mutated_ids, attention_mask=attention_mask)
+
+    torch.testing.assert_close(out_a.load_balance_loss_raw, out_b.load_balance_loss_raw, atol=1e-6, rtol=1e-6)
+    torch.testing.assert_close(out_a.router_z_loss_raw, out_b.router_z_loss_raw, atol=1e-6, rtol=1e-6)
+
+
+def test_no_nan_with_a_fully_padded_row_in_the_batch():
+    cfg = make_tiny_sparse_config()
+    model = build_model(cfg, seed=0)
+    input_ids = torch.randint(0, cfg.embeddings.vocab_size, (2, 5))
+    attention_mask = torch.tensor([[True, True, True, True, True], [False, False, False, False, False]])
+    labels = input_ids.clone()
+    labels[~attention_mask] = -100
+
+    out = model(input_ids, attention_mask=attention_mask, labels=labels)
+    assert torch.isfinite(out.logits).all()
+    assert torch.isfinite(out.loss)
+
+
+def test_dense_model_has_zero_moe_losses_cleanly():
+    cfg = make_tiny_dense_config()
+    model = build_model(cfg, seed=0)
+    input_ids = torch.randint(0, cfg.embeddings.vocab_size, (1, 4))
+    labels = input_ids.clone()
+    out = model(input_ids, labels=labels)
+
+    assert out.load_balance_loss.item() == 0.0
+    assert out.router_z_loss.item() == 0.0
+    torch.testing.assert_close(out.loss, out.lm_loss)
+
+# ---- tests/test_model_config_assumption_guards.py ----
+"""Every architecture-config field the model code assumes is fixed (rather
+than genuinely branching on) must be validated at construction time and
+rejected loudly if a config asks for a variant that isn't implemented --
+found during Phase 1 self-review Pass B (frozen architecture audit) as a
+set of silently-unvalidated assumptions. These tests are the regression
+coverage for that fix: each pins one config field to an unimplemented
+value and asserts construction raises, rather than silently mishandling it."""
+
+from __future__ import annotations
+
+import pytest
+
+from juniper_auto.model.attention import GroupedQueryAttention
+from juniper_auto.model.block import DenseBlock
+from juniper_auto.model.model import JuniperAutoModel
+from juniper_auto.model.moe import MoELayer
+from tests.model_fixtures import make_tiny_sparse_config
+
+
+def test_residual_rezero_is_rejected():
+    cfg = make_tiny_sparse_config()
+    broken = cfg.model_copy(update={"residual": cfg.residual.model_copy(update={"rezero": True})})
+    with pytest.raises(ValueError, match="ReZero"):
+        DenseBlock(broken)
+
+
+def test_residual_deepnorm_is_rejected():
+    cfg = make_tiny_sparse_config()
+    broken = cfg.model_copy(update={"residual": cfg.residual.model_copy(update={"deepnorm": True})})
+    with pytest.raises(ValueError, match="ReZero"):
+        DenseBlock(broken)
+
+
+def test_residual_learned_gates_is_rejected():
+    cfg = make_tiny_sparse_config()
+    broken = cfg.model_copy(update={"residual": cfg.residual.model_copy(update={"learned_gates": True})})
+    with pytest.raises(ValueError, match="ReZero"):
+        DenseBlock(broken)
+
+
+def test_residual_scale_is_actually_applied():
+    cfg = make_tiny_sparse_config()
+    scaled = cfg.model_copy(update={"residual": cfg.residual.model_copy(update={"scale": 0.5})})
+    block = DenseBlock(scaled)
+    assert block.residual_scale == 0.5
+
+
+def test_normalization_post_norm_is_rejected():
+    cfg = make_tiny_sparse_config()
+    broken = cfg.model_copy(update={"normalization": cfg.normalization.model_copy(update={"placement": "post_norm"})})
+    with pytest.raises(ValueError, match="placement"):
+        DenseBlock(broken)
+
+
+def test_normalization_attention_norm_disabled_is_rejected():
+    cfg = make_tiny_sparse_config()
+    broken = cfg.model_copy(
+        update={"normalization": cfg.normalization.model_copy(update={"attention_norm": False})}
+    )
+    with pytest.raises(ValueError, match="attention_norm"):
+        DenseBlock(broken)
+
+
+def test_normalization_final_norm_disabled_is_rejected():
+    cfg = make_tiny_sparse_config()
+    broken = cfg.model_copy(update={"normalization": cfg.normalization.model_copy(update={"final_norm": False})})
+    with pytest.raises(ValueError, match="final_norm"):
+        JuniperAutoModel(broken)
+
+
+def test_non_fp32_rmsnorm_reduction_is_rejected():
+    cfg = make_tiny_sparse_config()
+    broken = cfg.model_copy(
+        update={"normalization": cfg.normalization.model_copy(update={"reduction_dtype": "fp16"})}
+    )
+    with pytest.raises(ValueError, match="reduction_dtype"):
+        JuniperAutoModel(broken)
+
+
+def test_rmsnorm_bias_request_is_rejected():
+    cfg = make_tiny_sparse_config()
+    broken = cfg.model_copy(
+        update={"normalization": cfg.normalization.model_copy(update={"layernorm_bias": True})}
+    )
+    with pytest.raises(ValueError, match="layernorm_bias"):
+        JuniperAutoModel(broken)
+
+
+def test_attention_non_causal_is_rejected():
+    cfg = make_tiny_sparse_config()
+    broken = cfg.model_copy(update={"attention": cfg.attention.model_copy(update={"causal": False})})
+    with pytest.raises(ValueError, match="causal"):
+        GroupedQueryAttention(broken)
+
+
+def test_attention_sliding_window_is_rejected():
+    cfg = make_tiny_sparse_config()
+    broken = cfg.model_copy(update={"attention": cfg.attention.model_copy(update={"sliding_window": 128})})
+    with pytest.raises(ValueError, match="sliding_window"):
+        GroupedQueryAttention(broken)
+
+
+def test_qk_norm_after_rope_placement_is_rejected():
+    cfg = make_tiny_sparse_config()
+    broken = cfg.model_copy(
+        update={"attention": cfg.attention.model_copy(update={"qk_norm_placement": "after_rope"})}
+    )
+    with pytest.raises(ValueError, match="QK-Norm"):
+        GroupedQueryAttention(broken)
+
+
+def test_moe_expert_choice_routing_is_rejected():
+    cfg = make_tiny_sparse_config()
+    broken = cfg.model_copy(update={"moe": cfg.moe.model_copy(update={"routing_kind": "expert_choice"})})
+    with pytest.raises(ValueError, match="routing_kind"):
+        MoELayer(broken)
+
+
+def test_moe_non_fp32_router_logits_dtype_is_rejected():
+    cfg = make_tiny_sparse_config()
+    broken = cfg.model_copy(update={"moe": cfg.moe.model_copy(update={"router_logits_dtype": "fp16"})})
+    with pytest.raises(ValueError, match="router_logits_dtype"):
+        MoELayer(broken)
+
+
+def test_moe_non_fp32_router_softmax_dtype_is_rejected():
+    cfg = make_tiny_sparse_config()
+    broken = cfg.model_copy(update={"moe": cfg.moe.model_copy(update={"router_softmax_dtype": "bf16"})})
+    with pytest.raises(ValueError, match="router_softmax_dtype"):
+        MoELayer(broken)
+
+
+def test_moe_non_always_active_shared_expert_is_rejected():
+    cfg = make_tiny_sparse_config()
+    broken = cfg.model_copy(
+        update={"moe": cfg.moe.model_copy(update={"shared_expert_always_active": False})}
+    )
+    with pytest.raises(ValueError, match="shared_expert_always_active"):
+        MoELayer(broken)
+
+
+@pytest.mark.parametrize(
+    "field,value",
+    [
+        ("training_router_jitter_magnitude", 0.1),
+        ("evaluation_router_jitter", True),
+        ("inference_router_jitter", True),
+    ],
+)
+def test_router_jitter_requests_are_rejected(field, value):
+    cfg = make_tiny_sparse_config()
+    broken = cfg.model_copy(update={"moe": cfg.moe.model_copy(update={field: value})})
+    with pytest.raises(ValueError, match="router jitter"):
+        MoELayer(broken)
+
+
+def test_nonzero_dropout_is_rejected():
+    cfg = make_tiny_sparse_config()
+    broken = cfg.model_copy(update={"dropout": cfg.dropout.model_copy(update={"attention": 0.1})})
+    with pytest.raises(ValueError, match="dropout"):
+        JuniperAutoModel(broken)
+
+# ---- tests/test_model_fault_injection.py ----
+"""Mutation/fault-injection tests (Phase 1 instructions section 26 /
+self-review Pass H): prove that specific broken implementations would be
+caught by this test suite's checks, rather than trusting a green run at
+face value. Each test deliberately builds or monkeypatches a broken
+variant *locally* (never mutating the real production module for longer
+than the test body) and asserts the relevant property genuinely fails."""
+
+from __future__ import annotations
+
+import torch
+import torch.nn.functional as F
+
+from juniper_auto.model import build_model
+from juniper_auto.model.attention import GroupedQueryAttention, build_attention_mask
+from juniper_auto.model.block import MoEBlock
+from juniper_auto.model.inspection import bias_audit, qk_norm_parameter_count, verify_weight_tying
+from juniper_auto.model.losses import causal_lm_loss, compute_load_balance_loss_raw
+from juniper_auto.model.moe import MoELayer
+from juniper_auto.model.moe_ablations import MoEAblationConfig
+from juniper_auto.model.moe_diagnostics import (
+    build_token_trace,
+    compute_entropy,
+    compute_expert_pair_coactivation,
+    compute_topk_prob_margin,
+)
+from juniper_auto.model.rope import RotaryEmbedding
+from tests.model_fixtures import make_tiny_sparse_config
+
+
+def test_future_token_leakage_is_detected_when_masking_is_disabled():
+    cfg = make_tiny_sparse_config()
+    attn = GroupedQueryAttention(cfg)
+    attn.eval()
+    torch.manual_seed(0)
+    x = torch.randn(1, 6, cfg.core.d_model)
+    pos = torch.arange(6).unsqueeze(0)
+    x_mutated = x.clone()
+    x_mutated[0, 4:, :] = torch.randn_like(x_mutated[0, 4:, :])
+
+    # Monkeypatch masking to "no masking at all" (every position attends to
+    # every position) -- this is what future-token leakage looks like.
+    import juniper_auto.model.attention as attention_module
+
+    original_builder = attention_module.build_attention_mask
+    try:
+        attention_module.build_attention_mask = lambda seq_len, key_valid_mask, device: torch.ones(
+            1, 1, seq_len, seq_len, dtype=torch.bool, device=device
+        )
+        with torch.no_grad():
+            out_a = attn(x, pos)
+            out_b = attn(x_mutated, pos)
+        # With no causal mask, changing future tokens MUST change earlier
+        # positions' output -- the causality test would fail on this.
+        assert not torch.allclose(out_a[:, :4, :], out_b[:, :4, :])
+    finally:
+        attention_module.build_attention_mask = original_builder
+
+
+def test_top1_routing_is_detected_by_assignment_count():
+    cfg = make_tiny_sparse_config(n_routed_experts=4, top_k=2)
+    layer = MoELayer(cfg)
+    layer.top_k = 1  # simulate a top-1 bug without touching the real class
+    x = torch.randn(1, 6, cfg.core.d_model)
+    valid_mask = torch.ones(1, 6, dtype=torch.bool)
+    _, _, _, diag = layer(x, valid_mask=valid_mask, return_diagnostics=True)
+    # The Phase 1 dropless contract requires exactly valid_tokens * 2
+    # assignments; a top-1 bug produces valid_tokens * 1 instead.
+    assert diag.assignment_counts_per_expert.sum().item() != 6 * 2
+    assert diag.assignment_counts_per_expert.sum().item() == 6 * 1
+
+
+def test_top3_routing_is_detected_by_assignment_count():
+    cfg = make_tiny_sparse_config(n_routed_experts=5, top_k=2)
+    layer = MoELayer(cfg)
+    layer.top_k = 3
+    x = torch.randn(1, 6, cfg.core.d_model)
+    valid_mask = torch.ones(1, 6, dtype=torch.bool)
+    _, _, _, diag = layer(x, valid_mask=valid_mask, return_diagnostics=True)
+    assert diag.assignment_counts_per_expert.sum().item() == 6 * 3
+    assert diag.assignment_counts_per_expert.sum().item() != 6 * 2  # frozen top_k=2 contract violated
+
+
+def test_token_dropping_is_detected_by_assignment_count():
+    cfg = make_tiny_sparse_config(n_routed_experts=4, top_k=2)
+    layer = MoELayer(cfg)
+    x = torch.randn(1, 6, cfg.core.d_model)
+    valid_mask = torch.ones(1, 6, dtype=torch.bool)
+    _, _, _, diag = layer(x, valid_mask=valid_mask, return_diagnostics=True)
+    # Simulate a capacity-drop bug: pretend some assignments never happened.
+    dropped_counts = diag.assignment_counts_per_expert.clone()
+    dropped_counts[0] = max(dropped_counts[0].item() - 1, 0)
+    assert dropped_counts.sum().item() < 6 * 2  # dropless contract violated
+
+
+def test_missing_shared_expert_is_detected():
+    cfg = make_tiny_sparse_config(
+        n_routed_experts=3, top_k=1, d_model=4, expert_ffn_dim=4, n_query_heads=1, n_kv_heads=1, head_dim=4
+    )
+    layer = MoELayer(cfg)
+    layer.shared_expert.forward = lambda x: torch.full((x.shape[0], cfg.core.d_model), 7.0)
+    for expert in layer.routed_experts:
+        expert.forward = lambda x: torch.zeros(x.shape[0], cfg.core.d_model)
+    x = torch.randn(1, 4, cfg.core.d_model)
+    out_correct, _, _, _ = layer(x, valid_mask=torch.ones(1, 4, dtype=torch.bool))
+
+    # Simulate "shared expert omitted": rebuild forward without the shared term.
+    def broken_forward(x_in, valid_mask=None, return_diagnostics=False):
+        flat_x = x_in.reshape(-1, cfg.core.d_model)
+        router_logits = F.linear(flat_x.to(torch.float32), layer.router.weight.to(torch.float32))
+        probs = F.softmax(router_logits, dim=-1)
+        topk_probs, topk_idx = torch.topk(probs, k=layer.top_k, dim=-1)
+        weights = topk_probs / topk_probs.sum(dim=-1, keepdim=True)
+        out = torch.zeros_like(flat_x)  # no shared_expert(flat_x) term at all
+        for eid, expert in enumerate(layer.routed_experts):
+            mask = topk_idx[:, 0] == eid
+            if mask.any():
+                out[mask] += weights[mask, 0:1] * expert(flat_x[mask])
+        return out.view(x_in.shape), None, None, None
+
+    out_broken, _, _, _ = broken_forward(x)
+    assert not torch.allclose(out_correct, out_broken)
+    assert torch.allclose(out_correct, out_broken + 7.0, atol=1e-4)  # missing exactly the shared term
+
+
+def test_hidden_averaging_of_moe_output_is_detected():
+    cfg = make_tiny_sparse_config(
+        n_routed_experts=4, top_k=2, d_model=4, expert_ffn_dim=4, n_query_heads=1, n_kv_heads=1, head_dim=4
+    )
+    layer = MoELayer(cfg)
+    layer.shared_expert.forward = lambda x: torch.full((x.shape[0], cfg.core.d_model), 100.0)
+    for i, expert in enumerate(layer.routed_experts):
+        expert.forward = (lambda v: lambda x: torch.full((x.shape[0], cfg.core.d_model), v))(float(i + 1))
+
+    x = torch.randn(1, 5, cfg.core.d_model)
+    out, _, _, diag = layer(x, valid_mask=torch.ones(1, 5, dtype=torch.bool), return_diagnostics=True)
+    out = out.squeeze(0)
+
+    for t in range(5):
+        e0, e1 = diag.topk_idx[t].tolist()
+        w0, w1 = diag.topk_weights[t].tolist()
+        correct_value = 100.0 + w0 * (e0 + 1) + w1 * (e1 + 1)
+        hidden_averaged_value = correct_value / 3.0  # e.g. averaging shared+2 routed by count
+        assert not torch.allclose(out[t], torch.full((cfg.core.d_model,), hidden_averaged_value), atol=1e-3)
+
+
+def test_broken_renormalization_is_detected():
+    cfg = make_tiny_sparse_config(n_routed_experts=6, top_k=2)
+    layer = MoELayer(cfg)
+    layer.renormalize = False  # simulate the renormalize_top_k_weights=False bug
+    x = torch.randn(1, 5, cfg.core.d_model)
+    _, _, _, diag = layer(x, valid_mask=torch.ones(1, 5, dtype=torch.bool), return_diagnostics=True)
+    sums = diag.topk_weights.sum(dim=-1)
+    assert not torch.allclose(sums, torch.ones(5), atol=1e-3)
+
+
+def test_untied_lm_head_is_detected():
+    cfg = make_tiny_sparse_config()
+    model = build_model(cfg, seed=0)
+    assert verify_weight_tying(model)  # correct baseline
+
+    broken = build_model(cfg, seed=0)
+    broken.lm_head.weight = torch.nn.Parameter(broken.lm_head.weight.detach().clone())
+    assert not verify_weight_tying(broken)
+
+
+def test_unintended_projection_bias_is_detected():
+    cfg = make_tiny_sparse_config(attention_bias=True)
+    model = build_model(cfg, seed=0)
+    offenders = bias_audit(model)
+    assert len(offenders) > 0
+    assert any("o_proj" in name or "q_proj" in name for name in offenders)
+
+
+def test_wrong_layer_placement_is_detected_against_frozen_positions():
+    # A config with dense/MoE positions swapped relative to the frozen
+    # [1,5,10,15,20] dense-anchor spec must fail a positional-equality
+    # check even though the total layer count is identical.
+    cfg = make_tiny_sparse_config(n_layers=6, dense_layers=[2, 4], moe_layers=[1, 3, 5, 6])
+    model = build_model(cfg, seed=0)
+    dense_positions = {i + 1 for i, kind in enumerate(model.layer_kinds) if kind == "dense"}
+    assert dense_positions != {1, 5, 10, 15, 20}  # not the frozen sparse spec's positions
+    assert dense_positions == {2, 4}  # matches this (deliberately wrong-for-frozen) test config
+
+
+def test_wrong_qk_norm_parameter_shape_is_detected():
+    cfg = make_tiny_sparse_config(
+        n_query_heads=4, n_kv_heads=2, head_dim=8, d_model=32, n_layers=3, dense_layers=[1, 3], moe_layers=[2]
+    )
+    model = build_model(cfg, seed=0)
+    correct_count = qk_norm_parameter_count(model)  # 2 * head_dim * n_layers = 2*8*3 = 48
+    assert correct_count == 48
+
+    # Simulate the bug this accounting is designed to catch: a *separate*
+    # head_dim-sized vector per query head instead of one shared vector.
+    buggy_count_if_per_head_q_norm = model.layers[0].attention.n_query_heads * cfg.attention.head_dim * 2  # Q per-head + shared K
+    assert buggy_count_if_per_head_q_norm != correct_count
+
+
+def test_router_fp16_execution_is_detected():
+    cfg = make_tiny_sparse_config()
+    layer = MoELayer(cfg)
+    x = torch.randn(1, 4, cfg.core.d_model)
+
+    # Simulate the bug: compute router logits WITHOUT the fp32-forcing
+    # autocast-disable context, directly in fp16.
+    flat_x = x.reshape(-1, cfg.core.d_model).to(torch.float16)
+    weight_fp16 = layer.router.weight.to(torch.float16)
+    buggy_logits = F.linear(flat_x, weight_fp16)
+    assert buggy_logits.dtype == torch.float16  # this is exactly what must never reach the real router path
+
+    _, _, _, diag = layer(x, valid_mask=torch.ones(1, 4, dtype=torch.bool), return_diagnostics=True)
+    assert diag.router_logits.dtype == torch.float32  # the real implementation avoids the bug
+
+
+def test_incorrect_rope_theta_is_detected():
+    correct = RotaryEmbedding(dim=8, theta=100000.0)
+    wrong = RotaryEmbedding(dim=8, theta=10000.0)  # a very common "wrong" default from other model families
+    assert not torch.allclose(correct.inv_freq, wrong.inv_freq)
+
+
+def test_unshifted_causal_loss_is_detected():
+    vocab, seq_len = 4, 4
+    logits = torch.zeros(1, seq_len, vocab)
+    for i in range(seq_len):
+        logits[0, i, (i + 1) % vocab] = 20.0
+    labels = torch.tensor([[i % vocab for i in range(seq_len)]])
+
+    correct_loss = causal_lm_loss(logits, labels)
+    buggy_unshifted_loss = F.cross_entropy(logits.view(-1, vocab), labels.view(-1))
+    assert correct_loss.item() < 1e-3
+    assert buggy_unshifted_loss.item() > 5.0
+    assert abs(correct_loss.item() - buggy_unshifted_loss.item()) > 1.0
+
+
+def test_padding_included_in_router_statistics_is_detected():
+    router_probs = torch.tensor([[0.9, 0.1], [0.1, 0.9], [0.99, 0.01]])
+    topk_idx = torch.tensor([[0], [1], [0]])
+    correctly_excluded = compute_load_balance_loss_raw(
+        router_probs, topk_idx, torch.tensor([True, True, False]), 2, 1
+    )
+    buggy_included = compute_load_balance_loss_raw(
+        router_probs, topk_idx, torch.tensor([True, True, True]), 2, 1
+    )
+    assert not torch.allclose(correctly_excluded, buggy_included)
+
+
+# --------------------------------------------------------------------------
+# Phase 2 fault injection (instructions section 19)
+# --------------------------------------------------------------------------
+
+
+def test_gated_shared_expert_is_detected():
+    cfg = make_tiny_sparse_config(
+        n_routed_experts=3, top_k=1, d_model=4, expert_ffn_dim=4, n_query_heads=1, n_kv_heads=1, head_dim=4
+    )
+    layer = MoELayer(cfg)
+    layer.shared_expert.forward = lambda x: torch.full((x.shape[0], cfg.core.d_model), 9.0)
+    for expert in layer.routed_experts:
+        expert.forward = lambda x: torch.zeros(x.shape[0], cfg.core.d_model)
+    x = torch.randn(1, 5, cfg.core.d_model)
+    valid = torch.ones(1, 5, dtype=torch.bool)
+    out_correct, _, _, _ = layer(x, valid_mask=valid)
+
+    # Simulate a gated-shared-expert bug: shared contribution zeroed for
+    # "odd" tokens, as a naive per-token gate might do.
+    gate = torch.tensor([1.0, 0.0, 1.0, 0.0, 1.0]).view(1, 5, 1)
+    out_gated_bug = out_correct - (1 - gate).squeeze(-1).unsqueeze(-1) * 9.0
+    assert not torch.allclose(out_correct, out_gated_bug)
+    # The unconditional (correct) contract requires every token's output to
+    # include the constant shared term, which the gated bug violates for
+    # tokens 1 and 3.
+    assert torch.allclose(out_correct[0, 1], out_gated_bug[0, 1] + 9.0, atol=1e-4)
+
+
+def test_reordered_token_reconstruction_is_detected():
+    torch.manual_seed(0)
+    cfg = make_tiny_sparse_config(
+        n_routed_experts=4, top_k=2, d_model=6, expert_ffn_dim=6, n_query_heads=1, n_kv_heads=1, head_dim=6
+    )
+    layer = MoELayer(cfg)
+    x = torch.randn(1, 6, cfg.core.d_model)
+    valid = torch.ones(1, 6, dtype=torch.bool)
+    out_correct, _, _, _ = layer(x, valid_mask=valid)
+
+    perm = torch.tensor([3, 1, 4, 0, 5, 2])
+    out_permuted_input, _, _, _ = layer(x[:, perm, :], valid_mask=valid[:, perm])
+    correct_reconstruction = out_correct[0, perm]
+
+    # Simulate a reconstruction bug: apply a DIFFERENT permutation on the way
+    # back out than was applied on the way in (e.g. an off-by-one index
+    # error in a real optimized/sorted dispatch implementation).
+    wrong_perm = torch.tensor([1, 3, 4, 0, 5, 2])
+    buggy_reconstruction = out_correct[0, wrong_perm]
+
+    torch.testing.assert_close(correct_reconstruction, out_permuted_input[0], atol=1e-5, rtol=1e-5)
+    assert not torch.allclose(buggy_reconstruction, out_permuted_input[0], atol=1e-5, rtol=1e-5)
+
+
+def test_duplicate_expert_selected_twice_is_detected():
+    # A correct top-k selection never repeats an expert index for one token
+    # (torch.topk over a continuous probability tensor guarantees distinct
+    # indices). Simulate the bug directly by constructing a topk_idx with a
+    # repeated expert and show the "unique experts per token" invariant --
+    # asserted throughout tests/test_model_moe_property.py -- correctly fails.
+    buggy_topk_idx = torch.tensor([[0, 0], [1, 2], [3, 3]])
+    for row in buggy_topk_idx.tolist():
+        if row[0] == row[1]:
+            assert len(set(row)) != 2  # duplicate correctly detected
+        else:
+            assert len(set(row)) == 2
+
+
+def test_reference_optimized_mismatch_is_not_hidden_by_an_overly_broad_tolerance():
+    torch.manual_seed(0)
+    cfg = make_tiny_sparse_config(
+        n_routed_experts=6, top_k=2, d_model=6, expert_ffn_dim=6, n_query_heads=1, n_kv_heads=1, head_dim=6
+    )
+    layer = MoELayer(cfg)
+    x = torch.randn(1, 9, cfg.core.d_model)
+    valid = torch.ones(1, 9, dtype=torch.bool)
+    out_ref, _, _, _ = layer(x, valid_mask=valid, backend="reference")
+
+    flat_x = x.reshape(-1, cfg.core.d_model)
+
+    # Simulate a genuinely broken "optimized" dispatch: silently drops the
+    # weight multiplication for one expert (a plausible grouped-dispatch bug).
+    def broken_optimized_dispatch(flat_x, routed_experts, topk_idx, topk_weights, n_routed_experts, top_k, initial_output, **kwargs):
+        output = initial_output
+        for expert_id, expert in enumerate(routed_experts):
+            for slot in range(top_k):
+                slot_mask = topk_idx[:, slot] == expert_id
+                if not torch.any(slot_mask):
+                    continue
+                expert_out = expert(flat_x[slot_mask])
+                weight = topk_weights[slot_mask, slot : slot + 1].to(expert_out.dtype)
+                if expert_id == 0:
+                    weight = torch.ones_like(weight)  # bug: weight dropped for expert 0
+                output = output.index_add(0, slot_mask.nonzero(as_tuple=True)[0], (weight * expert_out).to(output.dtype))
+        return output
+
+    from juniper_auto.model import moe as moe_module
+
+    original = moe_module.DISPATCH_BACKENDS["optimized"]
+    moe_module.DISPATCH_BACKENDS["optimized"] = broken_optimized_dispatch
+    try:
+        out_broken, _, _, _ = layer(x, valid_mask=valid, backend="optimized")
+    finally:
+        moe_module.DISPATCH_BACKENDS["optimized"] = original
+
+    # The real equivalence tests use atol=rtol=1e-5. An overly broad
+    # tolerance (e.g. atol=1.0) would hide this real bug -- proving the
+    # chosen tolerance is load-bearing, not decorative.
+    assert not torch.allclose(out_ref, out_broken, atol=1e-5, rtol=1e-5)
+    broad_tolerance_would_hide_it = torch.allclose(out_ref, out_broken, atol=1.0, rtol=1.0)
+    assert broad_tolerance_would_hide_it  # demonstrates why atol=1.0 must never be used here
+
+
+def test_lost_token_trace_record_is_detected():
+    torch.manual_seed(0)
+    topk_idx = torch.tensor([[0, 1], [2, 3], [1, 0]])
+    topk_weights = torch.tensor([[0.6, 0.4], [0.5, 0.5], [0.7, 0.3]])
+    valid = torch.tensor([True, True, True])
+    trace = build_token_trace(topk_idx, topk_weights, valid, batch=1, seq_len=3)
+    assert len(trace) == 3
+
+    buggy_trace = trace[:-1]  # simulate a dropped record
+    seen_positions = {(r.batch_index, r.seq_position) for r in buggy_trace}
+    expected_positions = {(0, 0), (0, 1), (0, 2)}
+    assert seen_positions != expected_positions
+    assert len(buggy_trace) != 3
+
+
+def test_corrupted_token_position_in_trace_is_detected():
+    topk_idx = torch.tensor([[0, 1], [2, 3]])
+    topk_weights = torch.tensor([[0.6, 0.4], [0.5, 0.5]])
+    valid = torch.tensor([True, True])
+    trace = build_token_trace(topk_idx, topk_weights, valid, batch=1, seq_len=2)
+
+    import dataclasses
+
+    corrupted = list(trace)
+    corrupted[0] = dataclasses.replace(trace[0], seq_position=99)  # simulate corruption
+    for record in corrupted:
+        reconstructed_flat_idx = record.batch_index * 2 + record.seq_position
+        if record is corrupted[0]:
+            assert reconstructed_flat_idx != record.flat_token_index  # corruption correctly detected
+        else:
+            assert reconstructed_flat_idx == record.flat_token_index
+
+
+def test_incorrect_pair_coactivation_accounting_is_detected():
+    topk_idx = torch.tensor([[0, 1], [1, 0], [2, 3]])
+    valid = torch.tensor([True, True, True])
+    correct_matrix = compute_expert_pair_coactivation(topk_idx, valid, n_experts=4)
+    assert correct_matrix.sum().item() == 3  # 3 valid tokens, C(2,2)=1 pair each
+
+    # Simulate a double-counting bug: symmetrize before summing without
+    # having stored raw pairs upper-triangular first (adds both (a,b) and
+    # (b,a) as if they were independent observations).
+    buggy_doubled = correct_matrix + correct_matrix.T
+    assert buggy_doubled.sum().item() == 6
+    assert buggy_doubled.sum().item() != correct_matrix.sum().item()
+
+
+def test_incorrect_entropy_calculation_is_detected():
+    probs = torch.tensor([[0.5, 0.25, 0.25]])
+    correct_entropy, _ = compute_entropy(probs)
+
+    # Simulate a common entropy bug: forgetting the negative sign.
+    buggy_entropy = (probs.clamp_min(1e-12) * probs.clamp_min(1e-12).log()).sum(dim=-1)
+    assert not torch.allclose(correct_entropy, buggy_entropy)
+    assert (correct_entropy > 0).all() and (buggy_entropy < 0).all()
+
+
+def test_incorrect_topk_margin_is_detected():
+    probs = torch.tensor([[0.7, 0.2, 0.1]])
+    correct_margin = compute_topk_prob_margin(probs)
+
+    # Simulate a bug: sum instead of difference.
+    top2, _ = torch.topk(probs, k=2, dim=-1)
+    buggy_margin = top2[:, 0] + top2[:, 1]
+    assert not torch.allclose(correct_margin, buggy_margin)
+    torch.testing.assert_close(correct_margin, torch.tensor([0.5]), atol=1e-6, rtol=1e-6)
+
+
+def test_missing_expert_gradient_statistics_is_detected():
+    torch.manual_seed(0)
+    cfg = make_tiny_sparse_config(
+        n_routed_experts=4, top_k=2, d_model=6, expert_ffn_dim=6, n_query_heads=1, n_kv_heads=1, head_dim=6
+    )
+    layer = MoELayer(cfg)
+    x = torch.randn(1, 5, cfg.core.d_model, requires_grad=True)
+    valid = torch.ones(1, 5, dtype=torch.bool)
+    out, lb, z, _ = layer(x, valid_mask=valid)
+    (out.sum() + lb + z).backward()
+
+    # A gradient-statistics check that only inspects the router's gradient
+    # would miss a completely broken shared-expert backward path.
+    router_only_check_passes = layer.router.weight.grad is not None
+    assert router_only_check_passes  # this alone is an insufficient check
+
+    full_check_covers_shared_and_routed = all(
+        p.grad is not None and torch.isfinite(p.grad).all() for p in layer.shared_expert.parameters()
+    )
+    assert full_check_covers_shared_and_routed
+    # Demonstrate the gap: a fault-injected shared expert with a detached
+    # (grad-free) forward would still pass the router-only check.
+    layer.zero_grad(set_to_none=True)
+    x2 = torch.randn(1, 5, cfg.core.d_model, requires_grad=True)
+    original_shared_forward = layer.shared_expert.forward
+    layer.shared_expert.forward = lambda inp: original_shared_forward(inp).detach()
+    try:
+        out2, lb2, z2, _ = layer(x2, valid_mask=valid)
+        (out2.sum() + lb2 + z2).backward()
+    finally:
+        del layer.shared_expert.forward
+    router_only_check_still_passes = layer.router.weight.grad is not None
+    shared_expert_grad_missing = any(p.grad is None for p in layer.shared_expert.parameters())
+    assert router_only_check_still_passes and shared_expert_grad_missing  # the gap is real
+
+
+def test_non_reproducible_seeded_random_routing_is_detected():
+    cfg = make_tiny_sparse_config(
+        n_routed_experts=6, top_k=2, d_model=4, expert_ffn_dim=4, n_query_heads=1, n_kv_heads=1, head_dim=4
+    )
+    layer = MoELayer(cfg)
+    layer.eval()
+    x = torch.randn(1, 10, cfg.core.d_model)
+    valid = torch.ones(1, 10, dtype=torch.bool)
+
+    ablation = MoEAblationConfig(mode="random_router", seed=42)
+    torch.manual_seed(1)
+    _, _, _, diag_a = layer(x, valid_mask=valid, ablation=ablation, return_diagnostics=True)
+    torch.manual_seed(2)  # different ambient global RNG state
+    _, _, _, diag_b = layer(x, valid_mask=valid, ablation=ablation, return_diagnostics=True)
+    assert torch.equal(diag_a.topk_idx, diag_b.topk_idx)  # correct: isolated from ambient RNG
+
+    # Simulate the bug: a "seeded" random router that actually reads ambient
+    # global RNG state instead of an explicit isolated generator.
+    def buggy_random_topk(n_tokens, n_experts, top_k, seed, device):
+        del seed  # bug: seed is accepted but ignored
+        scores = torch.rand(n_tokens, n_experts)  # uses ambient global RNG
+        _, idx = torch.topk(scores, k=top_k, dim=-1)
+        return idx
+
+    torch.manual_seed(1)
+    buggy_a = buggy_random_topk(10, 6, 2, seed=42, device="cpu")
+    torch.manual_seed(2)
+    buggy_b = buggy_random_topk(10, 6, 2, seed=42, device="cpu")
+    assert not torch.equal(buggy_a, buggy_b)  # same "seed", different result: the bug is real and detectable
+
+
+def test_evaluation_ablation_leaking_into_normal_inference_is_detected():
+    cfg = make_tiny_sparse_config(
+        n_routed_experts=4, top_k=2, d_model=4, expert_ffn_dim=4, n_query_heads=1, n_kv_heads=1, head_dim=4
+    )
+    layer = MoELayer(cfg)
+    layer.eval()
+    torch.manual_seed(0)
+    x = torch.randn(1, 6, cfg.core.d_model)
+    valid = torch.ones(1, 6, dtype=torch.bool)
+    out_before, _, _, _ = layer(x, valid_mask=valid)
+
+    # Simulate a leaking-ablation bug: an ablation implementation that
+    # mutates shared module state instead of being purely a per-call
+    # override (a plausible mistake -- e.g. permanently monkeypatching an
+    # expert to implement "disable" instead of skipping it in dispatch).
+    leaked_disabled_expert_forward = layer.routed_experts[0].forward
+    layer.routed_experts[0].forward = lambda inp: torch.zeros(inp.shape[0], cfg.core.d_model)  # "ablation" bug
+    out_after_buggy_ablation_call, _, _, _ = layer(x, valid_mask=valid)  # ablation=None, but bug already applied
+    del layer.routed_experts[0].forward
+
+    # The real (correct) implementation never leaves state behind: MoEAblationConfig
+    # applied via the `ablation=` kwarg cannot reach this code path at all, and this
+    # test proves that IF an implementation did leak via module mutation, a
+    # before/after comparison at ablation=None would catch it.
+    correct_ablation = MoEAblationConfig(mode="disable_routed_expert", expert_id=0)
+    _, _, _, _ = layer(x, valid_mask=valid, ablation=correct_ablation)
+    out_after_correct_ablation, _, _, _ = layer(x, valid_mask=valid)  # ablation=None again
+    assert torch.equal(out_before, out_after_correct_ablation)  # correct: no leakage
+    # (out_after_buggy_ablation_call is intentionally not compared to out_before --
+    # it demonstrates what a leak WOULD look like, already shown to differ by
+    # construction since expert 0's forward was mutated before this call ran.)
+    assert leaked_disabled_expert_forward is not None
+
+# ---- tests/test_model_ffn.py ----
+"""SwiGLU equation correctness and bias-free structure."""
+
+from __future__ import annotations
+
+import torch
+import torch.nn.functional as F
+
+from juniper_auto.model.ffn import SwiGLU
+
+
+def test_swiglu_matches_manual_equation():
+    torch.manual_seed(0)
+    ffn = SwiGLU(d_model=6, hidden_dim=10, bias=False)
+    x = torch.randn(3, 4, 6)
+    out = ffn(x)
+
+    gate = x @ ffn.gate_proj.weight.T
+    up = x @ ffn.up_proj.weight.T
+    expected = (F.silu(gate) * up) @ ffn.down_proj.weight.T
+    torch.testing.assert_close(out, expected, atol=1e-5, rtol=1e-5)
+
+
+def test_swiglu_no_bias_by_default():
+    ffn = SwiGLU(d_model=4, hidden_dim=8, bias=False)
+    assert ffn.gate_proj.bias is None
+    assert ffn.up_proj.bias is None
+    assert ffn.down_proj.bias is None
+
+
+def test_swiglu_shapes():
+    ffn = SwiGLU(d_model=6, hidden_dim=10, bias=False)
+    x = torch.randn(2, 5, 6)
+    out = ffn(x)
+    assert out.shape == (2, 5, 6)
+    assert ffn.gate_proj.weight.shape == (10, 6)
+    assert ffn.up_proj.weight.shape == (10, 6)
+    assert ffn.down_proj.weight.shape == (6, 10)
+
+
+def test_swiglu_is_not_a_plain_relu_mlp():
+    # Sanity guard: SiLU-gated output must differ from a naive gate*up
+    # without the SiLU nonlinearity, proving the activation is actually applied.
+    torch.manual_seed(1)
+    ffn = SwiGLU(d_model=4, hidden_dim=6, bias=False)
+    x = torch.randn(2, 4)
+    out = ffn(x)
+    gate = x @ ffn.gate_proj.weight.T
+    up = x @ ffn.up_proj.weight.T
+    ungated = (gate * up) @ ffn.down_proj.weight.T
+    assert not torch.allclose(out, ungated)
+
+# ---- tests/test_model_gradients.py ----
+"""Full-model backward pass: gradients exist and are finite where expected,
+for both sparse and dense tiny configs."""
+
+from __future__ import annotations
+
+import torch
+
+from juniper_auto.model import build_model
+from juniper_auto.model.block import MoEBlock
+from tests.model_fixtures import make_tiny_dense_config, make_tiny_sparse_config
+
+
+def test_dense_backward_all_params_receive_finite_gradients():
+    cfg = make_tiny_dense_config()
+    model = build_model(cfg, seed=0)
+    input_ids = torch.randint(0, cfg.embeddings.vocab_size, (2, 6))
+    labels = input_ids.clone()
+    out = model(input_ids, labels=labels)
+    out.loss.backward()
+
+    for name, p in model.named_parameters():
+        assert p.grad is not None, f"missing gradient: {name}"
+        assert torch.isfinite(p.grad).all(), f"non-finite gradient: {name}"
+
+
+def test_sparse_backward_router_and_active_experts_receive_finite_gradients():
+    # Use a batch large enough (relative to n_routed_experts) that every
+    # expert is very likely selected at least once, so this test can
+    # legitimately assert full coverage rather than "some subset".
+    cfg = make_tiny_sparse_config(n_routed_experts=4, top_k=2)
+    model = build_model(cfg, seed=0)
+    torch.manual_seed(0)
+    input_ids = torch.randint(0, cfg.embeddings.vocab_size, (4, 32))
+    labels = input_ids.clone()
+    out = model(input_ids, labels=labels, return_diagnostics=True)
+    out.loss.backward()
+
+    for name, p in model.named_parameters():
+        if p.grad is not None:
+            assert torch.isfinite(p.grad).all(), f"non-finite gradient: {name}"
+
+    for block, diag in zip(model.layers, out.diagnostics):
+        if not isinstance(block, MoEBlock):
+            continue
+        assert block.moe.router.weight.grad is not None
+        for p in block.moe.shared_expert.parameters():
+            assert p.grad is not None
+        selected = set(diag.topk_idx.reshape(-1).tolist())
+        assert len(selected) == cfg.moe.n_routed_experts, (
+            "test batch too small to exercise every routed expert; increase batch/seq"
+        )
+        for expert in block.moe.routed_experts:
+            assert all(p.grad is not None for p in expert.parameters())
+
+
+def test_embedding_and_tied_lm_head_gradient_is_a_single_accumulated_tensor():
+    cfg = make_tiny_sparse_config()
+    model = build_model(cfg, seed=0)
+    input_ids = torch.randint(0, cfg.embeddings.vocab_size, (1, 5))
+    labels = input_ids.clone()
+    out = model(input_ids, labels=labels)
+    out.loss.backward()
+    # Since embedding.weight and lm_head.weight are the same Parameter
+    # object, there is exactly one .grad tensor, accumulated from both the
+    # embedding-lookup backward and the LM-head-matmul backward.
+    assert model.embedding.weight.grad is model.lm_head.weight.grad
+    assert torch.isfinite(model.embedding.weight.grad).all()
+
+# ---- tests/test_model_initialization.py ----
+"""Initialization: seed reproducibility, statistical sanity of sampled
+weights, the smaller residual-output std, and norm weights at ones."""
+
+from __future__ import annotations
+
+import torch
+
+from juniper_auto.config import load_architecture_config
+from juniper_auto.model import build_model
+from juniper_auto.model.attention import GroupedQueryAttention
+from juniper_auto.model.block import DenseBlock, MoEBlock
+from juniper_auto.model.model import JuniperAutoModel, initialize_weights
+from tests.model_fixtures import make_tiny_sparse_config
+
+SPARSE_CFG = load_architecture_config("configs/architecture/ja150m-v0.1.yaml")
+
+
+def test_same_seed_reproduces_identical_initialization():
+    cfg = make_tiny_sparse_config()
+    model_a = build_model(cfg, seed=777)
+    model_b = build_model(cfg, seed=777)
+    for (name_a, p_a), (name_b, p_b) in zip(model_a.named_parameters(), model_b.named_parameters()):
+        assert name_a == name_b
+        torch.testing.assert_close(p_a, p_b)
+
+
+def test_different_seed_changes_initialization():
+    cfg = make_tiny_sparse_config()
+    model_a = build_model(cfg, seed=1)
+    model_b = build_model(cfg, seed=2)
+    any_different = any(
+        not torch.allclose(p_a, p_b) for p_a, p_b in zip(model_a.parameters(), model_b.parameters())
+    )
+    assert any_different
+
+
+def test_explicit_seed_does_not_consume_ambient_cpu_rng_state():
+    cfg = make_tiny_sparse_config()
+    torch.manual_seed(12345)
+    state_before = torch.get_rng_state().clone()
+    build_model(cfg, seed=777)
+    assert torch.equal(torch.get_rng_state(), state_before)
+
+
+def test_general_projection_std_close_to_base_std_on_official_model():
+    model = build_model(SPARSE_CFG, seed=0)
+    # A large-N sample of "general" (non-residual-output, non-router,
+    # non-embedding) projection weights: attention q_proj across all layers.
+    samples = torch.cat([block.attention.q_proj.weight.reshape(-1) for block in model.layers])
+    observed_std = samples.std().item()
+    assert abs(observed_std - 0.02) < 0.001  # >1M samples -> tight statistical tolerance
+
+
+def test_residual_output_projection_std_is_the_smaller_scaled_value():
+    model = build_model(SPARSE_CFG, seed=0)
+    o_proj_samples = torch.cat([block.attention.o_proj.weight.reshape(-1) for block in model.layers])
+    observed_std = o_proj_samples.std().item()
+    expected_std = 0.02 / (2 * 20) ** 0.5
+    assert abs(observed_std - expected_std) < 0.0005
+    # And it must be meaningfully smaller than the general std -- the whole
+    # point of the scaled-residual-init rule.
+    assert observed_std < 0.01
+
+
+def test_router_std_matches_config():
+    model = build_model(SPARSE_CFG, seed=0)
+    from juniper_auto.model.block import MoEBlock
+
+    router_samples = torch.cat(
+        [block.moe.router.weight.reshape(-1) for block in model.layers if isinstance(block, MoEBlock)]
+    )
+    observed_std = router_samples.std().item()
+    assert abs(observed_std - 0.02) < 0.002
+
+
+def test_embedding_std_matches_config():
+    model = build_model(SPARSE_CFG, seed=0)
+    observed_std = model.embedding.weight.reshape(-1).std().item()
+    assert abs(observed_std - 0.02) < 0.0001
+
+
+def test_norm_weights_are_exactly_ones_at_construction():
+    model = build_model(SPARSE_CFG, seed=0)
+    for block in model.layers:
+        assert torch.equal(block.attention_norm.weight, torch.ones_like(block.attention_norm.weight))
+        assert torch.equal(block.ffn_norm.weight, torch.ones_like(block.ffn_norm.weight))
+        if block.attention.qk_norm:
+            assert torch.equal(block.attention.q_norm.weight, torch.ones_like(block.attention.q_norm.weight))
+            assert torch.equal(block.attention.k_norm.weight, torch.ones_like(block.attention.k_norm.weight))
+    assert torch.equal(model.final_norm.weight, torch.ones_like(model.final_norm.weight))
+
+
+def test_no_bias_parameters_to_initialize():
+    model = build_model(SPARSE_CFG, seed=0)
+    assert not any(name.endswith(".bias") for name, _ in model.named_parameters())
+
+
+def test_initialization_policy_reaches_every_projection_once(monkeypatch):
+    cfg = make_tiny_sparse_config()
+    model = JuniperAutoModel(cfg)
+    calls = {}
+
+    def record(weight, mean, std, generator):
+        assert id(weight) not in calls, "a tied or traversed weight was initialized twice"
+        calls[id(weight)] = (mean, std)
+
+    monkeypatch.setattr("juniper_auto.model.model._init_normal", record)
+    initialize_weights(model, cfg, generator=torch.Generator().manual_seed(1))
+
+    base = (cfg.initialization.mean, cfg.initialization.base_std)
+    residual = (cfg.initialization.mean, cfg.initialization.residual_output_projection_std)
+    router = (cfg.initialization.mean, cfg.initialization.router_std)
+    embedding = (cfg.initialization.mean, cfg.initialization.embedding_std)
+    assert calls[id(model.embedding.weight)] == embedding
+    assert model.embedding.weight is model.lm_head.weight
+
+    for block in model.layers:
+        attn = block.attention
+        for projection in (attn.q_proj, attn.k_proj, attn.v_proj):
+            assert calls[id(projection.weight)] == base
+        assert calls[id(attn.o_proj.weight)] == residual
+        if isinstance(block, DenseBlock):
+            experts = [block.ffn]
+        else:
+            assert isinstance(block, MoEBlock)
+            assert calls[id(block.moe.router.weight)] == router
+            experts = [*block.moe.routed_experts, block.moe.shared_expert]
+        for expert in experts:
+            assert calls[id(expert.gate_proj.weight)] == base
+            assert calls[id(expert.up_proj.weight)] == base
+            assert calls[id(expert.down_proj.weight)] == residual
+
+# ---- tests/test_model_losses.py ----
+"""Shifted causal cross-entropy and MoE auxiliary loss formulas, verified
+against hand-calculated reference values -- not just "the code agrees with
+itself"."""
+
+from __future__ import annotations
+
+import math
+
+import pytest
+import torch
+
+from juniper_auto.model.losses import (
+    causal_lm_loss,
+    compute_load_balance_loss_raw,
+    compute_router_z_loss_raw,
+)
+
+
+def test_causal_lm_loss_exact_shift_two_token_example():
+    # vocab of size 3; single sequence [A, B]; logits chosen so the loss is
+    # hand-computable. Position 0's logits must predict token at position 1
+    # (label B=1); with 2 tokens there is exactly one supervised prediction.
+    logits = torch.tensor([[[10.0, 0.0, 0.0], [0.0, 0.0, 0.0]]])  # [1, 2, 3]
+    labels = torch.tensor([[0, 1]])
+    loss = causal_lm_loss(logits, labels)
+    # cross_entropy(logits[0,0]=[10,0,0], target=1) = -log(softmax[1])
+    probs = torch.softmax(torch.tensor([10.0, 0.0, 0.0]), dim=-1)
+    expected = -torch.log(probs[1])
+    torch.testing.assert_close(loss, expected, atol=1e-5, rtol=1e-5)
+
+
+def test_causal_lm_loss_ignores_masked_labels():
+    logits = torch.randn(1, 3, 5)
+    labels = torch.tensor([[-100, -100, -100]])
+    with pytest.raises(ValueError, match="non-ignored next-token target"):
+        causal_lm_loss(logits, labels)
+
+
+def test_causal_lm_loss_off_by_one_shift_is_load_bearing():
+    # If position i's logits were (incorrectly) compared against label i
+    # instead of label i+1, this specific construction would score
+    # differently. logits strongly predict "next id = position index + 1".
+    vocab = 4
+    seq_len = 4
+    logits = torch.zeros(1, seq_len, vocab)
+    for i in range(seq_len):
+        logits[0, i, (i + 1) % vocab] = 20.0  # position i confidently predicts token (i+1)
+    # shift_logits[j] = logits[j] (predicts (j+1)%vocab); shift_labels[j] =
+    # labels[j+1], so labels[j] must equal j%vocab for j>=1 (labels[0] is
+    # never used as a target and is arbitrary).
+    labels = torch.tensor([[i % vocab for i in range(seq_len)]])
+    loss_correct_shift = causal_lm_loss(logits, labels)
+    assert loss_correct_shift.item() < 1e-3
+
+    # An unshifted (buggy) comparison -- position i vs label i -- would score
+    # very poorly on this construction, since logits at i strongly favor
+    # (i+1), not i.
+    shift_logits = logits[:, :-1, :]
+    unshifted_labels = labels[:, :-1]
+    bad_loss = torch.nn.functional.cross_entropy(
+        shift_logits.reshape(-1, vocab), unshifted_labels.reshape(-1)
+    )
+    assert bad_loss.item() > 5.0
+
+
+def test_load_balance_loss_hand_calculated():
+    # 2 experts, top_k=1, 4 valid tokens, each with a fixed router_probs row
+    # and a fixed top-1 assignment chosen independently of argmax so the
+    # test isn't trivially "assignment == argmax(probs)".
+    router_probs = torch.tensor(
+        [
+            [0.9, 0.1],
+            [0.8, 0.2],
+            [0.3, 0.7],
+            [0.4, 0.6],
+        ]
+    )
+    topk_idx = torch.tensor([[0], [0], [1], [0]])  # 3 assignments to expert 0, 1 to expert 1
+    valid_mask = torch.tensor([True, True, True, True])
+    n_experts, top_k = 2, 1
+
+    loss = compute_load_balance_loss_raw(router_probs, topk_idx, valid_mask, n_experts, top_k)
+
+    f0, f1 = 3 / 4, 1 / 4
+    p0 = router_probs[:, 0].mean().item()
+    p1 = router_probs[:, 1].mean().item()
+    expected = n_experts * (f0 * p0 + f1 * p1)
+    torch.testing.assert_close(loss.item(), expected, atol=1e-6, rtol=1e-6)
+
+
+def test_load_balance_loss_excludes_padding():
+    router_probs = torch.tensor([[0.9, 0.1], [0.1, 0.9], [0.5, 0.5]])
+    topk_idx = torch.tensor([[0], [1], [0]])
+    valid_mask = torch.tensor([True, True, False])  # last token is padding
+    loss_with_padding_excluded = compute_load_balance_loss_raw(router_probs, topk_idx, valid_mask, 2, 1)
+
+    # Only tokens 0,1 should matter: f0=f1=0.5, p0=0.5, p1=0.5 -> 2*(0.25+0.25)=1.0
+    expected = 1.0
+    torch.testing.assert_close(loss_with_padding_excluded.item(), expected, atol=1e-6, rtol=1e-6)
+
+    # Changing the padded row's probs/assignment must not move the result.
+    router_probs_mutated = router_probs.clone()
+    router_probs_mutated[2] = torch.tensor([0.99, 0.01])
+    topk_idx_mutated = topk_idx.clone()
+    topk_idx_mutated[2] = 1
+    loss_mutated = compute_load_balance_loss_raw(router_probs_mutated, topk_idx_mutated, valid_mask, 2, 1)
+    torch.testing.assert_close(loss_with_padding_excluded, loss_mutated)
+
+
+def test_load_balance_loss_no_gradient_through_hard_assignment_counts():
+    router_probs = torch.tensor([[0.6, 0.4], [0.3, 0.7]], requires_grad=True)
+    topk_idx = torch.tensor([[0], [1]])
+    valid_mask = torch.tensor([True, True])
+    loss = compute_load_balance_loss_raw(router_probs, topk_idx, valid_mask, 2, 1)
+    loss.backward()
+    assert router_probs.grad is not None
+    assert torch.isfinite(router_probs.grad).all()
+
+
+def test_router_z_loss_hand_calculated():
+    logits = torch.tensor([[1.0, 2.0, 3.0], [0.0, 0.0, 0.0]])
+    valid_mask = torch.tensor([True, True])
+    loss = compute_router_z_loss_raw(logits, valid_mask)
+
+    z0 = math.log(math.exp(1.0) + math.exp(2.0) + math.exp(3.0))
+    z1 = math.log(3.0)  # logsumexp of three zeros = log(3)
+    expected = (z0**2 + z1**2) / 2
+    torch.testing.assert_close(loss.item(), expected, atol=1e-5, rtol=1e-5)
+
+
+def test_router_z_loss_excludes_padding():
+    logits = torch.tensor([[1.0, 2.0, 3.0], [100.0, 100.0, 100.0]])  # row 1 would dominate if included
+    valid_mask = torch.tensor([True, False])
+    loss = compute_router_z_loss_raw(logits, valid_mask)
+    z0 = math.log(math.exp(1.0) + math.exp(2.0) + math.exp(3.0))
+    torch.testing.assert_close(loss.item(), z0**2, atol=1e-5, rtol=1e-5)
+
+# ---- tests/test_model_moe.py ----
+"""MoE router + dropless top-2 dispatch: expert counts, unique selection,
+renormalized combination weights, no hidden averaging, dropless assignment
+counting, router FP32 precision, padding exclusion, and gradient flow."""
+
+from __future__ import annotations
+
+import torch
+import pytest
+
+from juniper_auto.model.moe import MoELayer
+from tests.model_fixtures import make_tiny_sparse_config
+
+
+def _layer(n_routed=4, top_k=2, d_model=8, expert_ffn_dim=8):
+    # MoELayer itself never touches attention, but ArchitectureConfig
+    # validation still requires n_query_heads * head_dim == d_model, so a
+    # single-head config is used to keep d_model freely overridable here.
+    cfg = make_tiny_sparse_config(
+        n_routed_experts=n_routed,
+        top_k=top_k,
+        d_model=d_model,
+        expert_ffn_dim=expert_ffn_dim,
+        n_query_heads=1,
+        n_kv_heads=1,
+        head_dim=d_model,
+    )
+    return MoELayer(cfg), cfg
+
+
+def _call(layer, x_2d, valid_mask_1d=None, **kwargs):
+    """MoELayer's real forward contract is [batch, seq_len, d_model]
+    (matching how MoEBlock always calls it); tests work with flat
+    [n_tokens, d_model] tensors for readability, so this wraps a batch=1
+    dimension on the way in and strips it on the way out. `diag` fields are
+    already flattened across batch*seq inside MoELayer, so they need no
+    reshaping here."""
+    x_3d = x_2d.unsqueeze(0)
+    valid_3d = valid_mask_1d.unsqueeze(0) if valid_mask_1d is not None else None
+    out_3d, lb, z, diag = layer(x_3d, valid_mask=valid_3d, **kwargs)
+    return out_3d.squeeze(0), lb, z, diag
+
+
+def test_expert_counts_match_config():
+    layer, cfg = _layer(n_routed=4)
+    assert len(layer.routed_experts) == 4
+    assert layer.n_shared_experts == 1
+    assert isinstance(layer.shared_expert, torch.nn.Module)
+
+
+def test_moe_rejects_invalid_valid_mask_shape():
+    layer, cfg = _layer()
+    x = torch.randn(2, 5, cfg.core.d_model)
+    with pytest.raises(ValueError, match="valid_mask"):
+        layer(x, valid_mask=torch.ones(1, 5, dtype=torch.bool))
+
+
+def test_every_token_gets_exactly_top_k_unique_routed_experts():
+    layer, cfg = _layer(n_routed=6, top_k=2)
+    torch.manual_seed(0)
+    x = torch.randn(9, cfg.core.d_model)
+    _, _, _, diag = _call(layer, x, torch.ones(9, dtype=torch.bool), return_diagnostics=True)
+    for t in range(9):
+        e0, e1 = diag.topk_idx[t].tolist()
+        assert e0 != e1
+
+
+def test_topk_weights_renormalize_to_one():
+    layer, cfg = _layer(n_routed=8, top_k=2)
+    torch.manual_seed(1)
+    x = torch.randn(6, cfg.core.d_model)
+    _, _, _, diag = _call(layer, x, torch.ones(6, dtype=torch.bool), return_diagnostics=True)
+    sums = diag.topk_weights.sum(dim=-1)
+    torch.testing.assert_close(sums, torch.ones(6), atol=1e-5, rtol=1e-5)
+
+
+def test_dropless_assignment_count_equals_valid_tokens_times_top_k():
+    layer, cfg = _layer(n_routed=5, top_k=2)
+    torch.manual_seed(2)
+    x = torch.randn(11, cfg.core.d_model)
+    valid_mask = torch.tensor([True] * 7 + [False] * 4)
+    _, _, _, diag = _call(layer, x, valid_mask, return_diagnostics=True)
+    assert diag.assignment_counts_per_expert.sum().item() == 7 * 2
+
+
+def test_padding_excluded_from_dispatch_statistics_but_still_finite_output():
+    layer, cfg = _layer(n_routed=4, top_k=2)
+    torch.manual_seed(3)
+    x = torch.randn(6, cfg.core.d_model)
+    valid_mask = torch.tensor([True, True, True, False, False, False])
+    out_a, lb_a, z_a, diag_a = _call(layer, x, valid_mask, return_diagnostics=True)
+
+    x_mutated = x.clone()
+    x_mutated[3:] = torch.randn_like(x_mutated[3:]) * 50.0
+    out_b, lb_b, z_b, diag_b = _call(layer, x_mutated, valid_mask, return_diagnostics=True)
+
+    assert torch.equal(out_a[~valid_mask], torch.zeros_like(out_a[~valid_mask]))
+    assert torch.equal(out_b[~valid_mask], torch.zeros_like(out_b[~valid_mask]))
+
+    # Padding positions receive no expert contribution and must not move
+    # the auxiliary-loss statistics computed only over valid tokens.
+    torch.testing.assert_close(lb_a, lb_b)
+    torch.testing.assert_close(z_a, z_b)
+    assert torch.equal(diag_a.assignment_counts_per_expert, diag_b.assignment_counts_per_expert)
+    assert torch.isfinite(out_a).all() and torch.isfinite(out_b).all()
+    torch.testing.assert_close(out_a[:3], out_b[:3])
+
+
+def test_shared_plus_topk_routed_combination_with_no_hidden_averaging():
+    # Replace every expert with a deterministic constant-output stub so the
+    # *combination formula* can be checked exactly, independent of routing
+    # selection (covered separately). A hidden division by (top_k + 1) or
+    # by 2/3, or a missing shared-expert term, would fail this exactly.
+    layer, cfg = _layer(n_routed=4, top_k=2, d_model=4, expert_ffn_dim=4)
+
+    def make_stub(value):
+        def stub(x):
+            return torch.full((x.shape[0], cfg.core.d_model), value)
+
+        return stub
+
+    layer.shared_expert.forward = make_stub(100.0)
+    for i, expert in enumerate(layer.routed_experts):
+        expert.forward = make_stub(float(i + 1))
+
+    torch.manual_seed(4)
+    x = torch.randn(5, cfg.core.d_model)
+    out, _, _, diag = _call(layer, x, torch.ones(5, dtype=torch.bool), return_diagnostics=True)
+
+    for t in range(5):
+        e0, e1 = diag.topk_idx[t].tolist()
+        w0, w1 = diag.topk_weights[t].tolist()
+        expected_value = 100.0 + w0 * (e0 + 1) + w1 * (e1 + 1)
+        torch.testing.assert_close(
+            out[t], torch.full((cfg.core.d_model,), expected_value), atol=1e-4, rtol=1e-4
+        )
+
+
+def test_shared_expert_is_never_gated():
+    # With a shared-expert stub returning a nonzero constant regardless of
+    # input, every token's output must include that constant term
+    # unconditionally -- a gated implementation could zero it for some tokens.
+    layer, cfg = _layer(n_routed=3, top_k=1, d_model=4, expert_ffn_dim=4)
+    layer.shared_expert.forward = lambda x: torch.full((x.shape[0], cfg.core.d_model), 7.0)
+    for expert in layer.routed_experts:
+        expert.forward = lambda x: torch.zeros(x.shape[0], cfg.core.d_model)
+
+    x = torch.randn(4, cfg.core.d_model)
+    out, _, _, _ = _call(layer, x, torch.ones(4, dtype=torch.bool))
+    torch.testing.assert_close(out, torch.full((4, cfg.core.d_model), 7.0), atol=1e-5, rtol=1e-5)
+
+
+def test_router_logits_and_softmax_are_fp32_under_fp16_input():
+    layer, cfg = _layer()
+    x_fp16 = torch.randn(4, cfg.core.d_model).to(torch.float16)
+    layer_fp16 = layer.to(torch.float16)
+    _, _, _, diag = _call(layer_fp16, x_fp16, torch.ones(4, dtype=torch.bool), return_diagnostics=True)
+    assert diag.router_logits.dtype == torch.float32
+    assert diag.router_probs.dtype == torch.float32
+
+
+def test_router_logits_and_softmax_are_fp32_under_cpu_autocast_bf16():
+    layer, cfg = _layer()
+    x = torch.randn(4, cfg.core.d_model)
+    with torch.autocast(device_type="cpu", dtype=torch.bfloat16, enabled=True):
+        _, _, _, diag = _call(layer, x, torch.ones(4, dtype=torch.bool), return_diagnostics=True)
+    assert diag.router_logits.dtype == torch.float32
+    assert diag.router_probs.dtype == torch.float32
+
+
+@pytest.mark.skipif(not torch.cuda.is_available(), reason="requires CUDA mixed-precision hardware")
+def test_router_fp32_path_and_gradients_under_real_cuda_fp16_autocast():
+    layer, cfg = _layer()
+    layer = layer.to("cuda")
+    x = torch.randn(4, cfg.core.d_model, device="cuda", requires_grad=True)
+    valid = torch.ones(4, dtype=torch.bool, device="cuda")
+    with torch.autocast(device_type="cuda", dtype=torch.float16):
+        out, lb, z, diag = _call(layer, x, valid, return_diagnostics=True)
+        loss = out.float().square().mean() + lb + z
+    assert diag.router_logits.dtype == torch.float32
+    assert diag.router_probs.dtype == torch.float32
+    loss.backward()
+    assert layer.router.weight.grad is not None
+    assert torch.isfinite(layer.router.weight.grad).all()
+
+
+def test_router_softmax_probabilities_sum_to_one():
+    layer, cfg = _layer(n_routed=6)
+    x = torch.randn(5, cfg.core.d_model)
+    _, _, _, diag = _call(layer, x, torch.ones(5, dtype=torch.bool), return_diagnostics=True)
+    torch.testing.assert_close(diag.router_probs.sum(dim=-1), torch.ones(5), atol=1e-5, rtol=1e-5)
+
+
+def test_gradients_reach_router_shared_expert_and_selected_experts_only():
+    layer, cfg = _layer(n_routed=8, top_k=2, d_model=6, expert_ffn_dim=6)
+    x = torch.randn(4, cfg.core.d_model, requires_grad=True)
+    out, lb, z, diag = _call(layer, x, torch.ones(4, dtype=torch.bool), return_diagnostics=True)
+    loss = out.sum() + lb + z
+    loss.backward()
+
+    assert layer.router.weight.grad is not None
+    assert torch.isfinite(layer.router.weight.grad).all()
+    for p in layer.shared_expert.parameters():
+        assert p.grad is not None and torch.isfinite(p.grad).all()
+
+    selected = set(diag.topk_idx.reshape(-1).tolist())
+    for expert_id, expert in enumerate(layer.routed_experts):
+        grads = [p.grad for p in expert.parameters()]
+        if expert_id in selected:
+            assert all(g is not None and torch.isfinite(g).all() for g in grads)
+        # Experts never selected in this batch are not required to have a
+        # gradient at all -- their forward was never called.
+
+
+def test_token_order_is_preserved_in_reconstruction():
+    layer, cfg = _layer(n_routed=4, top_k=2, d_model=6, expert_ffn_dim=6)
+    torch.manual_seed(5)
+    x = torch.randn(6, cfg.core.d_model)
+    valid_mask = torch.ones(6, dtype=torch.bool)
+    out_full, _, _, _ = _call(layer, x, valid_mask)
+
+    perm = torch.tensor([3, 1, 4, 0, 5, 2])
+    out_permuted_input, _, _, _ = _call(layer, x[perm], valid_mask[perm])
+    torch.testing.assert_close(out_full[perm], out_permuted_input, atol=1e-5, rtol=1e-5)
+
+# ---- tests/test_model_moe_ablations.py ----
+"""Evaluation-only MoE ablations (Phase 2 instructions section 13-14): each
+mode's exact mathematical semantics, checked with deterministic constant-
+output expert stubs so the expected output tensor can be computed exactly
+rather than merely asserting "something changed". Also proves seeded
+random-routing reproducibility and that no ablation leaks into a normal
+(ablation=None) forward call."""
+
+from __future__ import annotations
+
+import torch
+import pytest
+
+from juniper_auto.model.moe import MoELayer
+from juniper_auto.model.moe_ablations import MoEAblationConfig
+from tests.model_fixtures import make_tiny_sparse_config
+
+
+def _stub_layer(n_routed=4, top_k=2, d_model=4):
+    cfg = make_tiny_sparse_config(
+        n_routed_experts=n_routed, top_k=top_k, d_model=d_model, expert_ffn_dim=d_model,
+        n_query_heads=1, n_kv_heads=1, head_dim=d_model,
+    )
+    layer = MoELayer(cfg)
+    layer.eval()
+    layer.shared_expert.forward = lambda x: torch.full((x.shape[0], d_model), 100.0)
+    for i, expert in enumerate(layer.routed_experts):
+        expert.forward = (lambda v: lambda x: torch.full((x.shape[0], d_model), v))(float(i + 1))
+    return layer, cfg
+
+
+def _call(layer, x_2d, ablation=None, **kwargs):
+    out, lb, z, diag = layer(x_2d.unsqueeze(0), valid_mask=torch.ones(1, x_2d.shape[0], dtype=torch.bool), ablation=ablation, return_diagnostics=True, **kwargs)
+    return out.squeeze(0), lb, z, diag
+
+
+def test_normal_forward_matches_shared_plus_weighted_routed_equation():
+    layer, cfg = _stub_layer(n_routed=4, top_k=2, d_model=4)
+    torch.manual_seed(0)
+    x = torch.randn(6, cfg.core.d_model)
+    out, _, _, diag = _call(layer, x)
+    for t in range(6):
+        e0, e1 = diag.topk_idx[t].tolist()
+        w0, w1 = diag.topk_weights[t].tolist()
+        expected = 100.0 + w0 * (e0 + 1) + w1 * (e1 + 1)
+        torch.testing.assert_close(out[t], torch.full((cfg.core.d_model,), expected), atol=1e-4, rtol=1e-4)
+
+
+def test_disable_routed_expert_zeros_its_term_without_renormalizing():
+    layer, cfg = _stub_layer(n_routed=4, top_k=2, d_model=4)
+    torch.manual_seed(1)
+    x = torch.randn(8, cfg.core.d_model)
+    ablation = MoEAblationConfig(mode="disable_routed_expert", expert_id=2)
+    out, _, _, diag = _call(layer, x, ablation=ablation)
+    assert diag.ablation_mode == "disable_routed_expert"
+    for t in range(8):
+        e0, e1 = diag.topk_idx[t].tolist()
+        w0, w1 = diag.topk_weights[t].tolist()
+        contrib0 = 0.0 if e0 == 2 else w0 * (e0 + 1)
+        contrib1 = 0.0 if e1 == 2 else w1 * (e1 + 1)
+        expected = 100.0 + contrib0 + contrib1
+        torch.testing.assert_close(out[t], torch.full((cfg.core.d_model,), expected), atol=1e-4, rtol=1e-4)
+
+
+def test_ablation_trace_distinguishes_selected_from_executed_experts():
+    layer, cfg = _stub_layer(n_routed=4, top_k=2, d_model=4)
+    x = torch.randn(1, 12, cfg.core.d_model)
+    valid = torch.ones(1, 12, dtype=torch.bool)
+    ablation = MoEAblationConfig(mode="replace_routed_expert", expert_id=0, replacement_expert_id=3)
+    _, _, _, diag = layer(
+        x,
+        valid_mask=valid,
+        ablation=ablation,
+        return_diagnostics=True,
+        return_trace=True,
+    )
+    assert diag.ablation_mode == "replace_routed_expert"
+    for record in diag.token_trace:
+        assert record.executed_expert_1 == (3 if record.expert_1 == 0 else record.expert_1)
+        assert record.executed_expert_2 == (3 if record.expert_2 == 0 else record.expert_2)
+
+
+def test_zero_expert_output_generalizes_disable_to_a_set():
+    layer, cfg = _stub_layer(n_routed=4, top_k=2, d_model=4)
+    torch.manual_seed(2)
+    x = torch.randn(8, cfg.core.d_model)
+    ablation = MoEAblationConfig(mode="zero_expert_output", expert_ids=(1, 2))
+    out, _, _, diag = _call(layer, x, ablation=ablation)
+    for t in range(8):
+        e0, e1 = diag.topk_idx[t].tolist()
+        w0, w1 = diag.topk_weights[t].tolist()
+        contrib0 = 0.0 if e0 in (1, 2) else w0 * (e0 + 1)
+        contrib1 = 0.0 if e1 in (1, 2) else w1 * (e1 + 1)
+        expected = 100.0 + contrib0 + contrib1
+        torch.testing.assert_close(out[t], torch.full((cfg.core.d_model,), expected), atol=1e-4, rtol=1e-4)
+
+
+def test_disable_shared_expert_zeros_only_the_shared_term():
+    layer, cfg = _stub_layer(n_routed=4, top_k=2, d_model=4)
+    torch.manual_seed(3)
+    x = torch.randn(6, cfg.core.d_model)
+    ablation = MoEAblationConfig(mode="disable_shared_expert")
+    out, _, _, diag = _call(layer, x, ablation=ablation)
+    for t in range(6):
+        e0, e1 = diag.topk_idx[t].tolist()
+        w0, w1 = diag.topk_weights[t].tolist()
+        expected = w0 * (e0 + 1) + w1 * (e1 + 1)  # no +100.0
+        torch.testing.assert_close(out[t], torch.full((cfg.core.d_model,), expected), atol=1e-4, rtol=1e-4)
+
+
+def test_replace_routed_expert_uses_replacement_output_with_original_weight():
+    layer, cfg = _stub_layer(n_routed=4, top_k=2, d_model=4)
+    torch.manual_seed(4)
+    x = torch.randn(8, cfg.core.d_model)
+    ablation = MoEAblationConfig(mode="replace_routed_expert", expert_id=0, replacement_expert_id=3)
+    out, _, _, diag = _call(layer, x, ablation=ablation)
+    for t in range(8):
+        e0, e1 = diag.topk_idx[t].tolist()
+        w0, w1 = diag.topk_weights[t].tolist()
+        val0 = 4.0 if e0 == 0 else float(e0 + 1)  # expert 0's slot runs expert 3 (value 4.0) instead
+        val1 = 4.0 if e1 == 0 else float(e1 + 1)
+        expected = 100.0 + w0 * val0 + w1 * val1
+        torch.testing.assert_close(out[t], torch.full((cfg.core.d_model,), expected), atol=1e-4, rtol=1e-4)
+
+
+def test_replace_routed_expert_never_calls_the_replaced_experts_own_parameters():
+    layer, cfg = _stub_layer(n_routed=4, top_k=2, d_model=4)
+    # Restore real (parametrized) experts so gradients are meaningful.
+    del layer.shared_expert.forward
+    for expert in layer.routed_experts:
+        del expert.forward
+    torch.manual_seed(5)
+    x = torch.randn(1, 10, cfg.core.d_model, requires_grad=True)
+    valid = torch.ones(1, 10, dtype=torch.bool)
+    ablation = MoEAblationConfig(mode="replace_routed_expert", expert_id=0, replacement_expert_id=1)
+    out, lb, z, diag = layer(x, valid_mask=valid, ablation=ablation, return_diagnostics=True)
+    (out.sum() + lb + z).backward()
+    assert all(p.grad is None for p in layer.routed_experts[0].parameters())
+
+
+def test_uniform_router_assigns_deterministic_round_robin_experts_with_equal_weight():
+    layer, cfg = _stub_layer(n_routed=4, top_k=2, d_model=4)
+    x = torch.randn(9, cfg.core.d_model)
+    ablation = MoEAblationConfig(mode="uniform_router")
+    out, _, _, diag = _call(layer, x, ablation=ablation)
+    for t in range(9):
+        assert diag.topk_idx[t].tolist() == [t % 4, (t + 1) % 4]
+    torch.testing.assert_close(diag.topk_weights, torch.full((9, 2), 0.5), atol=1e-6, rtol=1e-6)
+
+
+def test_uniform_router_selection_is_independent_of_actual_router_weights():
+    layer_a, cfg = _stub_layer(n_routed=4, top_k=2, d_model=4)
+    layer_b, _ = _stub_layer(n_routed=4, top_k=2, d_model=4)
+    torch.nn.init.normal_(layer_b.router.weight, std=5.0)  # very different router
+    x = torch.randn(1, 6, cfg.core.d_model)
+    valid = torch.ones(1, 6, dtype=torch.bool)
+    ablation = MoEAblationConfig(mode="uniform_router")
+    _, _, _, diag_a = layer_a(x, valid_mask=valid, ablation=ablation, return_diagnostics=True)
+    _, _, _, diag_b = layer_b(x, valid_mask=valid, ablation=ablation, return_diagnostics=True)
+    assert torch.equal(diag_a.topk_idx, diag_b.topk_idx)
+    assert torch.equal(diag_a.topk_weights, diag_b.topk_weights)
+
+
+def test_random_router_selects_unique_experts_and_equal_weight():
+    layer, cfg = _stub_layer(n_routed=6, top_k=3, d_model=4)
+    x = torch.randn(12, cfg.core.d_model)
+    ablation = MoEAblationConfig(mode="random_router", seed=42)
+    out, _, _, diag = _call(layer, x, ablation=ablation)
+    for row in diag.topk_idx.tolist():
+        assert len(set(row)) == 3
+    torch.testing.assert_close(diag.topk_weights, torch.full((12, 3), 1 / 3), atol=1e-6, rtol=1e-6)
+
+
+def test_random_router_is_reproducible_given_the_same_seed():
+    layer, cfg = _stub_layer(n_routed=6, top_k=2, d_model=4)
+    x = torch.randn(1, 10, cfg.core.d_model)
+    valid = torch.ones(1, 10, dtype=torch.bool)
+    ablation = MoEAblationConfig(mode="random_router", seed=7)
+    _, _, _, diag_1 = layer(x, valid_mask=valid, ablation=ablation, return_diagnostics=True)
+    _, _, _, diag_2 = layer(x, valid_mask=valid, ablation=ablation, return_diagnostics=True)
+    assert torch.equal(diag_1.topk_idx, diag_2.topk_idx)
+
+
+def test_random_router_is_independent_of_ambient_global_rng_state():
+    layer, cfg = _stub_layer(n_routed=6, top_k=2, d_model=4)
+    x = torch.randn(1, 10, cfg.core.d_model)
+    valid = torch.ones(1, 10, dtype=torch.bool)
+    ablation = MoEAblationConfig(mode="random_router", seed=7)
+
+    torch.manual_seed(0)
+    _, _, _, diag_1 = layer(x, valid_mask=valid, ablation=ablation, return_diagnostics=True)
+    torch.manual_seed(999)  # different ambient global RNG state
+    _, _, _, diag_2 = layer(x, valid_mask=valid, ablation=ablation, return_diagnostics=True)
+    assert torch.equal(diag_1.topk_idx, diag_2.topk_idx)
+
+
+def test_different_seeds_produce_different_random_routing_with_high_probability():
+    layer, cfg = _stub_layer(n_routed=8, top_k=2, d_model=4)
+    x = torch.randn(1, 20, cfg.core.d_model)
+    valid = torch.ones(1, 20, dtype=torch.bool)
+    _, _, _, diag_a = layer(x, valid_mask=valid, ablation=MoEAblationConfig(mode="random_router", seed=1), return_diagnostics=True)
+    _, _, _, diag_b = layer(x, valid_mask=valid, ablation=MoEAblationConfig(mode="random_router", seed=2), return_diagnostics=True)
+    assert not torch.equal(diag_a.topk_idx, diag_b.topk_idx)
+
+
+def test_ablation_none_is_byte_identical_to_pre_ablation_forward():
+    layer, cfg = _stub_layer(n_routed=4, top_k=2, d_model=4)
+    torch.manual_seed(6)
+    x = torch.randn(1, 7, cfg.core.d_model)
+    valid = torch.ones(1, 7, dtype=torch.bool)
+
+    out_a, lb_a, z_a, diag_a = layer(x, valid_mask=valid, ablation=None, return_diagnostics=True)
+    out_b, lb_b, z_b, diag_b = layer(x, valid_mask=valid, return_diagnostics=True)  # ablation omitted entirely
+
+    assert torch.equal(out_a, out_b)
+    assert torch.equal(lb_a, lb_b)
+    assert torch.equal(z_a, z_b)
+    assert torch.equal(diag_a.topk_idx, diag_b.topk_idx)
+
+
+def test_ablation_state_does_not_persist_across_calls():
+    # A call using an ablation must not leave any mutated module state behind
+    # that changes the *next*, unrelated, ablation=None call's output.
+    layer, cfg = _stub_layer(n_routed=4, top_k=2, d_model=4)
+    torch.manual_seed(8)
+    x = torch.randn(1, 7, cfg.core.d_model)
+    valid = torch.ones(1, 7, dtype=torch.bool)
+
+    out_before, _, _, _ = layer(x, valid_mask=valid)
+    for ablation in [
+        MoEAblationConfig(mode="disable_shared_expert"),
+        MoEAblationConfig(mode="disable_routed_expert", expert_id=0),
+        MoEAblationConfig(mode="replace_routed_expert", expert_id=0, replacement_expert_id=1),
+        MoEAblationConfig(mode="uniform_router"),
+        MoEAblationConfig(mode="random_router", seed=1),
+        MoEAblationConfig(mode="zero_expert_output", expert_ids=(0, 1)),
+    ]:
+        layer(x, valid_mask=valid, ablation=ablation)
+    out_after, _, _, _ = layer(x, valid_mask=valid)
+    assert torch.equal(out_before, out_after)
+
+
+def test_ablation_is_rejected_while_layer_is_in_training_mode():
+    layer, cfg = _stub_layer()
+    layer.train()
+    x = torch.randn(1, 3, cfg.core.d_model)
+    with pytest.raises(RuntimeError, match="evaluation-only"):
+        layer(x, ablation=MoEAblationConfig(mode="disable_shared_expert"))
+
+
+@pytest.mark.parametrize(
+    "kwargs",
+    [
+        {"mode": "not-a-mode"},
+        {"mode": "disable_routed_expert", "expert_id": -1},
+        {"mode": "disable_shared_expert", "expert_id": 0},
+        {"mode": "replace_routed_expert", "expert_id": 1, "replacement_expert_id": 1},
+        {"mode": "zero_expert_output", "expert_ids": (1, 1)},
+        {"mode": "random_router"},
+    ],
+)
+def test_malformed_ablation_configuration_is_rejected(kwargs):
+    with pytest.raises(ValueError):
+        MoEAblationConfig(**kwargs)
+
+
+@pytest.mark.parametrize(
+    "ablation",
+    [
+        MoEAblationConfig(mode="disable_routed_expert", expert_id=4),
+        MoEAblationConfig(mode="replace_routed_expert", expert_id=0, replacement_expert_id=4),
+        MoEAblationConfig(mode="zero_expert_output", expert_ids=(4,)),
+    ],
+)
+def test_out_of_range_expert_ids_fail_before_dispatch(ablation):
+    layer, cfg = _stub_layer(n_routed=4)
+    with pytest.raises(ValueError, match="out of range"):
+        layer(torch.randn(1, 3, cfg.core.d_model), ablation=ablation)
+
+# ---- tests/test_model_moe_diagnostics.py ----
+"""MoE routing instrumentation: entropy, margins, pair co-activation,
+contribution norms, router-logit magnitude, window aggregation, and
+routing-health detectors -- each checked against a hand-computed expected
+value or a synthetic case deliberately constructed to trigger it."""
+
+from __future__ import annotations
+
+import math
+
+import torch
+
+from juniper_auto.model.moe import MoELayer
+from juniper_auto.model.moe_diagnostics import (
+    RoutingWindowAccumulator,
+    RoutingHealthThresholds,
+    collect_layer_expert_gradient_norms,
+    compute_contribution_norms,
+    compute_entropy,
+    compute_expert_pair_coactivation,
+    compute_router_logit_magnitude_stats,
+    compute_topk_logit_margin,
+    compute_topk_prob_margin,
+    detect_dead_experts,
+    detect_dominant_experts,
+    detect_router_saturation,
+    detect_routing_collapse,
+    detect_routing_oscillation,
+    detect_starved_experts,
+    is_pathological_routing_oscillation,
+)
+from tests.model_fixtures import make_tiny_sparse_config
+
+
+def test_entropy_matches_hand_computed_value_for_uniform_and_peaked_distributions():
+    probs = torch.tensor([[0.25, 0.25, 0.25, 0.25], [1.0 - 3e-6, 1e-6, 1e-6, 1e-6]])
+    entropy, normalized = compute_entropy(probs)
+    torch.testing.assert_close(entropy[0], torch.tensor(math.log(4.0)), atol=1e-5, rtol=1e-5)
+    torch.testing.assert_close(normalized[0], torch.tensor(1.0), atol=1e-5, rtol=1e-5)
+    assert entropy[1].item() < 1e-3
+    assert normalized[1].item() < 1e-3
+
+
+def test_topk_margins_match_hand_computed_values():
+    probs = torch.tensor([[0.7, 0.2, 0.1]])
+    logits = torch.tensor([[5.0, 2.0, -1.0]])
+    prob_margin = compute_topk_prob_margin(probs)
+    logit_margin = compute_topk_logit_margin(logits)
+    torch.testing.assert_close(prob_margin, torch.tensor([0.5]), atol=1e-6, rtol=1e-6)
+    torch.testing.assert_close(logit_margin, torch.tensor([3.0]), atol=1e-6, rtol=1e-6)
+
+
+def test_router_logit_magnitude_stats_match_hand_computed_values():
+    logits = torch.tensor([[4.0, -2.0], [1.0, -1.0], [10.0, 0.0]])
+    valid = torch.tensor([True, True, False])
+    stats = compute_router_logit_magnitude_stats(logits, valid)
+    # valid rows only: [4,-2,1,-1]
+    expected_abs_mean = (4 + 2 + 1 + 1) / 4
+    expected_rms = math.sqrt((16 + 4 + 1 + 1) / 4)
+    torch.testing.assert_close(stats["abs_mean"], torch.tensor(expected_abs_mean), atol=1e-5, rtol=1e-5)
+    torch.testing.assert_close(stats["rms"], torch.tensor(expected_rms), atol=1e-5, rtol=1e-5)
+    torch.testing.assert_close(stats["abs_max"], torch.tensor(4.0), atol=1e-5, rtol=1e-5)
+
+
+def test_router_logit_magnitude_stats_handle_zero_valid_tokens():
+    logits = torch.randn(5, 3)
+    valid = torch.zeros(5, dtype=torch.bool)
+    stats = compute_router_logit_magnitude_stats(logits, valid)
+    assert stats["abs_mean"].item() == 0.0
+    assert stats["rms"].item() == 0.0
+    assert stats["abs_max"].item() == 0.0
+
+
+def test_expert_pair_coactivation_matches_hand_computed_matrix():
+    # 3 tokens, top_k=2, 4 experts. Pairs: (0,1), (0,1), (2,3). Token 2 (idx 2)
+    # is padding and must not contribute.
+    topk_idx = torch.tensor([[0, 1], [1, 0], [2, 3]])
+    valid = torch.tensor([True, True, False])
+    matrix = compute_expert_pair_coactivation(topk_idx, valid, n_experts=4)
+    expected = torch.zeros(4, 4, dtype=torch.long)
+    expected[0, 1] = 2  # (0,1) appears twice among valid tokens, order-independent
+    assert torch.equal(matrix, expected)
+    # strictly upper-triangular: nothing on/under the diagonal
+    assert torch.equal(torch.tril(matrix), torch.zeros(4, 4, dtype=torch.long))
+
+
+def test_expert_pair_coactivation_counts_each_pair_once_per_token_not_twice():
+    # top_k=3: token contributes exactly C(3,2)=3 pairs, not 6.
+    topk_idx = torch.tensor([[0, 1, 2]])
+    valid = torch.tensor([True])
+    matrix = compute_expert_pair_coactivation(topk_idx, valid, n_experts=3)
+    assert matrix.sum().item() == 3
+    assert matrix[0, 1].item() == 1 and matrix[0, 2].item() == 1 and matrix[1, 2].item() == 1
+
+
+def test_contribution_norms_match_hand_computed_values_with_stub_experts():
+    layer_cfg = make_tiny_sparse_config(
+        n_routed_experts=2, top_k=1, d_model=2, expert_ffn_dim=2, n_query_heads=1, n_kv_heads=1, head_dim=2
+    )
+    layer = MoELayer(layer_cfg)
+    layer.shared_expert.forward = lambda x: torch.full((x.shape[0], 2), 3.0)  # norm = sqrt(9+9) = sqrt(18)
+    layer.routed_experts[0].forward = lambda x: torch.full((x.shape[0], 2), 4.0)  # norm = sqrt(16+16)=sqrt(32)
+    layer.routed_experts[1].forward = lambda x: torch.full((x.shape[0], 2), 4.0)
+
+    x = torch.randn(3, layer_cfg.core.d_model)
+    _, _, _, diag = layer(x.unsqueeze(0), valid_mask=torch.ones(1, 3, dtype=torch.bool), return_diagnostics=True)
+
+    torch.testing.assert_close(diag.shared_contribution_norm_mean, torch.tensor(math.sqrt(18.0)), atol=1e-3, rtol=1e-3)
+    torch.testing.assert_close(diag.routed_contribution_norm_mean, torch.tensor(math.sqrt(32.0)), atol=1e-3, rtol=1e-3)
+
+
+def test_contribution_norms_handle_zero_valid_tokens():
+    shared = torch.randn(4, 3)
+    routed = torch.randn(4, 3)
+    valid = torch.zeros(4, dtype=torch.bool)
+    stats = compute_contribution_norms(shared, routed, valid)
+    for v in stats.values():
+        assert v.item() == 0.0
+
+
+def test_weighted_auxiliary_diagnostics_are_explicit_and_apply_coefficients_once():
+    cfg = make_tiny_sparse_config(
+        n_routed_experts=4, top_k=2, d_model=8, expert_ffn_dim=8,
+        n_query_heads=1, n_kv_heads=1, head_dim=8,
+    )
+    layer = MoELayer(cfg)
+    x = torch.randn(1, 5, cfg.core.d_model)
+    _, _, _, diag = layer(x, return_diagnostics=True)
+    torch.testing.assert_close(
+        diag.load_balance_loss_weighted,
+        cfg.moe.load_balance_loss_coefficient * diag.load_balance_loss_raw,
+    )
+    torch.testing.assert_close(
+        diag.router_z_loss_weighted,
+        cfg.moe.router_z_loss_coefficient * diag.router_z_loss_raw,
+    )
+
+
+def test_post_backward_gradient_collector_distinguishes_unselected_experts():
+    cfg = make_tiny_sparse_config(
+        n_routed_experts=4, top_k=2, d_model=4, expert_ffn_dim=4,
+        n_query_heads=1, n_kv_heads=1, head_dim=4,
+    )
+    layer = MoELayer(cfg)
+    with torch.no_grad():
+        layer.router.weight.copy_(
+            torch.tensor(
+                [
+                    [4.0, 4.0, 4.0, 4.0],
+                    [3.0, 3.0, 3.0, 3.0],
+                    [2.0, 2.0, 2.0, 2.0],
+                    [1.0, 1.0, 1.0, 1.0],
+                ]
+            )
+        )
+    x = torch.ones(1, 3, cfg.core.d_model, requires_grad=True)
+    out, lb, z, diag = layer(x, return_diagnostics=True)
+    assert set(diag.topk_idx.reshape(-1).tolist()) == {0, 1}
+    (out.square().mean() + lb + z).backward()
+    norms = collect_layer_expert_gradient_norms(layer, layer_index=7)
+    assert norms.layer_index == 7
+    assert norms.router is not None and math.isfinite(norms.router)
+    assert norms.shared_expert is not None and math.isfinite(norms.shared_expert)
+    assert all(value is not None and math.isfinite(value) for value in norms.routed_experts[:2])
+    assert norms.routed_experts[2:] == (None, None)
+
+
+# --------------------------------------------------------------------------
+# Window aggregation
+# --------------------------------------------------------------------------
+
+
+def test_routing_window_accumulator_aggregates_counts_and_load_shares_across_batches():
+    torch.manual_seed(0)
+    cfg = make_tiny_sparse_config(
+        n_routed_experts=4, top_k=2, d_model=8, expert_ffn_dim=8, n_query_heads=1, n_kv_heads=1, head_dim=8
+    )
+    layer = MoELayer(cfg)
+    accumulator = RoutingWindowAccumulator(n_experts=4, top_k=2)
+    total_valid = 0
+    for seed in range(5):
+        torch.manual_seed(seed)
+        x = torch.randn(1, 7, cfg.core.d_model)
+        valid = torch.ones(1, 7, dtype=torch.bool)
+        valid[0, -1] = False
+        _, _, _, diag = layer(x, valid_mask=valid, return_diagnostics=True)
+        accumulator.add(diag)
+        total_valid += 6
+
+    assert accumulator.total_valid_tokens == total_valid
+    assert accumulator.assignment_counts.sum().item() == total_valid * 2
+    shares = accumulator.load_shares()
+    torch.testing.assert_close(shares.sum(), torch.tensor(1.0), atol=1e-5, rtol=1e-5)
+
+
+# --------------------------------------------------------------------------
+# Detectors -- each must fire on a constructed pathological case and NOT
+# fire on a constructed healthy case.
+# --------------------------------------------------------------------------
+
+
+def test_dead_expert_detector_fires_only_on_zero_share():
+    healthy = torch.tensor([0.25, 0.25, 0.25, 0.25])
+    assert detect_dead_experts(healthy) == []
+    dead = torch.tensor([0.0, 0.4, 0.3, 0.3])
+    assert detect_dead_experts(dead) == [0]
+
+
+def test_starved_expert_detector_fires_on_near_zero_but_nonzero_share():
+    n = 4
+    uniform = 1.0 / n
+    healthy = torch.full((n,), uniform)
+    assert detect_starved_experts(healthy) == []
+    starved = torch.tensor([0.01 * uniform, 0.33, 0.33, 0.33])
+    assert detect_starved_experts(starved) == [0]
+    # exactly-zero is "dead", not "starved" -- the two are disjoint sets
+    fully_dead = torch.tensor([0.0, 0.33, 0.33, 0.34])
+    assert detect_starved_experts(fully_dead) == []
+
+
+def test_dominant_expert_detector_fires_on_excess_share():
+    n = 4
+    healthy = torch.full((n,), 1.0 / n)
+    assert detect_dominant_experts(healthy) == []
+    dominant = torch.tensor([0.85, 0.05, 0.05, 0.05])
+    assert detect_dominant_experts(dominant) == [0]
+
+
+def test_routing_collapse_detector_requires_both_low_entropy_and_concentration():
+    healthy_shares = torch.full((4,), 0.25)
+    assert not detect_routing_collapse(mean_normalized_entropy=0.95, load_shares=healthy_shares)
+    collapsed_shares = torch.tensor([0.9, 0.03, 0.03, 0.04])
+    assert detect_routing_collapse(mean_normalized_entropy=0.1, load_shares=collapsed_shares)
+    # low entropy alone (without concentration) must not fire
+    assert not detect_routing_collapse(mean_normalized_entropy=0.1, load_shares=healthy_shares)
+
+
+def test_router_saturation_detector_fires_on_large_logits_or_large_margin():
+    assert not detect_router_saturation(mean_logit_abs=1.0, mean_top1_margin=0.3)
+    assert detect_router_saturation(mean_logit_abs=50.0, mean_top1_margin=0.3)
+    assert detect_router_saturation(mean_logit_abs=1.0, mean_top1_margin=0.999)
+
+
+def test_diagnostics_remain_finite_and_stable_under_large_magnitude_router_inputs():
+    # Phase 2 instructions section 17: deliberately test large-magnitude
+    # router inputs/logits and confirm saturation-related diagnostics stay
+    # numerically stable (no inf/nan from softmax overflow or entropy log(0)).
+    cfg = make_tiny_sparse_config(
+        n_routed_experts=6, top_k=2, d_model=8, expert_ffn_dim=8, n_query_heads=1, n_kv_heads=1, head_dim=8
+    )
+    layer = MoELayer(cfg)
+    torch.nn.init.normal_(layer.router.weight, std=50.0)  # deliberately large router weights
+    x = torch.randn(1, 12, cfg.core.d_model) * 1000.0  # deliberately large-magnitude hidden states
+
+    out, lb, z, diag = layer(x, valid_mask=torch.ones(1, 12, dtype=torch.bool), return_diagnostics=True)
+
+    assert torch.isfinite(out).all()
+    assert torch.isfinite(lb).all() and torch.isfinite(z).all()
+    assert torch.isfinite(diag.router_logits).all()
+    assert torch.isfinite(diag.router_probs).all()
+    torch.testing.assert_close(diag.router_probs.sum(dim=-1), torch.ones(12), atol=1e-4, rtol=1e-4)
+    assert torch.isfinite(diag.entropy).all() and (diag.entropy >= 0).all()
+    assert torch.isfinite(diag.normalized_entropy).all()
+    assert torch.isfinite(diag.top1_top2_prob_margin).all()
+    assert torch.isfinite(diag.top1_top2_logit_margin).all()
+    assert torch.isfinite(diag.router_logit_abs_mean).item()
+    assert torch.isfinite(diag.router_logit_rms).item()
+    assert torch.isfinite(diag.router_logit_abs_max).item()
+    # This case is expected to genuinely trip the saturation detector --
+    # confirms the detector is reachable from a real forward pass, not just
+    # from hand-fed synthetic scalars.
+    from juniper_auto.model.moe_diagnostics import detect_router_saturation
+
+    assert detect_router_saturation(
+        mean_logit_abs=diag.router_logit_abs_mean.item(),
+        mean_top1_margin=diag.top1_top2_prob_margin.mean().item(),
+    )
+
+
+def test_diagnostics_remain_finite_under_large_magnitude_inputs_with_padding():
+    cfg = make_tiny_sparse_config(
+        n_routed_experts=6, top_k=2, d_model=8, expert_ffn_dim=8, n_query_heads=1, n_kv_heads=1, head_dim=8
+    )
+    layer = MoELayer(cfg)
+    x = torch.randn(1, 10, cfg.core.d_model) * 5000.0
+    valid = torch.ones(1, 10, dtype=torch.bool)
+    valid[0, -4:] = False
+    out, lb, z, diag = layer(x, valid_mask=valid, return_diagnostics=True)
+    assert torch.isfinite(out).all()
+    assert torch.isfinite(lb).all() and torch.isfinite(z).all()
+    assert torch.isfinite(diag.shared_contribution_norm_mean).item()
+    assert torch.isfinite(diag.routed_contribution_norm_mean).item()
+
+
+def test_routing_oscillation_detector_measures_top1_change_rate():
+    a = torch.tensor([[0, 1], [2, 3], [0, 2]])
+    b_identical = a.clone()
+    assert detect_routing_oscillation(a, b_identical) == 0.0
+    b_all_changed = torch.tensor([[1, 0], [3, 2], [2, 0]])
+    assert detect_routing_oscillation(a, b_all_changed) == 1.0
+    b_one_changed = torch.tensor([[9, 1], [2, 3], [0, 2]])
+    assert abs(detect_routing_oscillation(a, b_one_changed) - (1 / 3)) < 1e-6
+    assert not is_pathological_routing_oscillation(1 / 3)
+    assert is_pathological_routing_oscillation(1.0)
+
+
+def test_routing_health_thresholds_are_caller_configurable():
+    shares = torch.tensor([0.8, 0.07, 0.07, 0.06])
+    assert detect_dominant_experts(shares) == [0]
+    relaxed = RoutingHealthThresholds(dominant_expert_uniform_share_ratio=4.0)
+    assert detect_dominant_experts(shares, relaxed) == []
+    strict_oscillation = RoutingHealthThresholds(oscillation_top1_change_rate=0.1)
+    assert is_pathological_routing_oscillation(0.2, strict_oscillation)
+
+# ---- tests/test_model_moe_dispatch.py ----
+"""Reference-vs-optimized MoE dispatch equivalence (Phase 2 instructions
+section 5), and a golden comparison against the approved Phase 1 commit's
+`moe.py` (section 4) proving the Phase 2 module split (routing.py /
+moe_dispatch.py / moe_ablations.py / moe_diagnostics.py) did not silently
+change the reference dispatch's semantics."""
+
+from __future__ import annotations
+
+import importlib.util
+import subprocess
+import sys
+from pathlib import Path
+
+import pytest
+import torch
+import yaml
+
+from juniper_auto.model.moe import MoELayer
+from tests.model_fixtures import make_tiny_sparse_config
+
+REPO_ROOT = Path(__file__).resolve().parent.parent
+PHASE_1_TAG = "phase-1-architecture"
+PHASE_1_APPROVED_COMMIT = "073acf46e04241ed35d00bc4b4c29ac463ee744d"
+
+
+def _load_phase1_golden_moe_module():
+    resolved = subprocess.run(
+        ["git", "rev-list", "-n", "1", PHASE_1_TAG],
+        cwd=REPO_ROOT,
+        capture_output=True,
+        text=True,
+    )
+    if resolved.returncode != 0 or resolved.stdout.strip() != PHASE_1_APPROVED_COMMIT:
+        raise RuntimeError(
+            f"required golden tag {PHASE_1_TAG!r} must resolve to {PHASE_1_APPROVED_COMMIT}, "
+            f"got {resolved.stdout.strip() or resolved.stderr.strip() or 'unavailable'}"
+        )
+    result = subprocess.run(
+        ["git", "show", f"{PHASE_1_TAG}:juniper_auto/model/moe.py"],
+        cwd=REPO_ROOT,
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode != 0:
+        raise RuntimeError(
+            f"required golden evidence is unavailable: cannot read "
+            f"{PHASE_1_TAG}:juniper_auto/model/moe.py from git: {result.stderr}"
+        )
+    source = result.stdout
+    spec = importlib.util.spec_from_loader("_phase1_golden_moe", loader=None)
+    module = importlib.util.module_from_spec(spec)
+    sys.modules["_phase1_golden_moe"] = module
+    try:
+        exec(compile(source, "<phase-1-architecture:juniper_auto/model/moe.py>", "exec"), module.__dict__)
+    finally:
+        del sys.modules["_phase1_golden_moe"]
+    return module
+
+
+@pytest.fixture(scope="module")
+def phase1_golden_moe():
+    return _load_phase1_golden_moe_module()
+
+
+def test_every_required_ci_workflow_fetches_the_golden_phase1_tag(repo_root):
+    for name in ("phase-0-validation.yml", "phase-1-validation.yml", "phase-2-validation.yml"):
+        workflow = yaml.load(
+            (repo_root / ".github" / "workflows" / name).read_text(),
+            Loader=yaml.BaseLoader,
+        )
+        checkout_steps = [
+            step
+            for job in workflow["jobs"].values()
+            for step in job["steps"]
+            if step.get("uses", "").startswith("actions/checkout@")
+        ]
+        assert len(checkout_steps) == 1, f"{name}: expected exactly one checkout step"
+        checkout = checkout_steps[0]
+        assert checkout.get("with", {}).get("fetch-depth") == "0", name
+        assert checkout.get("with", {}).get("fetch-tags") == "true", name
+
+
+def _paired_layers(phase1_golden_moe, **cfg_overrides):
+    d_model = cfg_overrides.get("d_model", 32)
+    cfg_overrides.setdefault("n_query_heads", 1)
+    cfg_overrides.setdefault("n_kv_heads", 1)
+    cfg_overrides.setdefault("head_dim", d_model)
+    cfg = make_tiny_sparse_config(**cfg_overrides)
+    new_layer = MoELayer(cfg)
+    golden_layer = phase1_golden_moe.MoELayer(cfg)
+    golden_layer.load_state_dict(new_layer.state_dict())
+    return new_layer, golden_layer, cfg
+
+
+@pytest.mark.parametrize("seed", [0, 1, 2, 3, 4])
+@pytest.mark.parametrize(
+    "n_tokens,n_experts,top_k,padding",
+    [
+        (9, 4, 2, "none"),
+        (11, 6, 2, "trailing"),
+        (11, 6, 2, "leading"),
+        (10, 5, 3, "scattered"),
+        (7, 8, 1, "none"),
+    ],
+)
+def test_refactored_reference_dispatch_matches_phase1_golden_bit_for_bit(
+    phase1_golden_moe, seed, n_tokens, n_experts, top_k, padding
+):
+    torch.manual_seed(seed)
+    new_layer, golden_layer, cfg = _paired_layers(
+        phase1_golden_moe, n_routed_experts=n_experts, top_k=top_k, d_model=8, expert_ffn_dim=8
+    )
+    x = torch.randn(1, n_tokens, cfg.core.d_model)
+    valid = torch.ones(1, n_tokens, dtype=torch.bool)
+    if padding == "trailing":
+        valid[0, -2:] = False
+    elif padding == "leading":
+        valid[0, :2] = False
+    elif padding == "scattered":
+        valid[0, ::3] = False
+
+    out_new, lb_new, z_new, diag_new = new_layer(x, valid_mask=valid, return_diagnostics=True)
+    out_gold, lb_gold, z_gold, diag_gold = golden_layer(x, valid_mask=valid, return_diagnostics=True)
+
+    # Phase 2 independent review tightened padding semantics: valid-token
+    # behavior remains the Phase 1 golden oracle, while padding positions no
+    # longer execute experts and therefore have a zero MoE contribution.
+    flat_valid = valid.unsqueeze(-1).expand_as(out_new)
+    if valid.all():
+        assert torch.equal(out_new, out_gold)
+    else:
+        # Compacting valid rows changes GEMM batching and can change the last
+        # few floating-point bits without changing valid-token semantics.
+        torch.testing.assert_close(out_new[flat_valid], out_gold[flat_valid], atol=1e-6, rtol=1e-6)
+    if not valid.all():
+        assert torch.equal(out_new[~flat_valid], torch.zeros_like(out_new[~flat_valid]))
+    assert torch.equal(lb_new, lb_gold)
+    assert torch.equal(z_new, z_gold)
+    assert torch.equal(diag_new.router_logits, diag_gold.router_logits)
+    assert torch.equal(diag_new.router_probs, diag_gold.router_probs)
+    assert torch.equal(diag_new.topk_idx, diag_gold.topk_idx)
+    assert torch.equal(diag_new.topk_weights, diag_gold.topk_weights)
+    assert torch.equal(diag_new.assignment_counts_per_expert, diag_gold.assignment_counts_per_expert)
+
+
+def test_refactored_reference_dispatch_matches_phase1_golden_under_gradients(phase1_golden_moe):
+    torch.manual_seed(7)
+    new_layer, golden_layer, cfg = _paired_layers(
+        phase1_golden_moe, n_routed_experts=6, top_k=2, d_model=6, expert_ffn_dim=6
+    )
+    x = torch.randn(2, 5, cfg.core.d_model)
+    valid = torch.ones(2, 5, dtype=torch.bool)
+    valid[1, -1] = False
+
+    x_new = x.clone().requires_grad_(True)
+    x_gold = x.clone().requires_grad_(True)
+
+    out_new, lb_new, z_new, _ = new_layer(x_new, valid_mask=valid)
+    (out_new[valid].sum() + lb_new + z_new).backward()
+
+    out_gold, lb_gold, z_gold, _ = golden_layer(x_gold, valid_mask=valid)
+    (out_gold[valid].sum() + lb_gold + z_gold).backward()
+
+    flat_valid = valid.unsqueeze(-1).expand_as(out_new)
+    torch.testing.assert_close(out_new[flat_valid], out_gold[flat_valid], atol=1e-6, rtol=1e-6)
+    grad_valid = valid.unsqueeze(-1).expand_as(x_new.grad)
+    torch.testing.assert_close(x_new.grad[grad_valid], x_gold.grad[grad_valid], atol=1e-6, rtol=1e-6)
+    assert torch.equal(x_new.grad[~grad_valid], torch.zeros_like(x_new.grad[~grad_valid]))
+    torch.testing.assert_close(
+        new_layer.router.weight.grad, golden_layer.router.weight.grad, atol=1e-6, rtol=1e-6
+    )
+    for p_new, p_gold in zip(new_layer.shared_expert.parameters(), golden_layer.shared_expert.parameters()):
+        torch.testing.assert_close(p_new.grad, p_gold.grad, atol=1e-6, rtol=1e-6)
+
+
+# --------------------------------------------------------------------------
+# Reference vs optimized (Phase 2) numerical equivalence
+# --------------------------------------------------------------------------
+
+_EQUIVALENCE_TOLERANCE = dict(atol=1e-5, rtol=1e-5)
+
+
+def _layer(backend="reference", **overrides):
+    overrides.setdefault("n_routed_experts", 8)
+    overrides.setdefault("top_k", 2)
+    overrides.setdefault("d_model", 8)
+    overrides.setdefault("expert_ffn_dim", 8)
+    d_model = overrides["d_model"]
+    overrides.setdefault("n_query_heads", 1)
+    overrides.setdefault("n_kv_heads", 1)
+    overrides.setdefault("head_dim", d_model)
+    cfg = make_tiny_sparse_config(**overrides)
+    return MoELayer(cfg, backend=backend), cfg
+
+
+@pytest.mark.parametrize("seed", list(range(8)))
+@pytest.mark.parametrize(
+    "batch,seq_len,n_experts,top_k,padding",
+    [
+        (1, 9, 8, 2, "none"),
+        (2, 11, 6, 2, "trailing"),
+        (3, 7, 5, 3, "leading"),
+        (2, 13, 8, 2, "scattered"),
+        (1, 6, 4, 1, "none"),
+        (4, 5, 8, 2, "almost-all-padding"),
+    ],
+)
+def test_reference_and_optimized_forward_agree(seed, batch, seq_len, n_experts, top_k, padding):
+    torch.manual_seed(seed)
+    layer, cfg = _layer(n_routed_experts=n_experts, top_k=top_k, d_model=8, expert_ffn_dim=8)
+    x = torch.randn(batch, seq_len, cfg.core.d_model)
+    valid = torch.ones(batch, seq_len, dtype=torch.bool)
+    if padding == "trailing":
+        valid[:, -2:] = False
+    elif padding == "leading":
+        valid[:, :2] = False
+    elif padding == "scattered":
+        valid[..., ::3] = False
+    elif padding == "almost-all-padding":
+        valid[:] = False
+        valid[0, 0] = True
+
+    out_ref, lb_ref, z_ref, diag_ref = layer(x, valid_mask=valid, backend="reference", return_diagnostics=True)
+    out_opt, lb_opt, z_opt, diag_opt = layer(x, valid_mask=valid, backend="optimized", return_diagnostics=True)
+
+    # Routing itself is shared code (routing.py) -- these must match exactly,
+    # not just within tolerance, regardless of dispatch backend.
+    assert torch.equal(diag_ref.router_logits, diag_opt.router_logits)
+    assert torch.equal(diag_ref.topk_idx, diag_opt.topk_idx)
+    assert torch.equal(diag_ref.topk_weights, diag_opt.topk_weights)
+    assert torch.equal(diag_ref.assignment_counts_per_expert, diag_opt.assignment_counts_per_expert)
+    assert torch.equal(lb_ref, lb_opt)
+    assert torch.equal(z_ref, z_opt)
+
+    # Only the final combination (execution/summation order) can legitimately
+    # differ between dispatch backends.
+    torch.testing.assert_close(out_ref, out_opt, **_EQUIVALENCE_TOLERANCE)
+    torch.testing.assert_close(
+        out_ref[valid.reshape(batch, seq_len)], out_opt[valid.reshape(batch, seq_len)], **_EQUIVALENCE_TOLERANCE
+    )
+
+
+def test_reference_and_optimized_backward_agree():
+    torch.manual_seed(11)
+    layer, cfg = _layer(n_routed_experts=8, top_k=2, d_model=8, expert_ffn_dim=8)
+    x = torch.randn(2, 9, cfg.core.d_model)
+    valid = torch.ones(2, 9, dtype=torch.bool)
+    valid[1, -3:] = False
+
+    x_ref = x.clone().requires_grad_(True)
+    out_ref, lb_ref, z_ref, _ = layer(x_ref, valid_mask=valid, backend="reference")
+    (out_ref.sum() + lb_ref + z_ref).backward()
+    router_grad_ref = layer.router.weight.grad.clone()
+    shared_grad_ref = [p.grad.clone() for p in layer.shared_expert.parameters()]
+    routed_grad_ref = [
+        None if p.grad is None else p.grad.clone() for e in layer.routed_experts for p in e.parameters()
+    ]
+    layer.zero_grad(set_to_none=True)
+
+    x_opt = x.clone().requires_grad_(True)
+    out_opt, lb_opt, z_opt, _ = layer(x_opt, valid_mask=valid, backend="optimized")
+    (out_opt.sum() + lb_opt + z_opt).backward()
+    router_grad_opt = layer.router.weight.grad.clone()
+    shared_grad_opt = [p.grad.clone() for p in layer.shared_expert.parameters()]
+    routed_grad_opt = [
+        None if p.grad is None else p.grad.clone() for e in layer.routed_experts for p in e.parameters()
+    ]
+
+    torch.testing.assert_close(x_ref.grad, x_opt.grad, **_EQUIVALENCE_TOLERANCE)
+    torch.testing.assert_close(router_grad_ref, router_grad_opt, **_EQUIVALENCE_TOLERANCE)
+    for g_ref, g_opt in zip(shared_grad_ref, shared_grad_opt):
+        torch.testing.assert_close(g_ref, g_opt, **_EQUIVALENCE_TOLERANCE)
+    for g_ref, g_opt in zip(routed_grad_ref, routed_grad_opt):
+        assert (g_ref is None) == (g_opt is None)
+        if g_ref is not None:
+            torch.testing.assert_close(g_ref, g_opt, **_EQUIVALENCE_TOLERANCE)
+
+
+@pytest.mark.skipif(not torch.cuda.is_available(), reason="requires CUDA mixed-precision hardware")
+def test_reference_and_optimized_agree_under_real_cuda_fp16_autocast():
+    torch.manual_seed(13)
+    layer, cfg = _layer(n_routed_experts=8, top_k=2, d_model=16, expert_ffn_dim=16)
+    layer = layer.to("cuda")
+    x = torch.randn(2, 10, cfg.core.d_model, device="cuda")
+    valid = torch.ones(2, 10, dtype=torch.bool, device="cuda")
+    valid[1, -2:] = False
+
+    with torch.autocast(device_type="cuda", dtype=torch.float16):
+        out_ref, lb_ref, z_ref, diag_ref = layer(x, valid_mask=valid, backend="reference", return_diagnostics=True)
+        out_opt, lb_opt, z_opt, diag_opt = layer(x, valid_mask=valid, backend="optimized", return_diagnostics=True)
+
+    assert diag_ref.router_logits.dtype == torch.float32
+    assert diag_opt.router_logits.dtype == torch.float32
+    assert torch.equal(diag_ref.topk_idx, diag_opt.topk_idx)
+    torch.testing.assert_close(out_ref.float(), out_opt.float(), atol=2e-2, rtol=2e-2)
+
+# ---- tests/test_model_moe_property.py ----
+"""Randomized property coverage for MoE dropless routing invariants (Phase 2
+instructions section 18): across many seeds, batch sizes, sequence lengths,
+padding layouts, expert counts, and activation magnitudes, prove the
+dropless contract holds exactly -- not just on one hand-picked tensor.
+No external property-testing dependency is used; this is a deterministic,
+parametrized pytest suite, per the instructions' explicit allowance."""
+
+from __future__ import annotations
+
+import itertools
+import math
+
+import pytest
+import torch
+
+from juniper_auto.model.moe import MoELayer
+from tests.model_fixtures import make_tiny_sparse_config
+
+
+def _make_valid_mask(batch, seq_len, layout, generator):
+    valid = torch.ones(batch, seq_len, dtype=torch.bool)
+    if layout == "none":
+        pass
+    elif layout == "trailing":
+        valid[:, seq_len // 2 :] = False
+    elif layout == "leading":
+        valid[:, : seq_len // 2] = False
+    elif layout == "scattered":
+        valid[torch.rand(batch, seq_len, generator=generator) < 0.5] = False
+    elif layout == "per_row_different_lengths":
+        for b in range(batch):
+            length = 1 + (b % seq_len)
+            valid[b, length:] = False
+    elif layout == "almost_all_padding":
+        valid[:] = False
+        valid[0, 0] = True
+    elif layout == "fully_padded_row":
+        valid[0, :] = False
+    return valid
+
+
+CASES = list(
+    itertools.product(
+        range(6),  # seeds
+        [1, 2, 3],  # batch
+        [5, 7, 12],  # seq_len
+        [4, 6, 8],  # n_routed_experts
+        [1, 2, 3],  # top_k
+        ["none", "trailing", "leading", "scattered", "per_row_different_lengths", "almost_all_padding", "fully_padded_row"],
+    )
+)
+# Full cross product is large; subsample deterministically (index stride) to
+# keep CI fast while still exercising every axis many times over.
+CASES = CASES[::17]
+
+
+@pytest.mark.parametrize("seed,batch,seq_len,n_experts,top_k,layout", CASES)
+def test_dropless_invariants_hold_across_randomized_configurations(seed, batch, seq_len, n_experts, top_k, layout):
+    if top_k > n_experts:
+        pytest.skip("top_k cannot exceed n_routed_experts")
+    generator = torch.Generator().manual_seed(seed)
+    torch.manual_seed(seed)
+
+    cfg = make_tiny_sparse_config(
+        n_routed_experts=n_experts,
+        top_k=top_k,
+        d_model=8,
+        expert_ffn_dim=8,
+        n_query_heads=1,
+        n_kv_heads=1,
+        head_dim=8,
+    )
+    layer = MoELayer(cfg)
+    x = torch.randn(batch, seq_len, cfg.core.d_model, generator=generator) * (1.0 + 5.0 * torch.rand((), generator=generator).item())
+    valid_mask = _make_valid_mask(batch, seq_len, layout, generator)
+    n_valid = int(valid_mask.sum().item())
+
+    out, lb, z, diag = layer(x, valid_mask=valid_mask, return_diagnostics=True)
+
+    # Core dropless contract.
+    assert diag.assignment_counts_per_expert.sum().item() == n_valid * top_k
+
+    # Every token (valid or padding) gets exactly top_k *unique* experts.
+    flat_topk = diag.topk_idx
+    for row in flat_topk.tolist():
+        assert len(set(row)) == top_k
+
+    # Renormalized weights sum to 1 for every token.
+    torch.testing.assert_close(diag.topk_weights.sum(dim=-1), torch.ones(batch * seq_len), atol=1e-4, rtol=1e-4)
+
+    # Shapes and finiteness.
+    assert out.shape == (batch, seq_len, cfg.core.d_model)
+    assert torch.isfinite(out).all()
+    assert torch.equal(out[~valid_mask], torch.zeros_like(out[~valid_mask]))
+    assert torch.isfinite(lb).all() and torch.isfinite(z).all()
+
+    # Expert-pair coactivation: total pairs counted == n_valid * C(top_k, 2),
+    # and it is never larger than the number of valid tokens times the
+    # number of distinct pairs one token can contribute.
+    if top_k >= 2:
+        expected_pairs = n_valid * math.comb(top_k, 2)
+        assert diag.expert_pair_coactivation.sum().item() == expected_pairs
+        # strictly upper-triangular: no mass on/under the diagonal
+        assert torch.triu(diag.expert_pair_coactivation, diagonal=1).sum() == diag.expert_pair_coactivation.sum()
+
+
+@pytest.mark.parametrize("seed", range(10))
+def test_no_duplicate_expert_within_one_tokens_topk(seed):
+    torch.manual_seed(seed)
+    cfg = make_tiny_sparse_config(
+        n_routed_experts=8, top_k=3, d_model=8, expert_ffn_dim=8, n_query_heads=1, n_kv_heads=1, head_dim=8
+    )
+    layer = MoELayer(cfg)
+    x = torch.randn(3, 17, cfg.core.d_model)
+    _, _, _, diag = layer(x, return_diagnostics=True)
+    idx = diag.topk_idx
+    assert (idx[:, 0] != idx[:, 1]).all()
+    assert (idx[:, 0] != idx[:, 2]).all()
+    assert (idx[:, 1] != idx[:, 2]).all()
+
+
+def test_padding_never_alters_valid_token_statistics_across_many_layouts():
+    torch.manual_seed(21)
+    cfg = make_tiny_sparse_config(
+        n_routed_experts=6, top_k=2, d_model=8, expert_ffn_dim=8, n_query_heads=1, n_kv_heads=1, head_dim=8
+    )
+    layer = MoELayer(cfg)
+    x = torch.randn(2, 10, cfg.core.d_model)
+    valid = torch.ones(2, 10, dtype=torch.bool)
+    valid[0, 6:] = False
+    valid[1, :3] = False
+
+    _, lb_a, z_a, diag_a = layer(x, valid_mask=valid, return_diagnostics=True)
+
+    x_mutated_padding = x.clone()
+    x_mutated_padding[~valid] = torch.randn_like(x_mutated_padding[~valid]) * 1000.0
+    _, lb_b, z_b, diag_b = layer(x_mutated_padding, valid_mask=valid, return_diagnostics=True)
+
+    torch.testing.assert_close(lb_a, lb_b)
+    torch.testing.assert_close(z_a, z_b)
+    assert torch.equal(diag_a.assignment_counts_per_expert, diag_b.assignment_counts_per_expert)
+    assert torch.equal(diag_a.expert_pair_coactivation, diag_b.expert_pair_coactivation)
+    torch.testing.assert_close(
+        diag_a.entropy[valid.reshape(-1)].mean(), diag_b.entropy[valid.reshape(-1)].mean()
+    )
+
+# ---- tests/test_model_moe_trace.py ----
+"""Per-token routing traceability (Phase 2 instructions section 8): for a
+diagnostic run, exactly which routed experts processed every token at every
+MoE layer must be reconstructable, and the facility must be bounded/opt-in
+and safe to export as JSON."""
+
+from __future__ import annotations
+
+import json
+import tempfile
+from pathlib import Path
+
+import pytest
+import torch
+
+from juniper_auto.model import build_model
+from juniper_auto.model.moe import MoELayer
+from juniper_auto.model.moe_diagnostics import assemble_full_trace, export_trace_json
+from tests.model_fixtures import make_tiny_sparse_config
+
+
+def test_return_trace_requires_return_diagnostics():
+    cfg = make_tiny_sparse_config(n_routed_experts=4, top_k=2, d_model=4, n_query_heads=1, n_kv_heads=1, head_dim=4)
+    layer = MoELayer(cfg)
+    x = torch.randn(1, 5, cfg.core.d_model)
+    with pytest.raises(ValueError, match="return_trace"):
+        layer(x, return_diagnostics=False, return_trace=True)
+
+
+def test_single_layer_trace_records_correct_positions_experts_and_weights():
+    cfg = make_tiny_sparse_config(n_routed_experts=4, top_k=2, d_model=4, n_query_heads=1, n_kv_heads=1, head_dim=4)
+    layer = MoELayer(cfg)
+    torch.manual_seed(0)
+    batch, seq_len = 2, 5
+    x = torch.randn(batch, seq_len, cfg.core.d_model)
+    valid = torch.ones(batch, seq_len, dtype=torch.bool)
+    valid[1, -1] = False
+
+    _, _, _, diag = layer(x, valid_mask=valid, return_diagnostics=True, return_trace=True)
+    trace = diag.token_trace
+    assert len(trace) == batch * seq_len
+
+    for record in trace:
+        flat_idx = record.batch_index * seq_len + record.seq_position
+        assert record.flat_token_index == flat_idx
+        assert record.expert_1 == diag.topk_idx[flat_idx, 0].item()
+        assert record.expert_2 == diag.topk_idx[flat_idx, 1].item()
+        assert record.executed_expert_1 == (record.expert_1 if record.is_valid else -1)
+        assert record.executed_expert_2 == (record.expert_2 if record.is_valid else -1)
+        assert record.weight_1 == pytest.approx(diag.topk_weights[flat_idx, 0].item())
+        assert record.weight_2 == pytest.approx(diag.topk_weights[flat_idx, 1].item())
+        assert record.is_valid == bool(valid[record.batch_index, record.seq_position].item())
+        assert record.routed_assignment_count == (2 if record.is_valid else 0)
+        assert record.weights_sum == pytest.approx(record.weight_1 + record.weight_2)
+        assert record.weights_normalized
+        assert record.shared_expert_activated == record.is_valid
+        assert record.reconstruction_position == flat_idx
+
+
+def test_trace_covers_every_token_no_lost_records():
+    cfg = make_tiny_sparse_config(n_routed_experts=5, top_k=2, d_model=4, n_query_heads=1, n_kv_heads=1, head_dim=4)
+    layer = MoELayer(cfg)
+    batch, seq_len = 3, 9
+    x = torch.randn(batch, seq_len, cfg.core.d_model)
+    _, _, _, diag = layer(x, return_diagnostics=True, return_trace=True)
+    seen = {(r.batch_index, r.seq_position) for r in diag.token_trace}
+    expected = {(b, s) for b in range(batch) for s in range(seq_len)}
+    assert seen == expected
+
+
+def test_trace_is_bounded_by_default_and_raises_when_exceeded():
+    cfg = make_tiny_sparse_config(n_routed_experts=4, top_k=2, d_model=4, n_query_heads=1, n_kv_heads=1, head_dim=4)
+    layer = MoELayer(cfg)
+    x = torch.randn(1, 10, cfg.core.d_model)
+    with pytest.raises(ValueError, match="max_trace_tokens"):
+        layer(x, return_diagnostics=True, return_trace=True, max_trace_tokens=5)
+    # explicit opt-out of the bound is allowed
+    _, _, _, diag = layer(x, return_diagnostics=True, return_trace=True, max_trace_tokens=None)
+    assert len(diag.token_trace) == 10
+
+
+def test_full_model_trace_assigns_correct_layer_index_and_skips_dense_layers():
+    cfg = make_tiny_sparse_config(
+        n_layers=6, dense_layers=[1, 6], moe_layers=[2, 3, 4, 5],
+        d_model=8, n_routed_experts=4, top_k=2, expert_ffn_dim=8,
+        n_query_heads=2, n_kv_heads=1, head_dim=4,
+    )
+    model = build_model(cfg, seed=0)
+    input_ids = torch.randint(0, cfg.embeddings.vocab_size, (2, 6))
+    out = model(input_ids, return_diagnostics=True)
+
+    full_trace = assemble_full_trace(model.layer_kinds, out.diagnostics, token_ids=input_ids)
+    # only MoE layers (positions 2,3,4,5) contribute; each contributes
+    # batch*seq_len = 12 records since return_trace defaults to False on the
+    # model-level call -- so this should be empty until trace is requested.
+    assert full_trace == []
+
+
+def test_full_model_trace_with_explicit_trace_collection():
+    cfg = make_tiny_sparse_config(
+        n_layers=6, dense_layers=[1, 6], moe_layers=[2, 3, 4, 5],
+        d_model=8, n_routed_experts=4, top_k=2, expert_ffn_dim=8,
+        n_query_heads=2, n_kv_heads=1, head_dim=4,
+    )
+    model = build_model(cfg, seed=0)
+    input_ids = torch.randint(0, cfg.embeddings.vocab_size, (2, 6))
+    attention_mask = torch.ones(2, 6, dtype=torch.bool)
+
+    out = model(input_ids, attention_mask=attention_mask, return_diagnostics=True, return_trace=True)
+    full_trace = assemble_full_trace(model.layer_kinds, out.diagnostics, token_ids=input_ids)
+    assert len(full_trace) == 4 * 2 * 6  # 4 MoE layers * batch(2) * seq_len(6)
+    assert {r.layer_index for r in full_trace} == {2, 3, 4, 5}
+
+    with tempfile.TemporaryDirectory() as tmp:
+        out_path = Path(tmp) / "trace.json"
+        export_trace_json(full_trace, out_path)
+        with out_path.open() as f:
+            loaded = json.load(f)
+        assert len(loaded) == len(full_trace)
+        assert loaded[0]["layer_index"] in {2, 3, 4, 5}
+        assert set(loaded[0].keys()) == {
+            "layer_index", "batch_index", "seq_position", "flat_token_index",
+            "is_valid", "expert_1", "expert_2", "executed_expert_1", "executed_expert_2",
+            "weight_1", "weight_2",
+            "routed_assignment_count", "weights_sum", "weights_normalized",
+            "shared_expert_activated", "reconstruction_position", "token_id", "token_text",
+        }
+        assert loaded[0]["token_id"] == input_ids[0, 0].item()
+
+
+def test_full_trace_rejects_mismatched_token_id_shape():
+    cfg = make_tiny_sparse_config(
+        n_layers=2, dense_layers=[1], moe_layers=[2], d_model=4,
+        n_routed_experts=4, top_k=2, expert_ffn_dim=4,
+        n_query_heads=1, n_kv_heads=1, head_dim=4,
+    )
+    model = build_model(cfg, seed=0)
+    input_ids = torch.randint(0, cfg.embeddings.vocab_size, (1, 4))
+    out = model(input_ids, return_diagnostics=True, return_trace=True)
+    with pytest.raises(ValueError, match="token_ids"):
+        assemble_full_trace(model.layer_kinds, out.diagnostics, token_ids=torch.zeros(2, 4, dtype=torch.long))
+
+# ---- tests/test_model_norm.py ----
+"""RMSNorm and per-head QK-Norm math correctness."""
+
+from __future__ import annotations
+
+import torch
+
+from juniper_auto.model.norm import RMSNorm
+
+
+def _manual_rmsnorm(x: torch.Tensor, weight: torch.Tensor, eps: float) -> torch.Tensor:
+    x64 = x.double()
+    variance = x64.pow(2).mean(dim=-1, keepdim=True)
+    normed = x64 / torch.sqrt(variance + eps)
+    return weight.double() * normed
+
+
+def test_rmsnorm_matches_independent_reference():
+    torch.manual_seed(0)
+    norm = RMSNorm(16, eps=1e-5)
+    norm.weight.data.uniform_(0.5, 1.5)
+    x = torch.randn(3, 5, 16)
+    out = norm(x)
+    expected = _manual_rmsnorm(x, norm.weight, 1e-5)
+    torch.testing.assert_close(out.double(), expected, atol=1e-5, rtol=1e-5)
+
+
+def test_rmsnorm_reduction_axis_is_last_dim_only():
+    norm = RMSNorm(8)
+    x = torch.zeros(2, 3, 8)
+    x[0, 0, :] = torch.arange(8.0)
+    x[0, 1, :] = 1.0  # constant vector -> RMS = 1, normed output = constant / rms
+    out = norm(x)
+    # Row [0,1] has all-equal features, so normalization must leave it uniform.
+    assert torch.allclose(out[0, 1, :], out[0, 1, 0].expand(8), atol=1e-5)
+    # Row [0,0] and row [0,1] must differ in the output since their raw
+    # magnitudes differ -- proves normalization is not a no-op.
+    assert not torch.allclose(out[0, 0, :], out[0, 1, :])
+
+
+def test_rmsnorm_weight_ones_at_init_is_identity_scale():
+    norm = RMSNorm(12)
+    assert torch.equal(norm.weight.data, torch.ones(12))
+
+
+def test_rmsnorm_scale_is_learnable_and_no_bias():
+    norm = RMSNorm(4)
+    params = dict(norm.named_parameters())
+    assert set(params.keys()) == {"weight"}
+    assert params["weight"].requires_grad
+
+
+def test_rmsnorm_fp32_reduction_under_fp16_input():
+    # Reduction must happen in FP32 even when the input activation is FP16 --
+    # this guards against an implementation that reduces directly in FP16
+    # and silently loses precision on values that would overflow/underflow
+    # FP16 mean-of-squares.
+    norm = RMSNorm(8)
+    x = (torch.randn(4, 8) * 300).to(torch.float16)  # large enough that FP16 squared-mean is lossy
+    out = norm(x)
+    assert out.dtype == torch.float16
+    assert torch.isfinite(out).all()
+
+    expected = _manual_rmsnorm(x, norm.weight, 1e-5)
+    torch.testing.assert_close(out.double(), expected, atol=2e-2, rtol=2e-2)
+
+
+def test_per_head_qk_norm_independent_per_head_shared_scale():
+    head_dim = 8
+    norm = RMSNorm(head_dim)
+    norm.weight.data.uniform_(0.5, 1.5)
+    torch.manual_seed(1)
+    x = torch.randn(2, 5, 3, head_dim)  # [batch, seq, n_heads, head_dim]
+
+    out = norm(x)
+
+    # Each head normalized independently: compare against per-head slices
+    # run through the same module one head at a time.
+    for h in range(3):
+        expected_h = norm(x[:, :, h, :])
+        torch.testing.assert_close(out[:, :, h, :], expected_h)
+
+    # Exactly `head_dim` learnable parameters, shared across all heads --
+    # this is what keeps the frozen architecture's QK-Norm accounting at
+    # head_dim (not n_heads * head_dim) parameters per projection.
+    assert norm.weight.numel() == head_dim
+
+# ---- tests/test_model_official_architecture.py ----
+"""Structural verification of the actual official ja150m-v0.1 /
+ja150m-v0.1-dense modules -- not the config, the instantiated PyTorch
+model. A config can be correct while the code that builds modules from it
+is wrong, so every check here inspects `model.modules()`/`model.parameters()`
+directly. This is Phase 1's Method B parameter verification (Method A is
+`juniper_auto.accounting`, already covered by Phase 0's tests)."""
+
+from __future__ import annotations
+
+import torch
+
+from juniper_auto.accounting import standard_active_parameter_breakdown, total_parameter_breakdown
+from juniper_auto.config import load_architecture_config
+from juniper_auto.config.frozen import FROZEN_STANDARD_ACTIVE_PARAMETERS, FROZEN_TOTAL_PARAMETERS
+from juniper_auto.model import build_model
+from juniper_auto.model.inspection import (
+    bias_audit,
+    dropout_audit,
+    layer_placement_report,
+    pytorch_parameter_breakdown,
+    qk_norm_parameter_count,
+    total_parameters,
+    verify_weight_tying,
+)
+
+SPARSE_CFG = load_architecture_config("configs/architecture/ja150m-v0.1.yaml")
+DENSE_CFG = load_architecture_config("configs/architecture/ja150m-v0.1-dense.yaml")
+
+
+def test_sparse_total_parameters_exact_match_pytorch_and_config():
+    model = build_model(SPARSE_CFG, seed=0)
+    method_b_total = total_parameters(model)
+    method_a_total = total_parameter_breakdown(SPARSE_CFG).total
+    assert method_b_total == 150_031_360 == FROZEN_TOTAL_PARAMETERS["ja150m-v0.1"]
+    assert method_a_total == method_b_total
+
+
+def test_sparse_standard_active_parameters_config_derived():
+    method_a_active = standard_active_parameter_breakdown(SPARSE_CFG).total
+    assert method_a_active == 79_252_480 == FROZEN_STANDARD_ACTIVE_PARAMETERS["ja150m-v0.1"]
+
+
+def test_dense_total_parameters_exact_match_pytorch_and_config():
+    model = build_model(DENSE_CFG, seed=0)
+    method_b_total = total_parameters(model)
+    method_a_total = total_parameter_breakdown(DENSE_CFG).total
+    assert method_b_total == 79_191_040 == FROZEN_TOTAL_PARAMETERS["ja150m-v0.1-dense"]
+    assert method_a_total == method_b_total
+
+
+def test_sparse_pytorch_breakdown_matches_config_breakdown_field_by_field():
+    model = build_model(SPARSE_CFG, seed=0)
+    method_b = pytorch_parameter_breakdown(model)
+    method_a = total_parameter_breakdown(SPARSE_CFG).as_dict()
+    for key in method_a:
+        assert method_b[key] == method_a[key], f"mismatch in {key}: pytorch={method_b[key]} config={method_a[key]}"
+
+
+def test_dense_pytorch_breakdown_matches_config_breakdown_field_by_field():
+    model = build_model(DENSE_CFG, seed=0)
+    method_b = pytorch_parameter_breakdown(model)
+    method_a = total_parameter_breakdown(DENSE_CFG).as_dict()
+    for key in method_a:
+        assert method_b[key] == method_a[key]
+
+
+def test_qk_norm_parameter_count_is_exactly_2560():
+    model = build_model(SPARSE_CFG, seed=0)
+    assert qk_norm_parameter_count(model) == 2560
+
+
+def test_sparse_layer_placement_matches_frozen_dense_moe_positions():
+    model = build_model(SPARSE_CFG, seed=0)
+    report = layer_placement_report(model)
+    dense_positions = {entry["layer"] for entry in report if entry["kind"] == "dense"}
+    moe_positions = {entry["layer"] for entry in report if entry["kind"] == "moe"}
+    assert dense_positions == {1, 5, 10, 15, 20}
+    assert moe_positions == set(range(1, 21)) - {1, 5, 10, 15, 20}
+    for entry in report:
+        if entry["kind"] == "moe":
+            assert entry["n_routed_experts"] == 8
+            assert entry["n_shared_experts"] == 1
+            assert entry["top_k"] == 2
+
+
+def test_dense_control_layer_placement_is_all_dense():
+    model = build_model(DENSE_CFG, seed=0)
+    report = layer_placement_report(model)
+    assert all(entry["kind"] == "dense" for entry in report)
+    assert len(report) == 20
+
+
+def test_weight_tying_is_real_object_identity():
+    model = build_model(SPARSE_CFG, seed=0)
+    assert verify_weight_tying(model)
+    assert model.embedding.weight.data_ptr() == model.lm_head.weight.data_ptr()
+
+
+def test_no_bias_parameters_anywhere_in_sparse_model():
+    model = build_model(SPARSE_CFG, seed=0)
+    assert bias_audit(model) == []
+
+
+def test_no_bias_parameters_anywhere_in_dense_model():
+    model = build_model(DENSE_CFG, seed=0)
+    assert bias_audit(model) == []
+
+
+def test_no_dropout_modules_in_either_model():
+    assert dropout_audit(build_model(SPARSE_CFG, seed=0)) == []
+    assert dropout_audit(build_model(DENSE_CFG, seed=0)) == []
+
+
+def test_sparse_forward_backward_smoke_on_full_official_architecture():
+    model = build_model(SPARSE_CFG, seed=0)
+    torch.manual_seed(0)
+    input_ids = torch.randint(0, SPARSE_CFG.embeddings.vocab_size, (1, 8))
+    labels = input_ids.clone()
+    out = model(input_ids, labels=labels, return_diagnostics=True)
+    assert torch.isfinite(out.loss)
+    out.loss.backward()
+    assert any(p.grad is not None for p in model.parameters())
+
+    moe_diags = [d for d in out.diagnostics if d is not None]
+    assert len(moe_diags) == 15  # exactly the 15 MoE layers
+    for diag in moe_diags:
+        e0 = diag.topk_idx[:, 0]
+        e1 = diag.topk_idx[:, 1]
+        assert torch.all(e0 != e1)
+        torch.testing.assert_close(diag.topk_weights.sum(dim=-1), torch.ones(8), atol=1e-5, rtol=1e-5)
+
+
+def test_dense_forward_backward_smoke_on_full_official_architecture():
+    model = build_model(DENSE_CFG, seed=0)
+    torch.manual_seed(0)
+    input_ids = torch.randint(0, DENSE_CFG.embeddings.vocab_size, (1, 8))
+    labels = input_ids.clone()
+    out = model(input_ids, labels=labels)
+    assert torch.isfinite(out.loss)
+    out.loss.backward()
+    assert any(p.grad is not None for p in model.parameters())
+

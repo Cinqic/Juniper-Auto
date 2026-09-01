@@ -1,0 +1,11 @@
+{
+  "algorithm": "sha256",
+  "sha256": {
+    "merges.txt": "64b34f50e33b5dae1e3a54e24e0b1ff867fe460c223cf7ca8fcb9fcf30ed95d9",
+    "special_tokens.json": "7a870b42edc2843694dc83e64b42ba2169f2fadfa22038cfbc845fb4d36644c6",
+    "tokenizer.json": "26b49727e15ebd1754ad4544cb4e66a89c32bb0da46a3593a532fa51d919835a",
+    "tokenizer_config.json": "0098eda74cdcd43eee6a7dfb5f1d1176094c41c562cec275f4e6838d06629c60",
+    "vocab.json": "d84243f070bb808d99f4e9bcb32b03d5e0714b8f7492a40a2889ad6bfb862285"
+  },
+  "tokenizer_id": "ja-tokenizer-v0.1"
+}

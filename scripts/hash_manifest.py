@@ -31,6 +31,7 @@ from juniper_auto.util.hashing import (  # noqa: E402
     PHASE_0_HASHED_ARTIFACTS,
     PHASE_1_HASHED_ARTIFACTS,
     PHASE_2_HASHED_ARTIFACTS,
+    PHASE_3_HASHED_ARTIFACTS,
     compute_hashes,
 )
 
@@ -38,6 +39,7 @@ PHASES = {
     0: (PHASE_0_HASHED_ARTIFACTS, "manifests/phase-0-artifact-hashes.yaml", "Phase 0"),
     1: (PHASE_1_HASHED_ARTIFACTS, "manifests/phase-1-artifact-hashes.yaml", "Phase 1"),
     2: (PHASE_2_HASHED_ARTIFACTS, "manifests/phase-2-artifact-hashes.yaml", "Phase 2"),
+    3: (PHASE_3_HASHED_ARTIFACTS, "manifests/phase-3-artifact-hashes.yaml", "Phase 3"),
 }
 
 

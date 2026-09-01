@@ -1,0 +1,42 @@
+{
+  "core_control": {
+    "<|bos|>": 256,
+    "<|eos|>": 257,
+    "<|pad|>": 258,
+    "<|system|>": 259,
+    "<|user|>": 260,
+    "<|assistant|>": 261,
+    "<|objective|>": 262,
+    "<|state|>": 263,
+    "<|memory|>": 264,
+    "<|tool_call|>": 265,
+    "<|tool_result|>": 266,
+    "<|tool_error|>": 267,
+    "<|observation|>": 268,
+    "<|action|>": 269,
+    "<|final|>": 270
+  },
+  "core_control_semantics": {
+    "<|bos|>": "beginning of a token sequence / document boundary",
+    "<|eos|>": "end of a token sequence / document boundary",
+    "<|pad|>": "right-padding filler; never carries content; masked in loss",
+    "<|system|>": "opens a system-authority turn (runtime-inserted only)",
+    "<|user|>": "opens a user turn",
+    "<|assistant|>": "opens an assistant turn",
+    "<|objective|>": "opens a serialized objective record",
+    "<|state|>": "opens a serialized runtime-state record",
+    "<|memory|>": "opens a serialized persistent-memory record",
+    "<|tool_call|>": "opens a tool invocation emitted by the assistant",
+    "<|tool_result|>": "opens a successful tool result supplied to the model",
+    "<|tool_error|>": "opens a failed tool result / error supplied to the model",
+    "<|observation|>": "opens an environment observation supplied to the model",
+    "<|action|>": "opens an action record in an autonomous-control trace",
+    "<|final|>": "marks the assistant's final answer segment"
+  },
+  "reserved_control_range": {
+    "start": 271,
+    "end": 511,
+    "count": 241,
+    "surface_pattern": "<|reserved_{index}|>"
+  }
+}

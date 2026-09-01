@@ -77,3 +77,6 @@ site/
 
 # --- System junk ---
 Thumbs.db
+
+# --- Phase 3 tokenizer: comparator-only artifacts (never a runtime dep) ---
+data/tokenizer/comparators/

@@ -177,6 +177,82 @@ PHASE_2_TEST_FILES: list[str] = [
 ]
 
 
+# Phase 3 unified-tokenizer implementation, frozen artifact, corpus manifest,
+# held-out evaluation fixture, scripts, documentation, ADRs, validator, and
+# executed-experiment artifacts. As in Phase 2, a few globally-evolving files
+# (docs/time/phase-hours.csv, experiments/registry.yaml, README.md) also
+# appear in earlier phases' lists; those earlier manifests are regenerated at
+# the end of Phase 3 engineering to match the post-Phase-3 content of exactly
+# those files. The approved Phase 0/1/2 states remain pinned by their
+# immutable git tags (phase-0-foundation / phase-1-architecture /
+# phase-2-moe), not by these mutable manifests. The individual corpus shards
+# are NOT listed here on purpose: corpus-manifest.json records every shard's
+# SHA-256 and scripts/validate_phase3.py re-verifies each shard against it, so
+# hashing the manifest transitively protects the whole corpus without a broad
+# directory glob.
+PHASE_3_HASHED_ARTIFACTS: list[str] = [
+    "juniper_auto/tokenizer/__init__.py",
+    "juniper_auto/tokenizer/constants.py",
+    "juniper_auto/tokenizer/bytelevel.py",
+    "juniper_auto/tokenizer/bpe.py",
+    "juniper_auto/tokenizer/tokenizer.py",
+    "juniper_auto/tokenizer/artifacts.py",
+    "juniper_auto/tokenizer/corpus.py",
+    "juniper_auto/tokenizer/train.py",
+    "juniper_auto/tokenizer/evaluation.py",
+    "juniper_auto/tokenizer/comparators.py",
+    "juniper_auto/tokenizer/config.py",
+    "configs/tokenizer/ja-tokenizer-v0.1.yaml",
+    "manifests/frozen-artifacts.yaml",
+    "data/tokenizer/ja-tokenizer-v0.1/tokenizer.json",
+    "data/tokenizer/ja-tokenizer-v0.1/vocab.json",
+    "data/tokenizer/ja-tokenizer-v0.1/merges.txt",
+    "data/tokenizer/ja-tokenizer-v0.1/special_tokens.json",
+    "data/tokenizer/ja-tokenizer-v0.1/tokenizer_config.json",
+    "data/tokenizer/ja-tokenizer-v0.1/hashes.json",
+    "data/tokenizer/corpus/corpus-manifest.json",
+    "data/tokenizer/eval/held-out-eval-fixture.json",
+    "scripts/build_tokenizer_corpus.py",
+    "scripts/build_tokenizer_eval_fixture.py",
+    "scripts/train_tokenizer.py",
+    "scripts/run_phase3_experiment.py",
+    "scripts/validate_phase3.py",
+    "scripts/generate_phase3_test_manifest.py",
+    ".github/workflows/phase-3-validation.yml",
+    "docs/architecture/tokenizer-design.md",
+    "docs/adr/0010-tokenizer-implementation-choice.md",
+    "docs/adr/0011-tokenizer-special-token-and-reserved-id-layout.md",
+    "docs/adr/0012-tokenizer-normalization-and-pretokenization-policy.md",
+    "docs/phases/phase-3-tokenizer.md",
+    "docs/phases/phase-3-requirements-traceability.md",
+    "docs/phases/phase-3-sonnet-self-review.md",
+    "docs/recovery/phase-3.md",
+    "docs/time/phase-hours.csv",
+    "experiments/registry.yaml",
+    "docs/experiments/results/exp-0024-tokenizer-rebuild-determinism.json",
+    "docs/experiments/results/exp-0025-tokenizer-roundtrip-fallback.json",
+    "docs/experiments/results/exp-0026-tokenizer-efficiency.json",
+    "docs/experiments/results/exp-0027-tokenizer-baseline-comparison.json",
+    "docs/experiments/results/exp-0028-tokenizer-control-and-reserved.json",
+    "docs/experiments/results/exp-0029-tokenizer-flowbox-performance.json",
+    "docs/experiments/results/exp-0030-tokenizer-difficult-examples.json",
+    "manifests/phase-3-test-manifest.yaml",
+]
+
+PHASE_3_TEST_FILES: list[str] = [
+    "tests/tokenizer_fixtures.py",
+    "tests/test_tokenizer_vocab.py",
+    "tests/test_tokenizer_roundtrip.py",
+    "tests/test_tokenizer_normalization.py",
+    "tests/test_tokenizer_determinism.py",
+    "tests/test_tokenizer_control_tokens.py",
+    "tests/test_tokenizer_failure_handling.py",
+    "tests/test_tokenizer_fault_injection.py",
+    "tests/test_tokenizer_config_and_model.py",
+    "tests/test_tokenizer_evaluation.py",
+]
+
+
 def sha256_file(path: Path) -> str:
     h = hashlib.sha256()
     with path.open("rb") as f:

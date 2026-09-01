@@ -1,0 +1,121 @@
+# Frozen canonical configuration for ja-tokenizer-v0.1.
+#
+# This file is declarative and sufficient (together with the committed
+# corpus under data/tokenizer/corpus/) to reconstruct the frozen artifact
+# under data/tokenizer/ja-tokenizer-v0.1/. It is schema-validated and
+# cross-checked against juniper_auto.tokenizer.constants and the frozen
+# artifact by juniper_auto.tokenizer.config.validate_tokenizer_config
+# (tests/test_tokenizer_config.py) and scripts/validate_phase3.py.
+#
+# Changing any frozen field here means creating ja-tokenizer-v0.2, not
+# editing this file (project-governance.md rule 4).
+
+tokenizer_id: ja-tokenizer-v0.1
+algorithm: utf8-byte-level-bpe
+vocab_size: 36864
+
+byte_level:
+  base_alphabet_size: 256
+  byte_fallback: true
+  unk_token: null            # no <unk>; byte fallback guarantees representability
+
+normalization:
+  kind: none                 # identity: no lowercasing/stripping/whitespace-collapse/NFC/NFKC
+  rationale: >
+    Code, paths, mathematical notation, and structured data must round-trip
+    byte-for-byte; any destructive normalization would corrupt them. See
+    docs/adr/0012-tokenizer-normalization-and-pretokenization-policy.md.
+
+pre_tokenization:
+  kind: regex
+  # A guaranteed full partition of any str (concatenation of matches == input).
+  pattern: "'(?:[sdmtSDMT]|ll|LL|ve|VE|re|RE)| ?\\d+| ?[^\\s\\d\\W]+| ?[^\\s\\w]+|\\s+(?!\\S)|\\s+"
+  lossless_partition: true
+
+training:
+  corpus_manifest: data/tokenizer/corpus/corpus-manifest.json
+  corpus_seed: 20260901
+  training_seed: 20260901
+  min_pair_frequency: 2
+  tail_fill_threshold: 1     # drop to freq 1 only if needed to fill the exact budget
+  merge_selection: "argmax by (count, then lexicographically smallest byte pair)"
+  merge_application: "greedy lowest-rank-first"
+  implementation: juniper_auto.tokenizer.bpe  # in-project pure Python, no third-party tokenizer dep
+
+layout:
+  byte_tokens: [0, 255]
+  control_block: [256, 511]
+  core_control: [256, 270]
+  reserved_control: [271, 511]
+  learned_vocab: [512, 36863]
+  num_merges: 36352
+
+bos_eos:
+  add_bos_by_default: false
+  add_eos_by_default: false
+  bos_token: "<|bos|>"
+  eos_token: "<|eos|>"
+  pad_token: "<|pad|>"
+
+core_control_tokens:
+  "<|bos|>": 256
+  "<|eos|>": 257
+  "<|pad|>": 258
+  "<|system|>": 259
+  "<|user|>": 260
+  "<|assistant|>": 261
+  "<|objective|>": 262
+  "<|state|>": 263
+  "<|memory|>": 264
+  "<|tool_call|>": 265
+  "<|tool_result|>": 266
+  "<|tool_error|>": 267
+  "<|observation|>": 268
+  "<|action|>": 269
+  "<|final|>": 270
+
+reserved_control_range:
+  start: 271
+  end: 511
+  count: 241
+  surface_pattern: "<|reserved_{index}|>"
+  rationale: >
+    241 contiguous otherwise-unused ids let future protocol versions add
+    control/framing tokens without retraining the tokenizer. Per-tool tokens
+    are explicitly NOT allocated here -- tool identity belongs in Phase 4+
+    structured schemas.
+
+artifact:
+  directory: data/tokenizer/ja-tokenizer-v0.1
+  files: [tokenizer.json, vocab.json, merges.txt, special_tokens.json, tokenizer_config.json, hashes.json]
+  hash_manifest: data/tokenizer/ja-tokenizer-v0.1/hashes.json
+  offline_loadable: true
+
+model_compatibility:
+  requires_vocab_size: 36864
+  architectures: [ja150m-v0.1, ja150m-v0.1-dense]
+
+# Phase 3 engineering acceptance criteria. Frozen here BEFORE the canonical
+# evaluation (docs/phases/phase-3-tokenizer.md records the run). Hard gates
+# are absolute correctness properties. Efficiency gates are defensible
+# domain-level bars chosen with reference to the byte-level floor and the
+# GPT-2 comparison in exp-0027 -- not tuned after the fact to force a pass.
+acceptance_criteria:
+  hard_gates:
+    - "zero round-trip corruption on the canonical test corpus, the held-out eval fixture, and >=20k random valid-UTF-8 property cases"
+    - "deterministic canonical encode/decode (repeated + cross-process identical)"
+    - "deterministic rebuild: retrain from committed corpus+config+seed reproduces every artifact hash"
+    - "stable special-token ids across serialization/reload/rebuild"
+    - "exact vocabulary size == 36864; no id-space holes; core/reserved ids never emitted from ordinary text"
+    - "functional byte fallback: all 256 byte values representable losslessly; no <unk> needed for valid input"
+    - "code / structured-data / whitespace / indentation preserved byte-for-byte"
+    - "valid artifact hashes; corruption fails closed and loud"
+    - "tokenizer vocab_size == ja150m-v0.1 == ja150m-v0.1-dense == 36864"
+  efficiency_gates:
+    - "every domain: chars_per_token > 1.5 (strictly better than the byte-level floor)"
+    - "prose domains (general_prose, technical_prose): chars_per_token >= 3.5"
+    - "code/structured domains (python, javascript, c_cpp, json, yaml, xml_html, shell): chars_per_token >= 2.2"
+    - "math domain: chars_per_token >= 2.0"
+    - "agent-trace domains (tool_traces, state_records, memory_records): chars_per_token >= 2.5"
+    - "no domain is more than 1.35x LESS compact than GPT-2 (exp-0027) except general_prose, where GPT-2's far larger English training corpus is expected to win"
+    - "overall byte_fallback tokens are always lossless (fallback is a fidelity guarantee, not a failure)"

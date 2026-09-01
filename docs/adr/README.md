@@ -42,3 +42,6 @@ Each ADR has:
 | [0007](0007-router-jitter-policy-separation.md) | Separate router-jitter permission from experiment enablement | accepted |
 | [0008](0008-moe-auxiliary-loss-semantics.md) | MoE auxiliary-loss (load-balancing and router Z-loss) semantics | accepted |
 | [0009](0009-moe-dispatch-backend-selection.md) | MoE dispatch backend selection (reference default, optimized available) | accepted |
+| [0010](0010-tokenizer-implementation-choice.md) | Tokenizer implementation — in-project byte-level BPE, no third-party tokenizer dependency | accepted |
+| [0011](0011-tokenizer-special-token-and-reserved-id-layout.md) | Special-token and reserved-control-id layout for ja-tokenizer-v0.1 | accepted |
+| [0012](0012-tokenizer-normalization-and-pretokenization-policy.md) | Tokenizer normalization and pre-tokenization policy for ja-tokenizer-v0.1 | accepted |
