@@ -1,10 +1,12 @@
 # Juniper Auto — Project Governance
 
-Status: living document, Phase 0 baseline. Related: [[project-charter]].
+Status: retired historical record; superseded September 5, 2026. Related: [[project-charter]].
 
-This document states permanent Juniper Auto project rules in **operational**
-form: what each rule requires someone (or some CI check) to actually do, not
-just believe.
+This document preserves the rules that governed Juniper Auto during its active
+period in **operational** form: what each rule required someone (or some CI
+check) to actually do, not just believe. The rules are retained for historical
+interpretation and reproducibility; they do not authorize new official work or
+imply that development will continue.
 
 ## 1. One cognitive language model
 
