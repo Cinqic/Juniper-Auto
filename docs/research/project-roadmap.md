@@ -1,7 +1,16 @@
-# Juniper Auto Authoritative Phase Roadmap
+# Historical Juniper Auto Phase Roadmap
 
-This Phase 0 baseline preserves the authoritative phase ownership used by
-all repository references:
+**RETIRED — September 5, 2026**
+
+This document preserves the roadmap that governed Juniper Auto while it was
+being developed. It is historical planning evidence, not an active roadmap.
+Juniper Auto was retired on September 5, 2026. Phases after the retirement
+point are historical plans that were never executed and are no longer planned
+for Juniper Auto. Do not interpret this mapping as a commitment to continue
+the project.
+
+This archive preserves the phase ownership mapping used by repository
+references during the project:
 
 0. Foundation
 1. Reference Model and Dense Control Architecture

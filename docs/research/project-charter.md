@@ -1,7 +1,12 @@
 # Juniper Auto — Research Charter
 
-Status: living document, Phase 0 baseline
-Architecture target: `ja150m-v0.1`
+Status: retired historical record; superseded September 5, 2026
+Historical architecture target: `ja150m-v0.1`
+
+This charter records the research questions, boundaries, and intended scope
+that governed Juniper Auto during its active period. The project is retired,
+there is no planned continuation, and the future-oriented language below is
+historical research context rather than a current roadmap or promise.
 
 ## Primary research question
 
@@ -100,12 +105,12 @@ Architecture, training methodology, runtime, tools, evaluations, and
 customization mechanisms are intended to remain inspectable and modifiable
 by the project owner.
 
-**License status:** an MIT `LICENSE` file already exists in this repository
-(added prior to Phase 0 engineering). Phase 0 preserves it as-is. Phase 0
-does **not** make a new legal licensing decision, does not add an additional
-model-weights license, and does not assert that full open-source licensing
-of the eventual trained artifacts (weights, tokenizer, datasets) has been
-decided. That remains an open governance item — see
+**Historical license status:** an MIT `LICENSE` file already existed in this
+repository (added prior to Phase 0 engineering). Phase 0 preserved it as-is.
+At retirement, this document recorded no new legal licensing decision or
+model-weights license, and did not assert that full open-source licensing of
+the eventual trained artifacts (weights, tokenizer, datasets) had been
+decided. That remained an open governance item — see
 [[project-governance]] and [[frozen-artifact-registry]].
 
 ## Sparse-vs-dense requirement
@@ -215,8 +220,8 @@ multimodal encoders inside `ja150m-v0.1` itself. See
 
 ## Relationship to governance and architecture documents
 
-This charter states *why* the project exists and what it is trying to learn.
-Operational rules that follow from the charter are recorded in
+This historical charter states *why* the project existed and what it was
+trying to learn. Operational rules that followed from the charter are recorded in
 [[project-governance]]. The frozen numeric architecture is recorded in
 `configs/architecture/ja150m-v0.1.yaml` and
 `configs/architecture/ja150m-v0.1-dense.yaml`, independently verified by

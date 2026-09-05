@@ -1,6 +1,26 @@
 # Juniper Auto
 
-**Status: Phase 0 approved; Phase 1 approved; Phase 2 independently
+**RETIRED — September 5, 2026**
+
+Juniper Auto is a retired Cinqic research project and is no longer in active
+development. This repository is preserved as a historical archive of the
+project's research, architecture, experiments, tokenizer work, validation,
+documentation, source code, decisions, results, and lessons.
+
+Development ended after the approved Phase 0–2 work and the unapproved Phase 3
+tokenizer candidate. No model was trained on a real pretraining corpus, no
+base or instruction-tuned checkpoint was produced, and the planned
+autonomy/runtime phases were never completed.
+
+Cinqic's language-model research direction has moved toward models designed
+specifically to work with Juniper App and the broader modular Juniper
+ecosystem rather than attempting to concentrate the entire ecosystem into one
+language model. This repository is the canonical historical archive; there
+is no planned continuation of Juniper Auto.
+
+## Historical research overview
+
+**Historical final status: Phase 0 approved; Phase 1 approved; Phase 2 independently
 approved; Phase 3 is a CANDIDATE pending independent review.** See the
 annotated tags `phase-0-foundation`, `phase-1-architecture`, and
 `phase-2-moe`, the GPT-5.6 Sol
@@ -29,7 +49,7 @@ math/code/research/creativity models. See the full
 [research charter](docs/research/project-charter.md) for the complete
 research questions and scope.
 
-## Current architecture (implemented as software, not yet trained)
+## Historical architecture record (implemented as software, not trained)
 
 | | Sparse (`ja150m-v0.1`) | Dense control (`ja150m-v0.1-dense`) |
 |---|---|---|
@@ -53,16 +73,16 @@ sparse architecture's complexity is earning its keep -- see
 Practical operation on hardware like this is a standing design constraint,
 not a one-time benchmark.
 
-**License:** this repository ships an MIT `LICENSE`. Whether that license
-is the final intended license for trained model weights/datasets is an
-open governance item, not yet decided -- see the charter's License status
-section.
+**License:** this repository shipped an MIT `LICENSE`. Whether that license
+would have been the final intended license for trained model weights/datasets
+was an open governance item at retirement; no later decision is recorded --
+see the charter's historical License status section.
 
-## What exists right now (approved Phases 0, 1, 2; Phase 3 candidate)
+## Historical research record (approved Phases 0, 1, 2; Phase 3 candidate)
 
-### Phase 3 (CANDIDATE — pending independent review)
+### Phase 3 (historical candidate — never independently approved)
 
-Phase 3 builds and freezes **`ja-tokenizer-v0.1`**: one unified UTF-8
+The Phase 3 work built and froze **`ja-tokenizer-v0.1`**: one unified UTF-8
 byte-level BPE tokenizer for the single Juniper Auto model. It is tokenizer
 engineering only — no model is trained, no runtime is built. What the
 candidate contains, with executed evidence:
@@ -99,9 +119,9 @@ byte-fallback rates would improve with a larger organic corpus; several
 domain corpora are project-authored synthetic; the GPT-2 comparator uses a
 `re`-based pre-tokenizer approximation.
 
-### Phase 2 (independently approved)
+### Phase 2 (independently approved historical phase)
 
-Phase 2 validates the sparse MoE routing/dispatch machinery itself:
+Phase 2 validated the sparse MoE routing/dispatch machinery itself:
 correctness, droplessness, reproducibility, per-token inspectability,
 numerical stability, instrumentation, ablatability, and context-sensitivity
 measurement infrastructure -- see
@@ -155,9 +175,9 @@ broadened beyond what Phase 1 already established. See
 [docs/phases/phase-2-moe.md](docs/phases/phase-2-moe.md)'s accepted
 limitations for the full list.
 
-### Phase 1 (independently approved)
+### Phase 1 (independently approved historical phase)
 
-Phase 1 implements the full `ja150m-v0.1` (sparse MoE) and
+Phase 1 implemented the full `ja150m-v0.1` (sparse MoE) and
 `ja150m-v0.1-dense` architectures as real, executable PyTorch code on one
 shared stack (`juniper_auto/model/`), plus the training-support plumbing
 needed to exercise it (`juniper_auto/training/`). This is architecture and
@@ -196,9 +216,9 @@ specialization), and 16K context remains unvalidated (only the frozen
 4,096-token `context_length` was exercised). A model that memorizes four
 synthetic sequences is training-plumbing correctness, not intelligence.
 
-### Phase 0 (approved foundation)
+### Phase 0 (approved historical foundation)
 
-Phase 0 is foundation engineering, not model training. It exists to prove
+Phase 0 was foundation engineering, not model training. It existed to prove
 the project can survive the loss of its current local development machine.
 What Phase 0 actually builds:
 
@@ -228,15 +248,15 @@ What Phase 0 actually builds:
   exercised end to end on a fresh clone and fresh virtual environment (see
   `docs/phases/phase-0-foundation.md`).
 
-**What does not exist yet** (as of Phase 0; Phase 3 adds a candidate
+**What never existed** (as of the final archive; Phase 3 added a candidate
 tokenizer, see above): any real training data, any trained checkpoint (base
 or instruction-tuned), a runtime, tools, memory, or autonomy of any kind.
 Juniper Auto has **not** been trained on any real tokens, does not have 16K
 validated context, and does not have measured expert specialization. Phase 1
 implements the model architecture and training plumbing as executable
 software; Phase 2 (above) validates the sparse routing subsystem
-specifically; Phase 3 (above) builds a candidate tokenizer; production
-pretraining is a later phase.
+specifically; Phase 3 (above) built a candidate tokenizer. Production
+pretraining was a later phase in the original roadmap and was never completed.
 
 ## Repository layout
 
@@ -263,9 +283,9 @@ tests/                    pytest suite for everything above
 ```
 
 `runtime/`, `tools/`, `evals/` exist as reserved top-level locations for
-later phases and are intentionally close to empty right now.
+planned phases and remain intentionally close to empty in this final archive.
 
-## Getting started (development environment)
+## Reproducing the archived research environment
 
 ```bash
 git clone https://github.com/Cinqic/Juniper-Auto.git
@@ -286,10 +306,14 @@ troubleshooting-included procedure, and
 [docs/architecture/environment-specification.md](docs/architecture/environment-specification.md)
 for the exact environment this was developed and validated against.
 
-## Contributing / project rules
+## Archive use and preservation
 
-Read [docs/research/project-governance.md](docs/research/project-governance.md)
-before proposing architecture, data, or runtime changes -- it states the
-project's permanent rules (one model, dense-control requirement,
-reproducibility, evaluation before expansion, etc.) in operational form,
-including what each rule requires in code or tests, not just in prose.
+This repository is a read-only historical research archive. There is no
+planned continuation, next phase, successor release, or active development
+track for Juniper Auto. The original governance rules remain available to
+explain the decisions and validation boundaries used during the project; they
+do not authorize new official Juniper Auto work.
+
+Forks may study or reproduce the archived implementation. Future Cinqic models
+may reuse lessons from this research, but they are not continuations or
+releases of Juniper Auto.

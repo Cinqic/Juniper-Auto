@@ -8,9 +8,9 @@ sha256:
   configs/architecture/ja150m-v0.1-dense.yaml: 4b356cf9c7022fbfea60879a9b8b5fd28c14325565d2e6e908c5b5a79cb95370
   configs/architecture/ja150m-v0.1.yaml: 2fd81b5a602e08d28bf3510911d02e9fa43f09af81ba2b9dbe6f9ff9285558e3
   docs/architecture/precision-policy.md: dd5f84b75e8b308f761a6767a2d90104f8ebfe43f13e75b16e8faa45fb921002
-  docs/research/project-charter.md: 20fff00d25cbbb8587fa129f92617b76435ab653917a4a8186ea4ce56f66d3ef
-  docs/research/project-governance.md: ac291527c2f85208222f8f2d1d39206f1259e67354790a16eed348f97419f7c3
-  docs/research/project-roadmap.md: 972564b21952154b4860d26fa57f3ed2ae3ad6fbe7d604948970f9e58310579f
+  docs/research/project-charter.md: 7929f561a0b3b2eedc652f770ac97d01c6f26582360c0fb14ba5ead22ac75d86
+  docs/research/project-governance.md: 4cac6817826c884e0def14c19cd5a1a4dc6509fbbe44c63815dbfd359a63aba7
+  docs/research/project-roadmap.md: 88a66dd162b68d57f79aeb01326a6ac5d7f2d3da2d6f7a76338df079c9b93b7a
   juniper_auto/accounting/parameter_count.py: e0af4a3a816958cfb06fceeb841de707c10a81351f85b5454b7567bb90abafd5
   juniper_auto/config/frozen.py: 7b11dbc6c8212967d0ef9e855ce8e2d32c352dbbbf4c1b15610e4401e6d10167
   juniper_auto/config/schema.py: e4f4a9fa5f7007765eadd0b30f12238ba87e68be9a9cbf86bbd5824d9098b6a4
