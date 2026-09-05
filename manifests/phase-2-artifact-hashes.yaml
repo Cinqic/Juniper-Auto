@@ -8,7 +8,7 @@ sha256:
   .github/workflows/phase-0-validation.yml: 730995642fd1509905dfa5213a84617e321bacf29b181170373c60d52a7dd560
   .github/workflows/phase-1-validation.yml: 72f464ab51431ff26e33ffc2e54860bf4a6028834fd64dba05adf73a926ec8b4
   .github/workflows/phase-2-validation.yml: c5e4b3c334a950d91d1f6b255f1ab83ba94d65aa97cf8787e89657782135b198
-  README.md: 1bb1b97da5900e4a6e5a05bc5544d5192387ae554cddc544c6078fc243ae59bd
+  README.md: fbf15fd82165bcafaa3c719855ee9da6c8945ab537cc1c94258760999f8f2d73
   docs/adr/0009-moe-dispatch-backend-selection.md: 275c9e66efeb6e37622306f3cca016af615c3209f04c685007f230b05c25dd36
   docs/architecture/moe-routing-diagnostics.md: 8a1ee1fc406d4390db8de59c25ea2dc3196cc85ced3688b00342d16350f9eebf
   docs/experiments/results/exp-0015-moe-reference-optimized-equivalence.json: a8d6d71bbebb02b7f24a0f2e45841bbcb83d7dfd39b5eb58ade26759c0744e3b
